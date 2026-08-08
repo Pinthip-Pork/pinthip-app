@@ -397,7 +397,7 @@
         listTitle: "📊 ယနေ့ ဝန်ထမ်းများ၏ အခြေအနေ:",
         loadingText: "ဒေတာရယူနေသည်...",
         phEmpId: "ID အမှတ်",
-        phPIN: "PIN နံပါတ်",
+        phPin: "PIN နံပါတ်",
         btnLogin: "အကောင့်ဝင်မည်",
         welcome: (name) => `👋 မင်္ဂလာပါ: ${name}`,
         btnClockInMenu: "⏰ အလုပ်ဝင်/ထွက်ချိန်",
@@ -540,7 +540,6 @@
       if (!currentUser) return;
       const todayStr = getLocalDateTimeString();
 
-      // เปิดแสดงปุ่มกระดิ่งฝั่งพนักงานด้วย
       const bellBtn = document.getElementById('bellBtn');
       if (bellBtn) bellBtn.style.display = 'block';
 
@@ -636,7 +635,7 @@
             <div class="history-item" style="cursor:pointer; background:#fff3cd;" onclick="closeModal(); showDriverMyJobsView();">
               🏬 <b>ร้าน: ${item.customerName}</b><br>
               สถานะ: <span style="color:#e67e22; font-weight:bold;">${item.status}</span><br>
-              <span style="font-size:11px; color:#555;">(คลิกเพื่อไปหน้าถ่ายรูปส่งของ)</span>
+              <span style="font-size:11px; color:#555;">(คลิกเพื่อไปหน้าจัดการส่งของ)</span>
             </div>
           `;
         });
@@ -930,7 +929,7 @@
         list.forEach(j => {
           let isCompleted = String(j.status).includes('สำเร็จ');
           let badgeColor = isCompleted ? '#28a745' : '#e67e22';
-          let viewPhotoBtn = (isCompleted && j.photoUrl) ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปหลักฐานจาก Google Drive</a>` : '';
+          let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปหลักฐานจาก Google Drive</a>` : '<span style="color:#888; font-size:12px;">(ยังไม่มีรูปแนบ)</span>';
 
           html += `
             <div class="history-item" style="border-left: 4px solid ${badgeColor};">
@@ -1264,7 +1263,7 @@
         g.jobs.forEach(j => {
           let isCompleted = String(j.status).includes('สำเร็จ');
           let badgeColor = isCompleted ? '#28a745' : '#e67e22';
-          let viewPhotoBtn = (isCompleted && j.photoUrl) ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:4px; padding:4px 8px; font-size:11px; text-decoration:none; border-radius:4px;">🖼️ ดูรูป Drive</a>` : '';
+          let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:4px; padding:4px 8px; font-size:11px; text-decoration:none; border-radius:4px;">🖼️ ดูรูป Drive</a>` : '';
           
           html += `
             <div style="background:white; padding:8px 10px; border-radius:6px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
@@ -1346,35 +1345,47 @@
         let htmlList = '';
         myList.forEach(j => {
           let isCompleted = String(j.status).includes('สำเร็จ');
+          let badgeColor = isCompleted ? '#28a745' : '#e67e22';
           
-          let actionBtn = '';
-          if (isCompleted) {
-            let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปจาก Google Drive</a>` : '';
-            actionBtn = `
-              <span style="color:#28a745; font-weight:bold;">✅ ส่งสำเร็จแล้ว (${j.deliveredTime})</span><br>
-              ${viewPhotoBtn}
-            `;
-          } else {
-            actionBtn = `
-              <label class="btn-clock" style="display:block; text-align:center; padding:10px 14px; font-size:14px; border-radius:8px; cursor:pointer; margin:0;">
-                📸 ถ่ายรูปส่งของ & อัปขึ้น Drive
-                <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadDeliveryPhotoToDrive(event, '${j.key}', '${j.customerName}')">
-              </label>
-            `;
-          }
+          let viewPhotoLink = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปที่แนบไว้แล้ว</a>` : '<span style="color:#888; font-size:12px;">(ยังไม่มีรูปแนบ)</span>';
 
           htmlList += `
-            <div class="history-item" style="border-left: 4px solid ${isCompleted ? '#28a745' : '#e67e22'};">
+            <div class="history-item" style="border-left: 4px solid ${badgeColor};">
               <b>🏬 ร้าน/ลูกค้า: ${j.customerName}</b><br>
-              สถานะ: <b style="color:${isCompleted ? '#28a745' : '#e67e22'};">${j.status}</b><br><br>
-              <div style="text-align:right;">
-                ${actionBtn}
+              สถานะ: <b style="color:${badgeColor};">${j.status} (${j.deliveredTime})</b><br>
+              <div style="margin-top:6px;">${viewPhotoLink}</div><br>
+
+              <div style="display:flex; gap:8px;">
+                <button class="btn-clock" style="margin:0; padding:10px; font-size:14px; flex:1;" onclick="driverMarkAsDelivered('${j.key}', '${j.status}')">
+                  ${isCompleted ? '🔄 เปลี่ยนสถานะ' : '✅ กดส่งของแล้ว'}
+                </button>
+                
+                <label class="btn-fuel" style="margin:0; padding:10px; font-size:14px; flex:1; text-align:center; border-radius:8px; cursor:pointer; display:inline-block; box-sizing:border-box;">
+                  📸 แนบรูป
+                  <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadDeliveryPhotoToDrive(event, '${j.key}', '${j.customerName}')">
+                </label>
               </div>
             </div>
           `;
         });
 
         container.innerHTML = htmlList;
+      });
+    }
+
+    function driverMarkAsDelivered(jobKey, currentStatus) {
+      const todayStr = getLocalDateTimeString();
+      let isCompleted = String(currentStatus).includes('สำเร็จ');
+      let newStatus = isCompleted ? "รอจัดส่ง ⏳" : "ส่งสำเร็จแล้ว 🟢";
+      let timeStr = isCompleted ? "-" : (new Date().toTimeString().substring(0, 5) + " น.");
+
+      db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
+        status: newStatus,
+        deliveredTime: timeStr
+      }, (err) => {
+        if (!err) {
+          // รีเฟรชหน้าจอให้อัตโนมัติผ่าน on('value') อยู่แล้ว
+        }
       });
     }
 
@@ -3311,17 +3322,13 @@
           closeModal();
           if (result.status === "success") {
             const photoUrl = result.url;
-            const now = new Date();
-            const timeStr = now.toTimeString().substring(0, 5) + " น.";
             const todayStr = getLocalDateTimeString();
 
             db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
-              status: "ส่งสำเร็จแล้ว 🟢",
-              deliveredTime: timeStr,
               photoUrl: photoUrl
             }, (err) => {
               if (!err) {
-                showModal("🎉 ยอดเยี่ยม", "บันทึกสถานะและอัปโหลดรูปเข้า Google Drive สำเร็จเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ตกลง</button>`);
+                showModal("🎉 ยอดเยี่ยม", "แนบรูปหลักฐานเข้า Google Drive สำเร็จเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ตกลง</button>`);
               }
             });
 
