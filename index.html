@@ -254,6 +254,7 @@
     </div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()">🏠 แดสบอร์ดภาพรวม</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()">📦 จัดการ & มอบหมายจ๊อบส่งของ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()">📜 ประวัติการส่งของย้อนหลัง</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showCustomerManagementPanel()">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">👥 สรุปสถิติ ขาด ลา มาสาย</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">📜 ดูการลงเวลาทำงานย้อนหลัง</div>
@@ -396,7 +397,7 @@
         listTitle: "📊 ယနေ့ ဝန်ထမ်းများ၏ အခြေအနေ:",
         loadingText: "ဒေတာရယူနေသည်...",
         phEmpId: "ID အမှတ်",
-        phPin: "PIN နံပါတ်",
+        phPIN: "PIN နံပါတ်",
         btnLogin: "အကောင့်ဝင်မည်",
         welcome: (name) => `👋 မင်္ဂလာပါ: ${name}`,
         btnClockInMenu: "⏰ အလုပ်ဝင်/ထွက်ချိန်",
@@ -476,6 +477,8 @@
     let isInitialLoadFuels = true;
 
     function startAdminNotificationListener() {
+      document.getElementById('bellBtn').style.display = 'block';
+
       db.ref('leaves').on('value', (snap) => {
         const obj = snap.val() || {};
         pendingLeavesCache = [];
@@ -493,7 +496,7 @@
           showModal("🔔 แจ้งเตือนคำขอใหม่", "มีพนักงานส่งคำขอลามาใหม่ กรุณาตรวจสอบในเมนูอนุมัติใบลา", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
         }
         isInitialLoadLeaves = false;
-        updateBellBadgeCount();
+        updateAdminBellBadgeCount();
       });
 
       db.ref('fuel_requests').on('value', (snap) => {
@@ -513,48 +516,11 @@
           showModal("🔔 แจ้งเตือนเบิกจ่ายใหม่", "มีพนักงานส่งคำขอเบิกค่าน้ำมัน/ค่าซ่อมรถมาใหม่", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
         }
         isInitialLoadFuels = false;
-        updateBellBadgeCount();
+        updateAdminBellBadgeCount();
       });
     }
 
-    let isInitialLoadEmpJobs = true;
-    let isInitialLoadEmpStatus = true;
-
-    function startEmployeeNotificationListener() {
-      if (!currentUser) return;
-      const todayStr = getLocalDateTimeString();
-
-      // ดักฟังว่ามีจ๊อบส่งของใหม่ส่งมาถึงพนักงานคนนี้ไหม
-      db.ref('delivery_jobs/' + todayStr).on('value', (snap) => {
-        const obj = snap.val() || {};
-        let myNewJobsCount = 0;
-        Object.keys(obj).forEach(k => {
-          let j = obj[k];
-          if (String(j.driverId) === String(currentUser.empId) && String(j.status || '').includes('รอจัดส่ง')) {
-            myNewJobsCount++;
-          }
-        });
-
-        if (!isInitialLoadEmpJobs && myNewJobsCount > 0) {
-          playNotificationSound();
-          showModal("📦 มีงานส่งของใหม่!", `คุณได้รับมอบหมายจ๊อบส่งของใหม่วันนี้ (${myNewJobsCount} ร้าน)\nกรุณาตรวจสอบที่เมนู "งานส่งของของฉันวันนี้"`, `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ไปที่งานของฉัน</button>`);
-        }
-        isInitialLoadEmpJobs = false;
-      });
-
-      // ดักฟังสถานะใบลา / เบิกเงิน ว่าแอดมินอนุมัติหรือยัง
-      db.ref('leaves').on('value', (snap) => {
-        const obj = snap.val() || {};
-        Object.keys(obj).forEach(k => {
-          let l = obj[k];
-          if (String(l.empId) === String(currentUser.empId) && String(l.status || '').includes('อนุมัติแล้ว')) {
-            // เช็กว่าเพิ่งเปลี่ยนสถานะเป็นอนุมัติ
-          }
-        });
-      });
-    }
-
-    function updateBellBadgeCount() {
+    function updateAdminBellBadgeCount() {
       const totalPending = pendingLeavesCache.length + pendingFuelsCache.length;
       const badge = document.getElementById('bellBadge');
       if (badge) {
@@ -567,7 +533,60 @@
       }
     }
 
+    let myPendingJobsCache = [];
+    let isInitialLoadEmpJobs = true;
+
+    function startEmployeeNotificationListener() {
+      if (!currentUser) return;
+      const todayStr = getLocalDateTimeString();
+
+      // เปิดแสดงปุ่มกระดิ่งฝั่งพนักงานด้วย
+      const bellBtn = document.getElementById('bellBtn');
+      if (bellBtn) bellBtn.style.display = 'block';
+
+      db.ref('delivery_jobs/' + todayStr).on('value', (snap) => {
+        const obj = snap.val() || {};
+        myPendingJobsCache = [];
+        let myNewJobsCount = 0;
+
+        Object.keys(obj).forEach(k => {
+          let j = obj[k];
+          if (String(j.driverId) === String(currentUser.empId) && !String(j.status || '').includes('สำเร็จ')) {
+            myPendingJobsCache.push({ key: k, ...j });
+            myNewJobsCount++;
+          }
+        });
+
+        if (!isInitialLoadEmpJobs && myNewJobsCount > 0) {
+          playNotificationSound();
+          showModal("📦 มีงานส่งของใหม่!", `คุณได้รับมอบหมายจ๊อบส่งของใหม่วันนี้ (${myNewJobsCount} ร้าน)\nกรุณาตรวจสอบที่กระดิ่งแจ้งเตือน`, `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ไปที่งานของฉัน</button>`);
+        }
+        isInitialLoadEmpJobs = false;
+        updateEmployeeBellBadgeCount();
+      });
+    }
+
+    function updateEmployeeBellBadgeCount() {
+      const badge = document.getElementById('bellBadge');
+      if (badge) {
+        if (myPendingJobsCache.length > 0) {
+          badge.innerText = myPendingJobsCache.length;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    }
+
     function showNotificationModal() {
+      if (isAdmin) {
+        showAdminNotificationModal();
+      } else {
+        showEmployeeNotificationModal();
+      }
+    }
+
+    function showAdminNotificationModal() {
       let html = `<div style="max-height: 350px; overflow-y: auto;">`;
       
       if (pendingLeavesCache.length === 0 && pendingFuelsCache.length === 0) {
@@ -603,6 +622,28 @@
 
       html += `</div>`;
       showModal("🔔 รายการแจ้งเตือนรออนุมัติ", "", html, `<button class="btn-ok" onclick="closeModal()">ปิดหน้าต่าง</button>`);
+    }
+
+    function showEmployeeNotificationModal() {
+      let html = `<div style="max-height: 350px; overflow-y: auto;">`;
+
+      if (myPendingJobsCache.length === 0) {
+        html += `<div style="text-align:center; color:#888; padding:20px;">🎉 ไม่มีงานส่งของค้างส่งในขณะนี้</div>`;
+      } else {
+        html += `<div style="font-weight:bold; color:#e67e22; margin-bottom:8px;">📦 งานส่งของที่ต้องไปส่ง (${myPendingJobsCache.length} ร้าน):</div>`;
+        myPendingJobsCache.forEach(item => {
+          html += `
+            <div class="history-item" style="cursor:pointer; background:#fff3cd;" onclick="closeModal(); showDriverMyJobsView();">
+              🏬 <b>ร้าน: ${item.customerName}</b><br>
+              สถานะ: <span style="color:#e67e22; font-weight:bold;">${item.status}</span><br>
+              <span style="font-size:11px; color:#555;">(คลิกเพื่อไปหน้าถ่ายรูปส่งของ)</span>
+            </div>
+          `;
+        });
+      }
+
+      html += `</div>`;
+      showModal("🔔 แจ้งเตือนงานส่งของวันนี้", "", html, `<button class="btn-ok" onclick="closeModal()">ปิดหน้าต่าง</button>`);
     }
 
     function getDeviceInfo() {
@@ -769,10 +810,11 @@
                 <div class="dashboard-box">
                   <div>
                     <h3>📦 จัดการจ๊อบส่งหมูสด</h3>
-                    <p>มอบหมายงานส่งของ & จัดการร้านค้า</p>
+                    <p>มอบหมายงานส่งของ & ดูประวัติย้อนหลัง</p>
                   </div>
                   <div>
                     <button class="btn-fuel" onclick="showAdminJobAssignPanel()">📦 มอบหมายจ๊อบส่งของวันนี้</button>
+                    <button class="btn-history" onclick="showAdminDeliveryHistory()" style="margin-top:5px;">📜 ประวัติการส่งของย้อนหลัง</button>
                     <button class="btn-blue" onclick="showCustomerManagementPanel()" style="margin-top:5px;">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</button>
                   </div>
                 </div>
@@ -821,6 +863,86 @@
             loadTodayListRealtime();
           });
         });
+      });
+    }
+
+    function showAdminDeliveryHistory() {
+      isAdmin = true;
+      document.getElementById('mainCard').classList.add('admin-wide');
+      document.getElementById('hamburgerBtn').style.display = 'block';
+      document.getElementById('bellBtn').style.display = 'block';
+      document.getElementById('pageTitle').innerText = "📜 ประวัติการส่งของย้อนหลัง";
+      document.getElementById('listBox').style.display = "none";
+      document.getElementById('status').innerHTML = i18n[currentLang].checking;
+
+      const todayStr = getLocalDateTimeString();
+
+      const html = `
+        <h2>📜 ประวัติการจัดส่งสินค้า (จ๊อบส่งหมูสด) ย้อนหลัง</h2>
+        <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
+          <b>📅 เลือกวันที่ต้องการดูประวัติการส่งของ:</b>
+          <div style="display:flex; gap:10px; margin-top:5px;">
+            <div style="flex:1;">
+              <input type="date" id="deliveryHistDate" value="${todayStr}" onchange="renderAdminDeliveryHistoryList()" style="font-weight:bold; margin:0;">
+            </div>
+            <button class="btn-blue" onclick="setDeliveryDateToday()" style="margin:0; padding:8px 15px; font-size:13px; width:auto;">📌 วันนี้</button>
+          </div>
+        </div>
+        <div id="adminDeliveryHistContainer"></div>
+        <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
+      `;
+      document.getElementById('mainContent').innerHTML = html;
+      renderAdminDeliveryHistoryList();
+    }
+
+    function setDeliveryDateToday() {
+      const todayStr = getLocalDateTimeString();
+      document.getElementById('deliveryHistDate').value = todayStr;
+      renderAdminDeliveryHistoryList();
+    }
+
+    function renderAdminDeliveryHistoryList() {
+      const selectedDate = document.getElementById('deliveryHistDate').value;
+      const container = document.getElementById('adminDeliveryHistContainer');
+      if (!container) return;
+
+      container.innerHTML = i18n[currentLang].checking;
+
+      db.ref('delivery_jobs/' + selectedDate).once('value', (snapshot) => {
+        document.getElementById('status').innerHTML = "";
+        const jobsObj = snapshot.val() || {};
+        let list = [];
+        Object.keys(jobsObj).forEach(k => list.push({ key: k, ...jobsObj[k] }));
+
+        if (list.length === 0) {
+          container.innerHTML = `<div style="color:#888; text-align:center; padding:20px;">ไม่มีบันทึกการส่งของในวันที่ ${selectedDate}</div>`;
+          return;
+        }
+
+        let completedCount = list.filter(j => String(j.status).includes('สำเร็จ')).length;
+
+        let html = `
+          <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
+            <b>📊 สรุปผลวันที่ ${selectedDate}:</b> ส่งสำเร็จแล้ว <b>${completedCount} / ${list.length} ร้าน</b>
+          </div>
+        `;
+
+        list.forEach(j => {
+          let isCompleted = String(j.status).includes('สำเร็จ');
+          let badgeColor = isCompleted ? '#28a745' : '#e67e22';
+          let viewPhotoBtn = (isCompleted && j.photoUrl) ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปหลักฐานจาก Google Drive</a>` : '';
+
+          html += `
+            <div class="history-item" style="border-left: 4px solid ${badgeColor};">
+              <b>🚚 พนักงาน: ${j.driverName}</b><br>
+              🏬 ร้าน/ลูกค้า: <b>${j.customerName}</b><br>
+              สถานะ: <b style="color:${badgeColor};">${j.status} (${j.deliveredTime})</b><br>
+              ${viewPhotoBtn}
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
       });
     }
 
@@ -1260,7 +1382,6 @@
       isAdmin = false;
       document.getElementById('mainCard').classList.remove('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'none';
-      document.getElementById('bellBtn').style.display = 'none';
       const t = i18n[currentLang];
       document.getElementById('pageTitle').innerText = t.pageTitleDashboard;
       document.getElementById('status').innerText = "";
@@ -3200,7 +3321,7 @@
               photoUrl: photoUrl
             }, (err) => {
               if (!err) {
-                showModal("🎉 ยอดเยี่ยม", "บันทึกสถานะและอัปโหลดรูปเข้า Google Drive สำเร็จเรียบร้อย", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
+                showModal("🎉 ยอดเยี่ยม", "บันทึกสถานะและอัปโหลดรูปเข้า Google Drive สำเร็จเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ตกลง</button>`);
               }
             });
 
