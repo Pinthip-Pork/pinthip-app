@@ -2,36 +2,34 @@
 <html>
 <head>
   <!-- สำหรับ iOS (iPhone/iPad) -->
-<link rel="apple-touch-icon" href="icon-192.png">
-    <!-- เรียกใช้งาน Manifest -->
-<link rel="manifest" href="manifest.json?v=20260809-2">
-<meta name="theme-color" content="#16a34a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <!-- เรียกใช้งาน Manifest -->
+  <link rel="manifest" href="manifest.json?v=20260809-3">
+  <meta name="theme-color" content="#16a34a">
 
-<!-- สคริปต์บังคับอัปเดต Service Worker ทันทีเมื่อเข้าเว็บ -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then((reg) => {
-          console.log('Service Worker Registered', reg);
-          // เช็กว่ามี Service Worker ตัวใหม่รออัปเดตอยู่ไหม
-          reg.onupdatefound = () => {
-            const installingWorker = reg.installing;
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  // มีการอัปเดตใหม่ รีโหลดหน้าเว็บอัตโนมัติเพื่อให้ได้โค้ดใหม่ทันที
-                  console.log('New content is available; please refresh.');
-                  window.location.reload();
+  <!-- สคริปต์บังคับอัปเดต Service Worker ทันทีเมื่อเข้าเว็บ -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => {
+            console.log('Service Worker Registered', reg);
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing;
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    console.log('New content is available; please refresh.');
+                    window.location.reload();
+                  }
                 }
-              }
+              };
             };
-          };
-        })
-        .catch((err) => console.log('Service Worker Failed', err));
-    });
-  }
-</script>
+          })
+          .catch((err) => console.log('Service Worker Failed', err));
+      });
+    }
+  </script>
 
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -153,7 +151,7 @@
     }
     
     button:active { transform: scale(0.97); }
-    button:disabled { background: #cccccc !important; cursor: not-allowed; transform: none !important; }
+    button:disabled { background: #cccccc !important; cursor: not-allowed; transform: none !important; box-shadow: none !important; opacity: 0.7; }
     
     .btn-clock { background: linear-gradient(135deg, #28a745, #20c997) !important; }
     .btn-leave { background: linear-gradient(135deg, #fd7e14, #ffc107) !important; }
@@ -1288,7 +1286,7 @@
                 ${viewPhotoBtn}
               </div>
               <div style="display:flex; gap:4px;">
-                <button class="btn-blue" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}')">🔄 สลับสถานะ</button>
+                <button class="btn-blue" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}')">🔄 รีเซ็ต/สลับสถานะ</button>
                 <button class="btn-danger" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminDeleteJob('${j.key}')">🗑️ ลบ</button>
               </div>
             </div>
@@ -1364,6 +1362,11 @@
           
           let viewPhotoLink = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปที่แนบไว้แล้ว</a>` : '<span style="color:#888; font-size:12px;">(ยังไม่มีรูปแนบ)</span>';
 
+          // ถ้าส่งแล้ว ปุ่มกดส่งจะถูก Disable (กดซ้ำไม่ได้) และขึ้นสถานะล็อก
+          let actionBtnHtml = isCompleted 
+            ? `<button class="btn-clock" style="margin:0; padding:10px; font-size:14px; flex:1;" disabled>✅ ส่งเรียบร้อยแล้ว</button>`
+            : `<button class="btn-clock" style="margin:0; padding:10px; font-size:14px; flex:1;" onclick="driverMarkAsDelivered('${j.key}')">✅ กดส่งของแล้ว</button>`;
+
           htmlList += `
             <div class="history-item" style="border-left: 4px solid ${badgeColor};">
               <b>🏬 ร้าน/ลูกค้า: ${j.customerName}</b><br>
@@ -1371,12 +1374,10 @@
               <div style="margin-top:6px;">${viewPhotoLink}</div><br>
 
               <div style="display:flex; gap:8px;">
-                <button class="btn-clock" style="margin:0; padding:10px; font-size:14px; flex:1;" onclick="driverMarkAsDelivered('${j.key}', '${j.status}')">
-                  ${isCompleted ? '🔄 เปลี่ยนสถานะ' : '✅ กดส่งของแล้ว'}
-                </button>
+                ${actionBtnHtml}
                 
                 <label class="btn-fuel" style="margin:0; padding:10px; font-size:14px; flex:1; text-align:center; border-radius:8px; cursor:pointer; display:inline-block; box-sizing:border-box;">
-                  📸 แนบรูป
+                  📸 แนบรูปหลักฐาน
                   <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadDeliveryPhotoToDrive(event, '${j.key}', '${j.customerName}')">
                 </label>
               </div>
@@ -1388,18 +1389,16 @@
       });
     }
 
-    function driverMarkAsDelivered(jobKey, currentStatus) {
+    function driverMarkAsDelivered(jobKey) {
       const todayStr = getLocalDateTimeString();
-      let isCompleted = String(currentStatus).includes('สำเร็จ');
-      let newStatus = isCompleted ? "รอจัดส่ง ⏳" : "ส่งสำเร็จแล้ว 🟢";
-      let timeStr = isCompleted ? "-" : (new Date().toTimeString().substring(0, 5) + " น.");
+      let timeStr = new Date().toTimeString().substring(0, 5) + " น.";
 
       db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
-        status: newStatus,
+        status: "ส่งสำเร็จแล้ว 🟢",
         deliveredTime: timeStr
       }, (err) => {
         if (!err) {
-          // รีเฟรชหน้าจอให้อัตโนมัติผ่าน on('value') อยู่แล้ว
+          // อัปเดตสำเร็จเรียบร้อย
         }
       });
     }
