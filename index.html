@@ -437,6 +437,7 @@
           currentUser = JSON.parse(savedUser);
           isAdmin = false;
           showDashboard();
+          startEmployeeNotificationListener();
         } else {
           showLoginForm();
         }
@@ -489,6 +490,7 @@
 
         if (!isInitialLoadLeaves && newPendingCount > 0) {
           playNotificationSound();
+          showModal("🔔 แจ้งเตือนคำขอใหม่", "มีพนักงานส่งคำขอลามาใหม่ กรุณาตรวจสอบในเมนูอนุมัติใบลา", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
         }
         isInitialLoadLeaves = false;
         updateBellBadgeCount();
@@ -508,9 +510,47 @@
 
         if (!isInitialLoadFuels && newFuelPendingCount > 0) {
           playNotificationSound();
+          showModal("🔔 แจ้งเตือนเบิกจ่ายใหม่", "มีพนักงานส่งคำขอเบิกค่าน้ำมัน/ค่าซ่อมรถมาใหม่", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
         }
         isInitialLoadFuels = false;
         updateBellBadgeCount();
+      });
+    }
+
+    let isInitialLoadEmpJobs = true;
+    let isInitialLoadEmpStatus = true;
+
+    function startEmployeeNotificationListener() {
+      if (!currentUser) return;
+      const todayStr = getLocalDateTimeString();
+
+      // ดักฟังว่ามีจ๊อบส่งของใหม่ส่งมาถึงพนักงานคนนี้ไหม
+      db.ref('delivery_jobs/' + todayStr).on('value', (snap) => {
+        const obj = snap.val() || {};
+        let myNewJobsCount = 0;
+        Object.keys(obj).forEach(k => {
+          let j = obj[k];
+          if (String(j.driverId) === String(currentUser.empId) && String(j.status || '').includes('รอจัดส่ง')) {
+            myNewJobsCount++;
+          }
+        });
+
+        if (!isInitialLoadEmpJobs && myNewJobsCount > 0) {
+          playNotificationSound();
+          showModal("📦 มีงานส่งของใหม่!", `คุณได้รับมอบหมายจ๊อบส่งของใหม่วันนี้ (${myNewJobsCount} ร้าน)\nกรุณาตรวจสอบที่เมนู "งานส่งของของฉันวันนี้"`, `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ไปที่งานของฉัน</button>`);
+        }
+        isInitialLoadEmpJobs = false;
+      });
+
+      // ดักฟังสถานะใบลา / เบิกเงิน ว่าแอดมินอนุมัติหรือยัง
+      db.ref('leaves').on('value', (snap) => {
+        const obj = snap.val() || {};
+        Object.keys(obj).forEach(k => {
+          let l = obj[k];
+          if (String(l.empId) === String(currentUser.empId) && String(l.status || '').includes('อนุมัติแล้ว')) {
+            // เช็กว่าเพิ่งเปลี่ยนสถานะเป็นอนุมัติ
+          }
+        });
       });
     }
 
@@ -650,6 +690,7 @@
           localStorage.setItem('app_user_data', JSON.stringify(currentUser));
           localStorage.removeItem('app_is_admin');
           showDashboard();
+          startEmployeeNotificationListener();
         } else {
           statusDiv.innerHTML = "❌ รหัสเข้าใช้งาน หรือ PIN ไม่ถูกต้อง!";
         }
@@ -3121,7 +3162,6 @@
 
     initApp();
 
-    // ฟังก์ชันสำหรับรับรูปที่พนักงานถ่าย แล้วส่งไปยัง Google Apps Script เพื่ออัปขึ้น Google Drive
     function uploadDeliveryPhotoToDrive(event, jobKey, customerName) {
       const file = event.target.files[0];
       if (!file) return;
