@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-5">
+  <link rel="manifest" href="manifest.json?v=20260809-6">
   <meta name="theme-color" content="#16a34a">
 
   <!-- สคริปต์บังคับอัปเดต Service Worker ทันทีเมื่อเข้าเว็บ -->
@@ -310,6 +310,14 @@
     let currentLang = 'TH';
     let currentUser = null;
     let isAdmin = false;
+
+    // ระบบอุดรอยรั่ว: ตรวจจับเมื่อผู้ใช้สลับกลับมาเปิดแอปจากหน้าจอโฮม ให้รีเฟรชหน้าเว็บอัตโนมัติทันที
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        console.log("App resumed, reloading for fresh data...");
+        window.location.reload();
+      }
+    });
 
     function playNotificationSound() {
       try {
