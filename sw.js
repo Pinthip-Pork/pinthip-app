@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pinthip-cache-v20260809-6';
+const CACHE_NAME = 'pinthip-cache-v20260809-5';
 
 // ติดตั้ง Service Worker ใหม่และข้ามสถานะรอ (Skip Waiting) ทันที
 self.addEventListener('install', (event) => {
