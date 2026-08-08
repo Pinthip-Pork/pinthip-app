@@ -3,8 +3,8 @@
 <head>
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
-  <!-- เรียกใช้งาน Manifest -->
-  <link rel="manifest" href="manifest.json?v=20260809-3">
+  <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
+  <link rel="manifest" href="manifest.json?v=20260809-5">
   <meta name="theme-color" content="#16a34a">
 
   <!-- สคริปต์บังคับอัปเดต Service Worker ทันทีเมื่อเข้าเว็บ -->
@@ -369,7 +369,7 @@
         pageTitleClockIn: "📍 ลงเวลาเข้า-ออกงาน",
         pageTitleLeave: "🌴 แบบฟอร์มขอลางาน",
         pageTitleFuel: "⛽ แจ้งเบิกค่าน้ำมัน / ค่าซ่อมรถ",
-        pageTitleHistory: "📜 ประวัติการมาทำงาน",
+        pageTitleHistory: "📜 ประวัติการมาทำงานของฉัน",
         listTitle: "📊 สถานะพนักงานวันนี้:",
         loadingText: "กำลังโหลดข้อมูล...",
         phEmpId: "รหัสเข้าใช้งาน (4 หลัก)",
@@ -1362,7 +1362,6 @@
           
           let viewPhotoLink = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปที่แนบไว้แล้ว</a>` : '<span style="color:#888; font-size:12px;">(ยังไม่มีรูปแนบ)</span>';
 
-          // ถ้าส่งแล้ว ปุ่มกดส่งจะถูก Disable (กดซ้ำไม่ได้) และขึ้นสถานะล็อก
           let actionBtnHtml = isCompleted 
             ? `<button class="btn-clock" style="margin:0; padding:10px; font-size:14px; flex:1;" disabled>✅ ส่งเรียบร้อยแล้ว</button>`
             : `<button class="btn-clock" style="margin:0; padding:10px; font-size:14px; flex:1;" onclick="driverMarkAsDelivered('${j.key}')">✅ กดส่งของแล้ว</button>`;
@@ -3089,24 +3088,87 @@
       const t = i18n[currentLang];
       document.getElementById('pageTitle').innerText = t.pageTitleHistory;
       document.getElementById('listBox').style.display = "none";
-      
-      db.ref('logs').once('value', (logSnap) => {
-        const logsObj = logSnap.val() || {};
-        let myLogs = [];
-        Object.keys(logsObj).forEach(k => {
-          if (String(logsObj[k].empId) === String(currentUser.empId)) myLogs.push(logsObj[k]);
-        });
+      document.getElementById('status').innerHTML = i18n[currentLang].checking;
 
-        let html = `<div class="user-banner">${currentUser.empName}</div>`;
-        if (myLogs.length === 0) {
-          html += `<div style="color:#888;">ยังไม่มีประวัติ</div>`;
-        } else {
-          myLogs.slice().reverse().forEach(item => {
-            html += `<div class="history-item">📅 ${item.date} | ⏰ ${item.time} น. (${item.type})</div>`;
+      db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+        const globalLateTime = settingsSnap.val() || "08:00";
+
+        db.ref('logs').once('value', (logSnap) => {
+          const logsObj = logSnap.val() || {};
+          let presentDays = 0;
+          let lateRecords = [];
+
+          Object.keys(logsObj).forEach(k => {
+            let item = logsObj[k];
+            if (String(item.empId) === String(currentUser.empId) && item.type === "เข้างาน") {
+              presentDays++;
+              if (item.time > globalLateTime) {
+                lateRecords.push(item);
+              }
+            }
           });
-        }
-        html += `<button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>`;
-        document.getElementById('mainContent').innerHTML = html;
+
+          db.ref('leaves').once('value', (leaveSnap) => {
+            const leavesObj = leaveSnap.val() || {};
+            let leaveCount = 0;
+            let leaveRecords = [];
+
+            Object.keys(leavesObj).forEach(k => {
+              let item = leavesObj[k];
+              let statusStr = String(item.status || '');
+              if (String(item.empId) === String(currentUser.empId) && statusStr.includes('อนุมัติ')) {
+                leaveCount++;
+                leaveRecords.push(item);
+              }
+            });
+
+            document.getElementById('status').innerHTML = "";
+
+            let html = `
+              <div class="user-banner">👤 ${currentUser.empName} (${currentUser.empId})</div>
+              
+              <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                <div class="stat-box" style="background:#e8f5e9; color:#2e7d32; padding: 12px; border-radius: 10px; flex:1;">
+                  มาทำงานรวม<br><b style="font-size:20px;">${presentDays}</b> วัน
+                </div>
+                <div class="stat-box" style="background:#fff3cd; color:#856404; padding: 12px; border-radius: 10px; flex:1;">
+                  มาสาย<br><b style="font-size:20px;">${lateRecords.length}</b> ครั้ง
+                </div>
+                <div class="stat-box" style="background:#e2e3e5; color:#383d41; padding: 12px; border-radius: 10px; flex:1;">
+                  ลางาน<br><b style="font-size:20px;">${leaveCount}</b> วัน
+                </div>
+              </div>
+            `;
+
+            if (lateRecords.length > 0 || leaveRecords.length > 0) {
+              html += `<div style="text-align:left; font-weight:bold; margin: 15px 0 5px 0; color:#495057;">📌 รายละเอียดวันมาสาย หรือ วันลา:</div>`;
+
+              lateRecords.slice().reverse().forEach(item => {
+                html += `
+                  <div class="history-item" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                    ⏰ <b>มาสาย</b> วันที่: ${item.date} (เวลาสแกน: <b style="color:#d9534f;">${item.time} น.</b>)<br>
+                    <span style="font-size:12px; color:#555;">เกณฑ์เวลาเข้างาน: ${globalLateTime} น.</span>
+                  </div>
+                `;
+              });
+
+              leaveRecords.slice().reverse().forEach(item => {
+                html += `
+                  <div class="history-item" style="background: #e2e3e5; border-left: 4px solid #6c757d;">
+                    🌴 <b>${item.leaveType}</b> (${item.status})<br>
+                    📅 วันที่: ${item.startDate} ถึง ${item.endDate}<br>
+                    💬 เหตุผล: ${item.reason}
+                  </div>
+                `;
+              });
+            } else {
+              html += `<div style="color: #28a745; background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 15px; font-weight: bold;">🎉 ยอดเยี่ยม! คุณไม่เคยมาสายและไม่มีประวัติการลาเลย</div>`;
+            }
+
+            html += `<button class="btn-back" onclick="showDashboard()" style="margin-top:15px;">${t.btnBack}</button>`;
+            document.getElementById('mainContent').innerHTML = html;
+          });
+        });
       });
     }
 
