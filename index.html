@@ -7,30 +7,6 @@
   <link rel="manifest" href="manifest.json?v=20260809-8">
   <meta name="theme-color" content="#16a34a">
 
-  <!-- สคริปต์บังคับอัปเดต Service Worker ทันทีเมื่อเข้าเว็บ -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((reg) => {
-            console.log('Service Worker Registered', reg);
-            reg.onupdatefound = () => {
-              const installingWorker = reg.installing;
-              installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    console.log('New content is available; please refresh.');
-                    window.location.reload();
-                  }
-                }
-              };
-            };
-          })
-          .catch((err) => console.log('Service Worker Failed', err));
-      });
-    }
-  </script>
-
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
