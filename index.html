@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-9">
+  <link rel="manifest" href="manifest.json?v=20260809-10">
   <meta name="theme-color" content="#16a34a">
 
   <base target="_top">
@@ -1221,7 +1221,7 @@
         return;
       }
 
-      db.ref('customers').push().set({ name, phone, address, addedBy: 'Admin' }, (err) => {
+      db.ref('customers').push().set({ name, phone, address, addedBy: 'Admin', regularDriverId: 'ALL' }, (err) => {
         if (!err) {
           showCustomerManagementPanel();
         }
@@ -1527,7 +1527,7 @@
     }
 
     // ==========================================
-    // ฟังก์ชันฝั่งพนักงานขับรถ: จัดการจ๊อบ + เพิ่มร้านเอง + ลูกค้าประจำ
+    // ฟังก์ชันฝั่งพนักงานขับรถ: เพิ่มร้านเอง + ลูกค้าประจำแบบ Multi-select
     // ==========================================
     function showDriverMyJobsView() {
       const t = i18n[currentLang];
@@ -1540,28 +1540,21 @@
         
         <!-- แผงให้พนักงานเพิ่มร้านค้า/สถานที่ส่งของเอง -->
         <div style="background: #eef2f5; border: 2px dashed #0d6efd; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
-          <b>➕ เพิ่มร้านค้า/สถานที่ส่งของใหม่ (เพิ่มเข้าจ๊อบทันที):</b>
+          <b>➕ เพิ่มร้านค้า/สถานที่ส่งของใหม่ (เข้าสู่ระบบ):</b>
           <input type="text" id="driverNewCustName" placeholder="ชื่อร้านค้า / ลูกค้า" style="margin-top:6px; font-weight:bold;">
           <input type="text" id="driverNewCustPhone" placeholder="เบอร์โทรศัพท์ (ถ้ามี)" style="margin-top:4px;">
           <input type="text" id="driverNewCustZone" placeholder="โซน / ที่อยู่ (เช่น ตลาดสดโซน B)" style="margin-top:4px;">
           
-          <label style="display:flex; align-items:center; gap:6px; margin:6px 0; font-size:13px; font-weight:bold; cursor:pointer;">
-            <input type="checkbox" id="driverSaveAsRegular" style="width:16px; height:16px; margin:0;" checked> 
-            📌 บันทึกเป็น "ลูกค้าประจำของฉัน" ไว้เลือกส่งรอบหน้า
-          </label>
-
-          <button class="btn-blue" onclick="driverAddNewCustomerAndJob()" style="margin-top:6px; font-size:14px; padding:10px;">💾 เพิ่มร้านใหม่ & ใส่ในจ๊อบวันนี้</button>
+          <button class="btn-blue" onclick="driverAddNewCustomerOnly()" style="margin-top:6px; font-size:14px; padding:10px;">💾 บันทึกเก็บไว้เป็นลูกค้าประจำของฉัน</button>
         </div>
 
-        <!-- แผงเลือกจากลูกค้าประจำของฉัน (Quick Add) -->
+        <!-- แผงเลือกจากลูกค้าประจำของฉัน (Multi-select Batch Add) -->
         <div style="background: #f8f9fa; border: 1px solid #ced4da; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
-          <b>⭐ เลือกจาก "ลูกค้าประจำของฉัน":</b>
-          <div style="display:flex; gap:6px; margin-top:6px;">
-            <select id="driverRegularCustSelect" style="margin:0; font-size:13px;">
-              <option value="">-- โหลดรายชื่อลูกค้าประจำ --</option>
-            </select>
-            <button class="btn-fuel" onclick="driverAddJobFromRegularList()" style="width:auto; margin:0; padding:8px 12px; font-size:13px;">➕ ดึงไปส่งวันนี้</button>
+          <b>⭐ เลือกจาก "ลูกค้าประจำของฉัน" (ติ๊กเลือกหลายร้านพร้อมกัน):</b>
+          <div style="max-height: 180px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; border-radius: 8px; background: #fff; margin-top:6px;" id="driverRegularCustCheckboxContainer">
+            <span style="color:#888; font-size:13px;">กำลังโหลดรายชื่อลูกค้าประจำ...</span>
           </div>
+          <button class="btn-fuel" onclick="driverAddMultipleJobsFromRegular()" style="margin-top:8px; font-size:14px; padding:10px;">➕ ดึงร้านที่เลือกไปส่งวันนี้ทั้งหมด</button>
         </div>
 
         <h3>📦 รายการจ๊อบส่งของวันนี้:</h3>
@@ -1569,7 +1562,7 @@
         <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
       `;
       document.getElementById('mainContent').innerHTML = html;
-      loadDriverRegularCustomersDropdown();
+      loadDriverRegularCustomersCheckboxes();
 
       db.ref('delivery_jobs/' + todayStr).on('value', (snapshot) => {
         const jobsObj = snapshot.val() || {};
@@ -1584,7 +1577,7 @@
         });
 
         if (myList.length === 0) {
-          container.innerHTML = `<div style="color:#888; text-align:center; padding:20px;">🎉 วันนี้คุณยังไม่มีจ๊อบส่งของที่ได้รับมอบหมาย (สามารถเพิ่มร้านเองด้านบนได้เลย)</div>`;
+          container.innerHTML = `<div style="color:#888; text-align:center; padding:20px;">🎉 วันนี้คุณยังไม่มีจ๊อบส่งของ (สามารถติ๊กเลือกจากลูกค้าประจำด้านบนได้เลย)</div>`;
           return;
         }
 
@@ -1633,90 +1626,90 @@
       });
     }
 
-    function loadDriverRegularCustomersDropdown() {
-      const select = document.getElementById('driverRegularCustSelect');
-      if (!select) return;
+    function loadDriverRegularCustomersCheckboxes() {
+      const container = document.getElementById('driverRegularCustCheckboxContainer');
+      if (!container) return;
 
       db.ref('customers').once('value', (snapshot) => {
         const custObj = snapshot.val() || {};
-        let options = `<option value="">-- เลือกลูกค้าประจำของฉัน --</option>`;
-        
+        let myCustomers = [];
+
         Object.keys(custObj).forEach(k => {
           let c = custObj[k];
-          // เงื่อนไข: เป็นลูกค้าที่ถูกบันทึกโดยพนักงานคนนี้ หรือถูกเพิ่มเป็นลูกค้าประจำ
-          if (c.regularDriverId === currentUser.empId || c.addedBy === currentUser.empName) {
-            options += `<option value="${c.name}">🏬 ${c.name} (${c.address || 'ลูกค้าประจำ'})</option>`;
+          // เงื่อนไข: แสดงเฉพาะลูกค้าที่ผูกกับคนขับคนนี้โดยตรง หรือเป็นลูกค้ากลางที่แอดมินเพิ่ม (regularDriverId === 'ALL')
+          if (c.regularDriverId === currentUser.empId || c.regularDriverId === 'ALL' || c.addedBy === currentUser.empName) {
+            myCustomers.push(c);
           }
         });
 
-        // หากยังไม่มีลูกค้าประจำเฉพาะตัว ให้โชว์ลูกค้าทั้งหมดในระบบเป็นทางเลือกด้วย
-        if (options === `<option value="">-- เลือกลูกค้าประจำของฉัน --</option>`) {
-          Object.keys(custObj).forEach(k => {
-            let c = custObj[k];
-            options += `<option value="${c.name}">🏬 ${c.name} (${c.address || 'ทั่วไป'})</option>`;
-          });
+        if (myCustomers.length === 0) {
+          container.innerHTML = `<span style="color:#888; font-size:13px; font-style:italic;">ยังไม่มีลูกค้าประจำ (สามารถเพิ่มร้านใหม่ด้านบนได้เลย)</span>`;
+          return;
         }
 
-        select.innerHTML = options;
+        let html = '';
+        myCustomers.forEach(c => {
+          html += `
+            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:14px; background:#fff; padding:6px 8px; border-radius:6px; border:1px solid #e9ecef; cursor:pointer;">
+              <input type="checkbox" class="driver-cust-checkbox" value="${c.name}" style="width:18px; height:18px; margin:0;">
+              <span>🏬 ${c.name} (${c.address || 'ลูกค้าประจำ'})</span>
+            </label>
+          `;
+        });
+        container.innerHTML = html;
       });
     }
 
-    function driverAddJobFromRegularList() {
-      const select = document.getElementById('driverRegularCustSelect');
-      const custName = select.value;
-      if (!custName) {
-        alert("กรุณาเลือกลูกค้าจากรายชื่อก่อน");
+    function driverAddMultipleJobsFromRegular() {
+      const checkboxes = document.querySelectorAll('.driver-cust-checkbox:checked');
+      let selectedCusts = [];
+      checkboxes.forEach(cb => selectedCusts.push(cb.value));
+
+      if (selectedCusts.length === 0) {
+        alert("กรุณาติ๊กเลือกร้านค้าอย่างน้อย 1 ร้าน");
         return;
       }
 
       const todayStr = getLocalDateTimeString();
-      db.ref('delivery_jobs/' + todayStr).push().set({
-        driverId: currentUser.empId,
-        driverName: currentUser.empName,
-        customerName: custName,
-        status: "รอจัดส่ง ⏳",
-        deliveredTime: "-"
-      }, (err) => {
-        if (!err) {
-          select.value = "";
-        }
+      const jobsRef = db.ref('delivery_jobs/' + todayStr);
+
+      selectedCusts.forEach(custName => {
+        jobsRef.push({
+          driverId: currentUser.empId,
+          driverName: currentUser.empName,
+          customerName: custName,
+          status: "รอจัดส่ง ⏳",
+          deliveredTime: "-"
+        });
       });
+
+      showModal("🎉 สำเร็จ", `ดึงรายชื่อลูกค้า ${selectedCusts.length} ร้าน มาเป็นจ๊อบส่งของวันนี้เรียบร้อย`, `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ตกลง</button>`);
     }
 
-    function driverAddNewCustomerAndJob() {
+    function driverAddNewCustomerOnly() {
       const name = document.getElementById('driverNewCustName').value.trim();
       const phone = document.getElementById('driverNewCustPhone').value.trim();
       const address = document.getElementById('driverNewCustZone').value.trim();
-      const saveAsRegular = document.getElementById('driverSaveAsRegular').checked;
 
       if (!name) {
         alert("กรุณากรอกชื่อร้านค้าหรือลูกค้าใหม่");
         return;
       }
 
-      // 1. บันทึกลงฐานข้อมูลลูกค้ากลาง (customers) และผูกว่าเป็นลูกค้าประจำของคนขับคนนี้
+      // บันทึกลงฐานข้อมูลกลาง และผูกว่าเป็นลูกค้าประจำของพนักงานคนนี้โดยเฉพาะ (จะไม่ไปปะปนกับคนอื่น)
       db.ref('customers').push().set({
         name: name,
         phone: phone,
         address: address || 'เพิ่มโดยพนักงาน',
         addedBy: currentUser.empName,
-        regularDriverId: saveAsRegular ? currentUser.empId : ""
-      });
-
-      // 2. เพิ่มเข้าจ๊อบส่งของวันนี้ทันที
-      const todayStr = getLocalDateTimeString();
-      db.ref('delivery_jobs/' + todayStr).push().set({
-        driverId: currentUser.empId,
-        driverName: currentUser.empName,
-        customerName: name,
-        status: "รอจัดส่ง ⏳",
-        deliveredTime: "-"
+        regularDriverId: currentUser.empId
       }, (err) => {
         if (!err) {
           document.getElementById('driverNewCustName').value = '';
           document.getElementById('driverNewCustPhone').value = '';
           document.getElementById('driverNewCustZone').value = '';
-          loadDriverRegularCustomersDropdown();
+          loadDriverRegularCustomersCheckboxes();
+          alert("บันทึกเป็นลูกค้าประจำของคุณเรียบร้อย!");
         }
       });
     }
