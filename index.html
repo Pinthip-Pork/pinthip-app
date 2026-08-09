@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-6">
+  <link rel="manifest" href="manifest.json?v=20260809-7">
   <meta name="theme-color" content="#16a34a">
 
   <!-- สคริปต์บังคับอัปเดต Service Worker ทันทีเมื่อเข้าเว็บ -->
@@ -68,7 +68,7 @@
     }
 
     .card.admin-wide {
-      max-width: 950px !important;
+      max-width: 1150px !important;
     }
 
     .top-bar {
@@ -203,6 +203,40 @@
       padding-bottom: 8px;
     }
 
+    /* สไตล์สำหรับหน้าศูนย์บัญชาการเบ็ดเสร็จ (Command Center 3 Columns) */
+    .command-center-container {
+      display: grid;
+      grid-template-columns: 280px 1fr 1fr;
+      gap: 15px;
+      text-align: left;
+    }
+    @media (max-width: 900px) {
+      .command-center-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .command-column {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 12px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .command-column h3 {
+      margin-top: 0;
+      font-size: 15px;
+      color: #2c3e50;
+      border-bottom: 2px solid #0d6efd;
+      padding-bottom: 8px;
+      position: sticky;
+      top: 0;
+      background: #f8f9fa;
+      z-index: 10;
+    }
+
     .drawer-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
     .drawer-menu { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: white; z-index: 1000; box-shadow: 5px 0 15px rgba(0,0,0,0.2); transition: left 0.3s ease; display: flex; flex-direction: column; box-sizing: border-box; padding: 20px; text-align: left; overflow-y: auto; }
     .drawer-menu.open { left: 0; }
@@ -266,6 +300,7 @@
       <span onclick="toggleDrawer(false)" style="cursor:pointer; font-size:22px;">&times;</span>
     </div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()">🏠 แดสบอร์ดภาพรวม</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()">⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Center)</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()">📦 จัดการ & มอบหมายจ๊อบส่งของ</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()">📜 ประวัติการส่งของย้อนหลัง</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showCustomerManagementPanel()">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</div>
@@ -826,6 +861,11 @@
                 </div>
               </div>
 
+              <!-- ปุ่มทางลัดสู่หน้าศูนย์บัญชาการเบ็ดเสร็จ -->
+              <div style="margin-bottom: 15px;">
+                <button class="btn-fuel" onclick="showAdminCommandCenter()" style="padding: 16px; font-size: 17px; background: linear-gradient(135deg, #0d6efd, #6f42c1) !important;">⚡ เปิดหน้าศูนย์บัญชาการเบ็ดเสร็จ (Live Command Center)</button>
+              </div>
+
               <div class="dashboard-grid">
                 <div class="dashboard-box">
                   <div>
@@ -885,6 +925,186 @@
         });
       });
     }
+
+    // ==========================================
+    // ฟังก์ชันสำหรับหน้า "ศูนย์บัญชาการเบ็ดเสร็จ (Live Command Center)"
+    // ==========================================
+    function showAdminCommandCenter() {
+      isAdmin = true;
+      document.getElementById('mainCard').classList.add('admin-wide');
+      document.getElementById('hamburgerBtn').style.display = 'block';
+      document.getElementById('bellBtn').style.display = 'block';
+      document.getElementById('pageTitle').innerText = "⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Command Center)";
+      document.getElementById('listBox').style.display = "none";
+      document.getElementById('status').innerHTML = i18n[currentLang].checking;
+
+      const todayStr = getLocalDateTimeString();
+
+      const html = `
+        <div class="user-banner" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>👑 ศูนย์บัญชาการ Real-time ประจำวันที่: <b>${todayStr}</b></span>
+          <button class="btn-blue" onclick="showAdminCommandCenter()" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">🔄 รีเฟรชข้อมูลสด</button>
+        </div>
+
+        <div class="command-center-container">
+          <!-- โซนซ้าย: สรุปภาพรวมด่วน (KPIs) -->
+          <div class="command-column">
+            <h3>📊 สรุปกำลังพลวันนี้</h3>
+            <div id="ccSummaryStats" style="margin-top:10px;">กำลังโหลด...</div>
+            
+            <h3 style="margin-top:20px;">⚡ เมนูด่วนแอดมิน</h3>
+            <button class="btn-fuel" onclick="showAdminJobAssignPanel()" style="font-size:13px; padding:10px;">📦 จัดการจ๊อบส่งของ</button>
+            <button class="btn-blue" onclick="showAdminFuelRequests()" style="font-size:13px; padding:10px; margin-top:5px;">⛽ อนุมัติเบิกค่าน้ำมัน</button>
+            <button class="btn-orange" onclick="showAdminLeaves()" style="font-size:13px; padding:10px; margin-top:5px;">🌴 อนุมัติใบลา</button>
+          </div>
+
+          <!-- โซนกลาง: สถานะพนักงานมาทำงาน (Attendance Live) -->
+          <div class="command-column">
+            <h3>👥 สถานะพนักงานวันนี้ (Live)</h3>
+            <div id="ccAttendanceList" style="margin-top:10px;">กำลังโหลด...</div>
+          </div>
+
+          <!-- โซนขวา: สถานะการส่งของ (Delivery Live Tracking) -->
+          <div class="command-column">
+            <h3>🚚 ติดตามการส่งของ (Live Tracking)</h3>
+            <div id="ccDeliveryList" style="margin-top:10px;">กำลังโหลด...</div>
+          </div>
+        </div>
+
+        <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:20px;">⬅️ กลับหน้าแดสบอร์ดหลัก</button>
+      `;
+
+      document.getElementById('mainContent').innerHTML = html;
+      loadCommandCenterData(todayStr);
+    }
+
+    function loadCommandCenterData(todayStr) {
+      db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+        const globalLateTime = settingsSnap.val() || "08:00";
+
+        db.ref('employees').once('value', (empSnap) => {
+          const empObj = empSnap.val() || {};
+          let allEmployees = [];
+          Object.keys(empObj).forEach(k => allEmployees.push(empObj[k]));
+
+          db.ref('logs').once('value', (logSnap) => {
+            const logsObj = logSnap.val() || {};
+            let checkedInList = [];
+            Object.keys(logsObj).forEach(k => {
+              if (logsObj[k].date === todayStr && logsObj[k].type === "เข้างาน") {
+                checkedInList.push(logsObj[k]);
+              }
+            });
+
+            db.ref('leaves').once('value', (leaveSnap) => {
+              const leavesObj = leaveSnap.val() || {};
+              let approvedLeavesToday = [];
+              Object.keys(leavesObj).forEach(k => {
+                let l = leavesObj[k];
+                let statusStr = String(l.status || '');
+                if (statusStr.includes('อนุมัติแล้ว') && l.startDate <= todayStr && l.endDate >= todayStr) {
+                  approvedLeavesToday.push(l);
+                }
+              });
+
+              let leaveList = [];
+              let presentList = [];
+              let lateList = [];
+              let absentList = [];
+
+              allEmployees.forEach(emp => {
+                const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
+                const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
+
+                if (leave) {
+                  leaveList.push({ emp, leave });
+                } else if (present) {
+                  if (present.time > globalLateTime) {
+                    lateList.push({ emp, present });
+                  } else {
+                    presentList.push({ emp, present });
+                  }
+                } else {
+                  absentList.push({ emp });
+                }
+              });
+
+              let totalPresent = presentList.length + lateList.length;
+
+              // เรนเดอร์โซนซ้าย (Summary Stats)
+              document.getElementById('ccSummaryStats').innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
+                  <div style="background:#e8f5e9; color:#2e7d32; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
+                    <span>🟢 มาทำงาน:</span> <b>${totalPresent} คน</b>
+                  </div>
+                  <div style="background:#fff3cd; color:#856404; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
+                    <span>⏰ มาสาย:</span> <b>${lateList.length} คน</b>
+                  </div>
+                  <div style="background:#fff3cd; color:#856404; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
+                    <span>🌴 ลางาน:</span> <b>${leaveList.length} คน</b>
+                  </div>
+                  <div style="background:#ffebee; color:#c62828; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
+                    <span>🔴 ยังไม่เช็กอิน:</span> <b>${absentList.length} คน</b>
+                  </div>
+                </div>
+              `;
+
+              // เรนเดอร์โซนกลาง (Attendance List)
+              let attHtml = '';
+              leaveList.forEach(item => {
+                attHtml += `<div class="emp-tag-leave" style="font-size:12px;"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
+              });
+              presentList.forEach(item => {
+                attHtml += `<div class="emp-tag-present" style="font-size:12px;"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
+              });
+              lateList.forEach(item => {
+                attHtml += `<div class="emp-tag-late" style="font-size:12px;"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time}</b></span></div>`;
+              });
+              absentList.forEach(item => {
+                attHtml += `<div class="emp-tag-absent" style="font-size:12px;"><span>🔴 ${item.emp.empName}</span><span>ยังไม่สแกน</span></div>`;
+              });
+              document.getElementById('ccAttendanceList').innerHTML = attHtml;
+
+              // โหลดโซนขวาต่อ (Delivery Jobs Live)
+              db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
+                document.getElementById('status').innerHTML = "";
+                const jobsObj = jobSnap.val() || {};
+                let jobList = [];
+                Object.keys(jobsObj).forEach(k => jobList.push({ key: k, ...jobsObj[k] }));
+
+                let delivHtml = '';
+                if (jobList.length === 0) {
+                  delivHtml = `<div style="color:#888; font-size:13px; text-align:center; padding:15px;">ยังไม่มีการมอบหมายจ๊อบส่งของวันนี้</div>`;
+                } else {
+                  let completedCount = jobList.filter(j => String(j.status).includes('สำเร็จ')).length;
+                  delivHtml += `<div style="font-size:13px; font-weight:bold; margin-bottom:8px; color:#495057;">ส่งสำเร็จแล้ว: ${completedCount} / ${jobList.length} ร้าน</div>`;
+
+                  jobList.forEach(j => {
+                    let isCompleted = String(j.status).includes('สำเร็จ');
+                    let badgeColor = isCompleted ? '#28a745' : '#e67e22';
+                    let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#0d6efd; font-size:11px; text-decoration:underline;">ดูรูปหลักฐาน</a>` : '';
+
+                    delivHtml += `
+                      <div class="history-item" style="border-left: 4px solid ${badgeColor}; padding:8px; margin:6px 0;">
+                        <b>🚚 ${j.driverName}</b><br>
+                        🏬 ร้าน: <b>${j.customerName}</b><br>
+                        <span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span> ${viewPhotoBtn}<br>
+                        <div style="margin-top:4px; display:flex; gap:4px;">
+                          <button class="btn-blue" style="width:auto; margin:0; padding:2px 6px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}'); showAdminCommandCenter();">🔄 สลับสถานะ</button>
+                        </div>
+                      </div>
+                    `;
+                  });
+                }
+                document.getElementById('ccDeliveryList').innerHTML = delivHtml;
+              });
+
+            });
+          });
+        });
+      });
+    }
+    // ==========================================
 
     function showAdminDeliveryHistory() {
       isAdmin = true;
@@ -1317,7 +1537,12 @@
         deliveredTime: timeStr
       }, (err) => {
         if (!err) {
-          showAdminJobAssignPanel();
+          // ถ้าอยู่หน้า Command Center ให้รีเฟรชหน้าคอมมานด์ด้วย
+          if (document.getElementById('pageTitle').innerText.includes('ศูนย์บัญชาการ')) {
+            showAdminCommandCenter();
+          } else {
+            showAdminJobAssignPanel();
+          }
         }
       });
     }
