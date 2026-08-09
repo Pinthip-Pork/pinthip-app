@@ -836,7 +836,7 @@
               </div>
 
               <div style="margin-bottom: 15px;">
-                <button class="btn-fuel" onclick="showAdminCommandCenter()" style="padding: 16px; font-size: 17px; background: linear-gradient(135deg, #0d6efd, #6f42c1) !important;">⚡ เปิดหน้าศูนย์บัญชาการเบ็ดเสร็จ (Live Command Center)</button>
+                <button class="btn-fuel" onclick="showAdminCommandCenter()" style="padding: 16px; font-size: 17px; background: linear-gradient(135deg, #0d6efd, #6f42c1) !important;">DASHBORD สถานะพนักงานปิ่นทิพย์</button>
               </div>
 
               <div class="dashboard-grid">
@@ -904,7 +904,7 @@
       document.getElementById('mainCard').classList.add('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'block';
       document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Command Center)";
+      document.getElementById('pageTitle').innerText = "DASHBORD สถานะพนักงานปิ่นทิพย์";
       document.getElementById('listBox').style.display = "none";
       document.getElementById('status').innerHTML = i18n[currentLang].checking;
 
@@ -912,13 +912,13 @@
 
       const html = `
         <div class="user-banner" style="display:flex; justify-content:space-between; align-items:center;">
-          <span>👑 ศูนย์บัญชาการ Real-time ประจำวันที่: <b>${todayStr}</b></span>
+          <span>DASHBORD Real-Time ประจำวันที่: <b>${todayStr}</b></span>
           <button class="btn-blue" onclick="showAdminCommandCenter()" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">🔄 รีเฟรชข้อมูลสด</button>
         </div>
 
         <div class="command-center-container">
           <div class="command-column">
-            <h3>📊 สรุปกำลังพลวันนี้</h3>
+            <h3>📊 สรุปพนักงานมาทำงานวันนี้</h3>
             <div id="ccSummaryStats" style="margin-top:10px;">กำลังโหลด...</div>
             
             <h3 style="margin-top:20px;">⚡ เมนูด่วนแอดมิน</h3>
