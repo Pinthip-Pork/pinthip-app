@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-12">
+  <link rel="manifest" href="manifest.json?v=20260809-13">
   <meta name="theme-color" content="#16a34a">
 
   <base target="_top">
@@ -230,7 +230,6 @@
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
     .modal-box { background: white; padding: 22px; border-radius: 16px; max-width: 340px; width: 90%; box-shadow: 0 5px 20px rgba(0,0,0,0.2); box-sizing: border-box; text-align: left; }
     
-    /* ขยายขนาด Modal สำหรับ Popup เมนูด่วนแอดมิน */
     .modal-box.modal-wide {
       max-width: 900px !important;
       width: 95% !important;
@@ -252,7 +251,6 @@
     .btn-no { background: linear-gradient(135deg, #dc3545, #e83e8c) !important; color: white; }
     .btn-ok { background-color: #0d6efd; width: 100%; margin: 0 !important; padding: 12px 0; font-size: 16px; border-radius: 8px; }
 
-    /* Pull-to-Refresh Indicator Styling */
     #pullRefreshIndicator {
       position: absolute;
       top: -45px;
@@ -270,7 +268,6 @@
 </head>
 <body>
 
-  <!-- Pull-to-Refresh Indicator -->
   <div id="pullRefreshIndicator">⬇️ ดึงลงเพื่อรีเฟรช...</div>
 
   <div class="card" id="mainCard">
@@ -300,7 +297,6 @@
     </div>
   </div>
 
-  <!-- เมนู 3 ขีด (Slide Drawer สำหรับ Admin) -->
   <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer(false)"></div>
   <div class="drawer-menu" id="drawerMenu">
     <div class="drawer-header">
@@ -355,7 +351,6 @@
     let currentUser = null;
     let isAdmin = false;
 
-    // ระบบ Pull-to-Refresh (ดึงลงเพื่อรีเฟรชหน้าเว็บ)
     let touchStartY = 0;
     window.addEventListener('touchstart', (e) => {
       if (window.scrollY === 0) {
@@ -982,7 +977,7 @@
       document.getElementById('bellBtn').style.display = 'block';
       document.getElementById('pageTitle').innerText = "DASHBORD สถานะพนักงานปิ่นทิพย์";
       document.getElementById('listBox').style.display = "none";
-      document.getElementById('status').innerHTML = i18n[currentLang].checking;
+      document.getElementById('status').innerHTML = "";
 
       const todayStr = getLocalDateTimeString();
 
@@ -1021,7 +1016,131 @@
       loadCommandCenterData(todayStr);
     }
 
-    // ฟังก์ชันสำหรับเปิด Popup เมนูด่วนแอดมินในหน้าเดียวกัน
+    // ฟังก์ชันโหลดข้อมูลสำหรับศูนย์บัญชาการ (Live Center)
+    function loadCommandCenterData(todayStr) {
+      db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+        const globalLateTime = settingsSnap.val() || "08:00";
+
+        db.ref('employees').once('value', (empSnap) => {
+          const employeesObj = empSnap.val() || {};
+          let allEmployees = [];
+          Object.keys(employeesObj).forEach(k => allEmployees.push(employeesObj[k]));
+
+          db.ref('logs').once('value', (logSnap) => {
+            const logsObj = logSnap.val() || {};
+            let checkedInList = [];
+            Object.keys(logsObj).forEach(k => {
+              if (logsObj[k].date === todayStr && logsObj[k].type === "เข้างาน") {
+                checkedInList.push(logsObj[k]);
+              }
+            });
+
+            db.ref('leaves').once('value', (leaveSnap) => {
+              const leavesObj = leaveSnap.val() || {};
+              let approvedLeavesToday = [];
+              Object.keys(leavesObj).forEach(k => {
+                let l = leavesObj[k];
+                let statusStr = String(l.status || '');
+                if (statusStr.includes('อนุมัติแล้ว') && l.startDate <= todayStr && l.endDate >= todayStr) {
+                  approvedLeavesToday.push(l);
+                }
+              });
+
+              let leaveList = [];
+              let presentList = [];
+              let lateList = [];
+              let absentList = [];
+
+              allEmployees.forEach(emp => {
+                const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
+                const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
+
+                if (leave) {
+                  leaveList.push({ emp, leave });
+                } else if (present) {
+                  if (present.time > globalLateTime) {
+                    lateList.push({ emp, present });
+                  } else {
+                    presentList.push({ emp, present });
+                  }
+                } else {
+                  absentList.push({ emp });
+                }
+              });
+
+              let totalPresentCount = presentList.length + lateList.length;
+
+              // แสดงผลสรุปสถิติด้านซ้าย
+              const summaryContainer = document.getElementById('ccSummaryStats');
+              if (summaryContainer) {
+                summaryContainer.innerHTML = `
+                  <div class="stats-card-container">
+                    <div class="stat-box" style="background:#e8f5e9; color:#2e7d32;">มา<b>${totalPresentCount}</b></div>
+                    <div class="stat-box" style="background:#fff3cd; color:#856404;">ลา<b>${leaveList.length}</b></div>
+                    <div class="stat-box" style="background:#ffebee; color:#c62828;">ไม่มา<b>${absentList.length}</b></div>
+                  </div>
+                  <div style="font-size:12px; color:#555; margin-top:5px;">• พนักงานทั้งหมด: ${allEmployees.length} คน</div>
+                  <div style="font-size:12px; color:#555;">• เกณฑ์เวลามาสาย: หลัง ${globalLateTime} น.</div>
+                `;
+              }
+
+              // แสดงผลสถานะพนักงานตรงกลาง (Live)
+              const attContainer = document.getElementById('ccAttendanceList');
+              if (attContainer) {
+                let htmlAtt = '';
+                leaveList.forEach(item => {
+                  htmlAtt += `<div class="emp-tag-leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
+                });
+                presentList.forEach(item => {
+                  htmlAtt += `<div class="emp-tag-present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
+                });
+                lateList.forEach(item => {
+                  htmlAtt += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b></span></div>`;
+                });
+                absentList.forEach(item => {
+                  htmlAtt += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
+                });
+                attContainer.innerHTML = htmlAtt || '<div class="no-data">ไม่มีข้อมูลพนักงาน</div>';
+              }
+            });
+          });
+
+          // โหลดข้อมูลติดตามการส่งของด้านขวา (Live Tracking)
+          db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
+            const jobsObj = jobSnap.val() || {};
+            const deliveryContainer = document.getElementById('ccDeliveryList');
+            if (!deliveryContainer) return;
+
+            let jobList = [];
+            Object.keys(jobsObj).forEach(k => jobList.push({ key: k, ...jobsObj[k] }));
+
+            if (jobList.length === 0) {
+              deliveryContainer.innerHTML = `<div class="no-data" style="text-align:center; padding:15px;">ยังไม่มีการมอบหมายจ๊อบส่งของในวันนี้</div>`;
+              return;
+            }
+
+            let htmlJob = '';
+            jobList.forEach(j => {
+              let isCompleted = String(j.status).includes('สำเร็จ');
+              let isOnTheWay = String(j.status).includes('กำลังเดินทาง');
+              let badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
+              let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#0d6efd; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">🖼️ ดูรูปหลักฐาน</a>` : '';
+
+              htmlJob += `
+                <div class="history-item" style="border-left: 4px solid ${badgeColor}; margin-bottom:8px;">
+                  <b>🚚 คนขับ: ${j.driverName}</b><br>
+                  🏬 ร้าน: <b>${j.customerName}</b><br>
+                  สถานะ: <span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span>
+                  ${viewPhotoBtn}
+                </div>
+              `;
+            });
+            deliveryContainer.innerHTML = htmlJob;
+          });
+        });
+      });
+    }
+
     function openAdminQuickModal(type) {
       if (type === 'job') {
         openWideModal("📦 จัดการจ๊อบส่งของ", `<div id="quickModalContent" class="modal-body-scroll">กำลังโหลด...</div>`, `<button class="btn-ok" onclick="closeModal(); showAdminCommandCenter();">ปิดหน้าต่าง</button>`);
@@ -1044,7 +1163,6 @@
       document.getElementById('customModal').style.display = 'flex';
     }
 
-    // โหลดเนื้อหา จัดการจ๊อบส่งของ สำหรับ Popup
     function loadQuickJobContent() {
       const todayStr = getLocalDateTimeString();
       db.ref('employees').once('value', (empSnap) => {
@@ -1154,7 +1272,6 @@
       container.innerHTML = html;
     }
 
-    // โหลดเนื้อหา อนุมัติเบิกค่าน้ำมัน/ค่าซ่อม สำหรับ Popup
     function loadQuickFuelContent() {
       db.ref('fuel_requests').once('value', (snapshot) => {
         const fuelObj = snapshot.val() || {};
@@ -1207,7 +1324,6 @@
       });
     }
 
-    // โหลดเนื้อหา อนุมัติใบลา สำหรับ Popup
     function loadQuickLeaveContent() {
       db.ref('leaves').once('value', (snapshot) => {
         const leavesObj = snapshot.val() || {};
