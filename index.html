@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-10">
+  <link rel="manifest" href="manifest.json?v=20260809-11">
   <meta name="theme-color" content="#16a34a">
 
   <base target="_top">
@@ -635,7 +635,7 @@
         }
 
         if (pendingFuelsCache.length > 0) {
-          html += `<div style="font-weight:bold; color:#e67e22; margin-top:10px; margin-bottom:5px;">⛽ รายการเบิกน้ำมัน/ค่าซ่อม (${pendingFuelsCache.length}):</div>`;
+          html += `<div style="font-weight:bold; color:#e67e22; margin-top:10px; margin-bottom:5px;">⛽/🔧 รายการเบิกค่าน้ำมัน/ค่าซ่อม (${pendingFuelsCache.length}):</div>`;
           pendingFuelsCache.forEach(item => {
             let typeLabel = item.requestType || 'เบิกค่าน้ำมัน';
             let plateText = item.carPlate ? `ทะเบียน: ${item.carPlate}` : '';
@@ -803,18 +803,26 @@
           db.ref('fuel_requests').once('value', (fuelSnap) => {
             const fuelObj = fuelSnap.val() || {};
             let pendingFuel = 0;
-            let todayFuelTotal = 0;
+            let todayFuelOnlyTotal = 0;
+            let todayRepairOnlyTotal = 0;
 
             Object.keys(fuelObj).forEach(k => {
               let f = fuelObj[k];
               let statusStr = String(f.status || '');
+              let reqType = f.requestType || 'เบิกค่าน้ำมัน';
               if (statusStr.includes('รออนุมัติ')) pendingFuel++;
               if (f.date === todayStr && (statusStr.includes('อนุมัติแล้ว') || statusStr.includes('อนุมัติ'))) {
-                todayFuelTotal += Number(f.amount || 0);
+                let amt = Number(f.amount || 0);
+                if (reqType.includes('ซ่อม')) {
+                  todayRepairOnlyTotal += amt;
+                } else {
+                  todayFuelOnlyTotal += amt;
+                }
               }
             });
 
-            let grandTotalToday = todaySalaryTotal + todayFuelTotal;
+            let todayFuelAndRepairTotal = todayFuelOnlyTotal + todayRepairOnlyTotal;
+            let grandTotalToday = todaySalaryTotal + todayFuelAndRepairTotal;
 
             const html = `
               <div class="user-banner">👑 ผู้ดูแลระบบ (Admin) | ข้อมูลสรุปประจำวันนี้: <b>${todayStr}</b></div>
@@ -825,9 +833,13 @@
                   <span>• ค่าแรงพนักงานมาทำงานวันนี้ (${presentToday} คน):</span>
                   <b style="color: #333;">${todaySalaryTotal.toLocaleString()} บาท</b>
                 </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 6px;">
+                  <span>• ⛽ ค่าน้ำมันรถส่งของ (อนุมัติแล้ว):</span>
+                  <b style="color: #e67e22;">${todayFuelOnlyTotal.toLocaleString()} บาท</b>
+                </div>
                 <div style="display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 10px;">
-                  <span>• ค่าน้ำมัน/ค่าซ่อมรถเบิกวันนี้ (อนุมัติแล้ว 🟢):</span>
-                  <b style="color: #333;">${todayFuelTotal.toLocaleString()} บาท</b>
+                  <span>• 🔧 ค่าซ่อมรถ / ค่าอะไหล่ (อนุมัติแล้ว):</span>
+                  <b style="color: #d9534f;">${todayRepairOnlyTotal.toLocaleString()} บาท</b>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; color: #212529; border-top: 1px dashed #dee2e6; padding-top: 8px;">
                   <span>💰 รวมจ่ายออกวันนี้ทั้งหมด:</span>
@@ -876,11 +888,11 @@
 
                 <div class="dashboard-box">
                   <div>
-                    <h3>⛽ การเบิกค่าน้ำมัน / ค่าซ่อมรถ</h3>
+                    <h3>⛽/🔧 การเบิกค่าน้ำมัน / ค่าซ่อมรถ</h3>
                     <p>รออนุมัติ: <b style="color:#d9534f;">${pendingFuel}</b> รายการ</p>
                   </div>
                   <div>
-                    <button class="btn-fuel" onclick="showAdminFuelRequests()">⛽ ตรวจสอบ/อนุมัติเบิกจ่าย</button>
+                    <button class="btn-fuel" onclick="showAdminFuelRequests()">⛽/🔧 ตรวจสอบ/อนุมัติเบิกจ่าย</button>
                     <button class="btn-history" onclick="showAdminFuelHistory()" style="margin-top:5px;">📜 ประวัติ & จัดการเบิกจ่าย</button>
                   </div>
                 </div>
@@ -923,7 +935,7 @@
             
             <h3 style="margin-top:20px;">⚡ เมนูด่วนแอดมิน</h3>
             <button class="btn-fuel" onclick="showAdminJobAssignPanel()" style="font-size:13px; padding:10px;">📦 จัดการจ๊อบส่งของ</button>
-            <button class="btn-blue" onclick="showAdminFuelRequests()" style="font-size:13px; padding:10px; margin-top:5px;">⛽ อนุมัติเบิกค่าน้ำมัน</button>
+            <button class="btn-blue" onclick="showAdminFuelRequests()" style="font-size:13px; padding:10px; margin-top:5px;">⛽/🔧 อนุมัติเบิกค่าน้ำมัน/ค่าซ่อม</button>
             <button class="btn-orange" onclick="showAdminLeaves()" style="font-size:13px; padding:10px; margin-top:5px;">🌴 อนุมัติใบลา</button>
           </div>
 
@@ -1526,9 +1538,6 @@
       }
     }
 
-    // ==========================================
-    // ฟังก์ชันฝั่งพนักงานขับรถ: เพิ่มร้านเอง + ลูกค้าประจำแบบ Multi-select
-    // ==========================================
     function showDriverMyJobsView() {
       const t = i18n[currentLang];
       document.getElementById('pageTitle').innerText = "📦 งานส่งของของฉันวันนี้";
@@ -1538,7 +1547,6 @@
       const html = `
         <div class="user-banner">${currentUser.empName} (${currentUser.empId}) | วันที่: ${todayStr}</div>
         
-        <!-- แผงให้พนักงานเพิ่มร้านค้า/สถานที่ส่งของเอง -->
         <div style="background: #eef2f5; border: 2px dashed #0d6efd; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
           <b>➕ เพิ่มร้านค้า/สถานที่ส่งของใหม่ (เข้าสู่ระบบ):</b>
           <input type="text" id="driverNewCustName" placeholder="ชื่อร้านค้า / ลูกค้า" style="margin-top:6px; font-weight:bold;">
@@ -1548,7 +1556,6 @@
           <button class="btn-blue" onclick="driverAddNewCustomerOnly()" style="margin-top:6px; font-size:14px; padding:10px;">💾 บันทึกเก็บไว้เป็นลูกค้าประจำของฉัน</button>
         </div>
 
-        <!-- แผงเลือกจากลูกค้าประจำของฉัน (Multi-select Batch Add) -->
         <div style="background: #f8f9fa; border: 1px solid #ced4da; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
           <b>⭐ เลือกจาก "ลูกค้าประจำของฉัน" (ติ๊กเลือกหลายร้านพร้อมกัน):</b>
           <div style="max-height: 180px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; border-radius: 8px; background: #fff; margin-top:6px;" id="driverRegularCustCheckboxContainer">
@@ -1636,7 +1643,6 @@
 
         Object.keys(custObj).forEach(k => {
           let c = custObj[k];
-          // เงื่อนไข: แสดงเฉพาะลูกค้าที่ผูกกับคนขับคนนี้โดยตรง หรือเป็นลูกค้ากลางที่แอดมินเพิ่ม (regularDriverId === 'ALL')
           if (c.regularDriverId === currentUser.empId || c.regularDriverId === 'ALL' || c.addedBy === currentUser.empName) {
             myCustomers.push(c);
           }
@@ -1696,7 +1702,6 @@
         return;
       }
 
-      // บันทึกลงฐานข้อมูลกลาง และผูกว่าเป็นลูกค้าประจำของพนักงานคนนี้โดยเฉพาะ (จะไม่ไปปะปนกับคนอื่น)
       db.ref('customers').push().set({
         name: name,
         phone: phone,
@@ -2139,7 +2144,7 @@
       document.getElementById('mainCard').classList.add('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'block';
       document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "⛽ อนุมัติเบิกค่าน้ำมัน / ค่าซ่อมรถ";
+      document.getElementById('pageTitle').innerText = "⛽/🔧 อนุมัติเบิกค่าน้ำมัน / ค่าซ่อมรถ";
       document.getElementById('listBox').style.display = "none";
       document.getElementById('status').innerHTML = i18n[currentLang].checking;
 
@@ -2149,7 +2154,7 @@
         let list = [];
         Object.keys(fuelObj).forEach(k => list.push({ key: k, ...fuelObj[k] }));
 
-        let html = `<h2>⛽ รายการคำขอเบิกจ่าย (รออนุมัติ & กำหนดเงิน)</h2>`;
+        let html = `<h2>⛽/🔧 รายการคำขอเบิกจ่าย (รออนุมัติ & กำหนดเงิน)</h2>`;
         let pendingList = list.filter(item => String(item.status || '').includes('รออนุมัติ'));
 
         if (pendingList.length === 0) {
@@ -2208,13 +2213,13 @@
       document.getElementById('mainCard').classList.add('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'block';
       document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "📜 ประวัติ & จัดการเบิกจ่ายทั้งหมด";
+      document.getElementById('pageTitle').innerText = "📜 ประวัติ & จัดการเบิกจ่ายทั้งหมด (แยกน้ำมัน/ค่าซ่อม)";
       document.getElementById('listBox').style.display = "none";
 
       const todayStr = getLocalDateTimeString();
 
       const html = `
-        <h2>📜 ประวัติรายการเบิกจ่าย & จัดการทะเบียนรถกลาง</h2>
+        <h2>📜 ประวัติรายการเบิกจ่ายค่าน้ำมัน & ค่าซ่อมรถ</h2>
         
         <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 2px dashed #e67e22; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
           <b>🚗 จัดการทะเบียนรถในระบบ:</b>
@@ -2245,7 +2250,7 @@
 
         <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: left;">
           <div style="font-size: 14px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; padding-bottom: 6px;">
-            📊 สรุปยอดค่าน้ำมันแยกตามทะเบียนรถ
+            📊 สรุปยอดแยกตามทะเบียนรถ (ค่าน้ำมัน vs ค่าซ่อมรถ)
           </div>
           <div id="carExpenseChartContainer"></div>
         </div>
@@ -2335,18 +2340,30 @@
           return item.date >= startDate && item.date <= endDate;
         });
 
-        let totalFuelAmt = 0;
+        let totalFuelOnly = 0;
+        let totalRepairOnly = 0;
+
         currentFuelFilteredList.forEach(item => {
           let statusStr = String(item.status || '');
+          let reqType = item.requestType || 'เบิกค่าน้ำมัน';
           if (statusStr.includes('อนุมัติแล้ว') || statusStr.includes('อนุมัติ')) {
-            totalFuelAmt += Number(item.amount || 0);
+            let amt = Number(item.amount || 0);
+            if (reqType.includes('ซ่อม')) {
+              totalRepairOnly += amt;
+            } else {
+              totalFuelOnly += amt;
+            }
           }
         });
+
+        let grandTotalApproved = totalFuelOnly + totalRepairOnly;
 
         let html = `
           <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #e67e22; color: #333; padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
             <b>📊 สรุปยอดเบิกจ่ายช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-            💰 รวมยอดอนุมัติจ่ายทั้งหมด: <b style="color: #e67e22;">${totalFuelAmt.toLocaleString()} บาท</b> (${currentFuelFilteredList.length} รายการ)
+            • ⛽ ค่าน้ำมันรวม: <b style="color: #e67e22;">${totalFuelOnly.toLocaleString()} บาท</b><br>
+            • 🔧 ค่าซ่อมรถรวม: <b style="color: #d9534f;">${totalRepairOnly.toLocaleString()} บาท</b><br>
+            💰 รวมยอดอนุมัติจ่ายทั้งหมด: <b style="color: #2c3e50; font-size: 16px;">${grandTotalApproved.toLocaleString()} บาท</b> (${currentFuelFilteredList.length} รายการ)
           </div>
         `;
 
@@ -2357,10 +2374,12 @@
             let statusBadge = String(item.status || '').includes('อนุมัติแล้ว') ? '🟢 อนุมัติแล้ว' : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รออนุมัติ');
             let badgeType = item.requestType || '⛽ เบิกค่าน้ำมัน';
             let plateText = item.carPlate ? `🚗 ทะเบียน: ${item.carPlate} | ` : '';
+            let typeColor = badgeType.includes('ซ่อม') ? '#d9534f' : '#e67e22';
+
             html += `
               <div class="history-item">
-                <b>👤 ${item.empName} (${item.empId})</b> [${badgeType}] | สถานะ: <b>${statusBadge}</b><br>
-                ${plateText}📍 รายละเอียด: ${item.route || '-'} | 💵 ยอด: <b style="color:#e67e22; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
+                <b>👤 ${item.empName} (${item.empId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b><br>
+                ${plateText}📍 รายละเอียด: ${item.route || '-'} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
                 📅 วันที่: ${item.date}<br>
                 
                 <div style="margin-top:8px; display:flex; gap:6px;">
@@ -2380,20 +2399,29 @@
       const chartContainer = document.getElementById('carExpenseChartContainer');
       if (!chartContainer) return;
 
-      let carTotals = {};
+      let carData = {}; // { plateName: { fuel: 0, repair: 0 } }
       let maxAmount = 1;
 
       currentFuelFilteredList.forEach(item => {
         let plate = item.carPlate || 'ไม่ระบุทะเบียน';
         let statusStr = String(item.status || '');
+        let reqType = item.requestType || 'เบิกค่าน้ำมัน';
         if (statusStr.includes('อนุมัติ')) {
           let amt = Number(item.amount || 0);
-          carTotals[plate] = (carTotals[plate] || 0) + amt;
-          if (carTotals[plate] > maxAmount) maxAmount = carTotals[plate];
+          if (!carData[plate]) carData[plate] = { fuel: 0, repair: 0 };
+          
+          if (reqType.includes('ซ่อม')) {
+            carData[plate].repair += amt;
+          } else {
+            carData[plate].fuel += amt;
+          }
+
+          let totalForPlate = carData[plate].fuel + carData[plate].repair;
+          if (totalForPlate > maxAmount) maxAmount = totalForPlate;
         }
       });
 
-      let plates = Object.keys(carTotals);
+      let plates = Object.keys(carData);
       if (plates.length === 0) {
         chartContainer.innerHTML = `<div style="color: #888; font-size: 13px; text-align: center; padding: 10px;">ไม่มีข้อมูลยอดเงินที่อนุมัติในช่วงเวลานี้</div>`;
         return;
@@ -2401,17 +2429,20 @@
 
       let chartHtml = '';
       plates.forEach(plate => {
-        let total = carTotals[plate];
+        let fAmt = carData[plate].fuel;
+        let rAmt = carData[plate].repair;
+        let total = fAmt + rAmt;
         let percent = Math.round((total / maxAmount) * 100);
 
         chartHtml += `
-          <div style="margin-bottom: 10px;">
+          <div style="margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; color: #495057;">
-              <span>🚗 <b>${plate}</b></span>
-              <span style="font-weight: bold; color: #e67e22;">${total.toLocaleString()} บาท</span>
+              <span>🚗 <b>${plate}</b> (⛽ ค่าน้ำมัน: <b style="color:#e67e22;">${fAmt.toLocaleString()} ฿</b> | 🔧 ค่าซ่อม: <b style="color:#d9534f;">${rAmt.toLocaleString()} ฿</b>)</span>
+              <span style="font-weight: bold; color: #2c3e50;">รวม ${total.toLocaleString()} บาท</span>
             </div>
-            <div style="background: #e9ecef; border-radius: 6px; height: 10px; width: 100%; overflow: hidden;">
-              <div style="background: linear-gradient(135deg, #e67e22, #d35400); width: ${percent}%; height: 100%; border-radius: 6px; transition: width 0.4s ease;"></div>
+            <div style="background: #e9ecef; border-radius: 6px; height: 10px; width: 100%; overflow: hidden; display: flex;">
+              <div style="background: #e67e22; width: ${Math.round((fAmt/total)*100 || 0)}%; height: 100%;" title="ค่าน้ำมัน"></div>
+              <div style="background: #d9534f; width: ${Math.round((rAmt/total)*100 || 0)}%; height: 100%;" title="ค่าซ่อม"></div>
             </div>
           </div>
         `;
@@ -2445,7 +2476,7 @@
         ]);
       });
 
-      downloadCSV(`Fuel_Requests_${startDate}_to_${endDate}.csv`, rows);
+      downloadCSV(`Fuel_Repair_Requests_${startDate}_to_${endDate}.csv`, rows);
     }
 
     function showEditFuelModal(key, carPlate, route, amount, reqType) {
@@ -2886,7 +2917,7 @@
       renderDailyPayrollData();
     }
 
-    let currentPayrollDataCache = { salaryList: [], fuelList: [], salaryTotal: 0, fuelTotal: 0 };
+    let currentPayrollDataCache = { salaryList: [], fuelList: [], repairList: [], salaryTotal: 0, fuelTotal: 0, repairTotal: 0 };
 
     function renderDailyPayrollData() {
       const startDate = document.getElementById('payrollStartDate').value;
@@ -2919,28 +2950,37 @@
 
           db.ref('fuel_requests').once('value', (fuelSnap) => {
             const fuelObj = fuelSnap.val() || {};
-            let fuelTotal = 0;
+            let fuelOnlyTotal = 0;
+            let repairOnlyTotal = 0;
             let fuelList = [];
+            let repairList = [];
 
             Object.keys(fuelObj).forEach(k => {
               let f = fuelObj[k];
               let statusStr = String(f.status || '');
+              let reqType = f.requestType || 'เบิกค่าน้ำมัน';
               if (f.date >= startDate && f.date <= endDate && (statusStr.includes('อนุมัติแล้ว') || statusStr.includes('อนุมัติ'))) {
                 let amt = Number(f.amount || 0);
-                fuelTotal += amt;
-                fuelList.push({ name: f.empName, type: f.requestType || 'เบิกค่าน้ำมัน', date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
+                if (reqType.includes('ซ่อม')) {
+                  repairOnlyTotal += amt;
+                  repairList.push({ name: f.empName, type: reqType, date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
+                } else {
+                  fuelOnlyTotal += amt;
+                  fuelList.push({ name: f.empName, type: reqType, date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
+                }
               }
             });
 
-            currentPayrollDataCache = { salaryList: presentList, fuelList: fuelList, salaryTotal: salaryTotal, fuelTotal: fuelTotal };
+            currentPayrollDataCache = { salaryList: presentList, fuelList: fuelList, repairList: repairList, salaryTotal: salaryTotal, fuelTotal: fuelOnlyTotal, repairTotal: repairOnlyTotal };
 
-            let grandTotal = salaryTotal + fuelTotal;
+            let grandTotal = salaryTotal + fuelOnlyTotal + repairOnlyTotal;
 
             let html = `
               <div style="background: linear-gradient(135deg, #2b5876, #4e4376); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left;">
                 <b>📊 สรุปยอดช่วงวันที่: ${startDate} ถึง ${endDate}</b><br><br>
                 • ค่าแรงพนักงานรวม: <b>${salaryTotal.toLocaleString()} บาท</b><br>
-                • ค่าน้ำมัน/ค่าซ่อมรถรวม (อนุมัติแล้ว): <b>${fuelTotal.toLocaleString()} บาท</b><br>
+                • ⛽ ค่าน้ำมันรถรวม (อนุมัติแล้ว): <b style="color:#f39c12;">${fuelOnlyTotal.toLocaleString()} บาท</b><br>
+                • 🔧 ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#e74c3c;">${repairOnlyTotal.toLocaleString()} บาท</b><br>
                 <hr style="border:0; border-top:1px solid rgba(255,255,255,0.4); margin:8px 0;">
                 <span style="font-size: 17px; font-weight: bold;">💰 รวมจ่ายออกทั้งหมด: ${grandTotal.toLocaleString()} บาท</span>
               </div>
@@ -2956,12 +2996,21 @@
               });
             }
 
-            html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">⛽ รายการเบิกจ่ายที่อนุมัติแล้ว (${fuelList.length} รายการ):</div>`;
+            html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">⛽ รายการเบิกค่าน้ำมันที่อนุมัติแล้ว (${fuelList.length} รายการ):</div>`;
             if (fuelList.length === 0) {
-              html += `<div style="color:#888;">ไม่มีการเบิกจ่ายที่อนุมัติในช่วงเวลานี้</div>`;
+              html += `<div style="color:#888; margin-bottom:10px;">ไม่มีการเบิกค่าน้ำมันในช่วงเวลานี้</div>`;
             } else {
               fuelList.slice().reverse().forEach(f => {
                 html += `<div class="history-item">📅 ${f.date} | <b>${f.name}</b> [${f.type}] (ทะเบียน: ${f.plate})<br>รายละเอียด: ${f.route} | อนุมัติจ่าย: <b style="color:#e67e22;">${f.amount} บาท</b></div>`;
+              });
+            }
+
+            html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">🔧 รายการเบิกค่าซ่อมรถที่อนุมัติแล้ว (${repairList.length} รายการ):</div>`;
+            if (repairList.length === 0) {
+              html += `<div style="color:#888;">ไม่มีการเบิกค่าซ่อมรถในช่วงเวลานี้</div>`;
+            } else {
+              repairList.slice().reverse().forEach(r => {
+                html += `<div class="history-item">📅 ${r.date} | <b>${r.name}</b> [${r.type}] (ทะเบียน: ${r.plate})<br>รายละเอียด: ${r.route} | อนุมัติจ่าย: <b style="color:#d9534f;">${r.amount} บาท</b></div>`;
               });
             }
 
@@ -2985,18 +3034,26 @@
       });
 
       rows.push([]);
-      rows.push(["=== สรุปรายการเบิกค่าน้ำมัน / ค่าซ่อมรถ (อนุมัติแล้ว) ==="],
+      rows.push(["=== สรุปรายการเบิกค่าน้ำมัน (อนุมัติแล้ว) ==="],
         ["วันที่", "ชื่อพนักงาน", "ประเภทการเบิก", "ทะเบียนรถ", "รายละเอียด", "ยอดเงินอนุมัติ (บาท)"]
       );
-
       currentPayrollDataCache.fuelList.forEach(f => {
         rows.push([f.date, f.name, f.type, f.plate, f.route, f.amount]);
       });
 
       rows.push([]);
+      rows.push(["=== สรุปรายการเบิกค่าซ่อมรถ (อนุมัติแล้ว) ==="],
+        ["วันที่", "ชื่อพนักงาน", "ประเภทการเบิก", "ทะเบียนรถ", "รายละเอียด", "ยอดเงินอนุมัติ (บาท)"]
+      );
+      currentPayrollDataCache.repairList.forEach(r => {
+        rows.push([r.date, r.name, r.type, r.plate, r.route, r.amount]);
+      });
+
+      rows.push([]);
       rows.push(["รวมค่าแรงทั้งหมด", "", "", "", "", currentPayrollDataCache.salaryTotal]);
-      rows.push(["รวมเบิกจ่ายทั้งหมด", "", "", "", "", currentPayrollDataCache.fuelTotal]);
-      rows.push(["รวมจ่ายออกทั้งหมดสุทธิ", "", "", "", "", currentPayrollDataCache.salaryTotal + currentPayrollDataCache.fuelTotal]);
+      rows.push(["รวมค่าน้ำมันทั้งหมด", "", "", "", "", currentPayrollDataCache.fuelTotal]);
+      rows.push(["รวมค่าซ่อมรถทั้งหมด", "", "", "", "", currentPayrollDataCache.repairTotal]);
+      rows.push(["รวมจ่ายออกทั้งหมดสุทธิ", "", "", "", "", currentPayrollDataCache.salaryTotal + currentPayrollDataCache.fuelTotal + currentPayrollDataCache.repairTotal]);
 
       downloadCSV(`Daily_Payroll_Summary_${startDate}_to_${endDate}.csv`, rows);
     }
@@ -3024,7 +3081,7 @@
       renderMonthlySummary();
     }
 
-    let currentMonthlyCache = { ym: '', totalSalary: 0, totalFuel: 0 };
+    let currentMonthlyCache = { ym: '', totalSalary: 0, totalFuel: 0, totalRepair: 0 };
 
     function renderMonthlySummary() {
       const ym = document.getElementById('repMonth').value;
@@ -3039,6 +3096,7 @@
 
             let totalSalary = 0;
             let totalFuel = 0;
+            let totalRepair = 0;
 
             Object.keys(empObj).forEach(ek => {
               let emp = empObj[ek];
@@ -3053,21 +3111,29 @@
             Object.keys(fuelObj).forEach(fk => {
               let f = fuelObj[fk];
               let statusStr = String(f.status || '');
+              let reqType = f.requestType || 'เบิกค่าน้ำมัน';
               if (f.date && f.date.startsWith(ym) && (statusStr.includes('อนุมัติแล้ว') || statusStr.includes('อนุมัติ'))) {
-                totalFuel += Number(f.amount || 0);
+                let amt = Number(f.amount || 0);
+                if (reqType.includes('ซ่อม')) {
+                  totalRepair += amt;
+                } else {
+                  totalFuel += amt;
+                }
               }
             });
 
             currentMonthlyCache.totalSalary = totalSalary;
             currentMonthlyCache.totalFuel = totalFuel;
+            currentMonthlyCache.totalRepair = totalRepair;
 
             document.getElementById('repResult').innerHTML = `
               <div class="history-item">
                 📅 ประจำเดือน: <b>${ym}</b><br><br>
                 💵 ค่าแรงพนักงานรวม: <b style="color:#28a745; font-size:15px;">${totalSalary.toLocaleString()} บาท</b><br>
-                ⛽ ค่าน้ำมัน/ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#e67e22; font-size:15px;">${totalFuel.toLocaleString()} บาท</b><br>
+                ⛽ ค่าน้ำมันรถรวม (อนุมัติแล้ว): <b style="color:#e67e22; font-size:15px;">${totalFuel.toLocaleString()} บาท</b><br>
+                🔧 ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#d9534f; font-size:15px;">${totalRepair.toLocaleString()} บาท</b><br>
                 <hr style="border:0; border-top:1px solid #ddd; margin:10px 0;">
-                💰 <b>ค่าใช้จ่ายบริษัทรวมทั้งหมด: <span style="font-size:18px; color:#d9534f;">${(totalSalary + totalFuel).toLocaleString()} บาท</span></b>
+                💰 <b>ค่าใช้จ่ายบริษัทรวมทั้งหมด: <span style="font-size:18px; color:#d9534f;">${(totalSalary + totalFuel + totalRepair).toLocaleString()} บาท</span></b>
               </div>
             `;
           });
@@ -3082,8 +3148,9 @@
         [],
         ["รายการค่าใช้จ่าย", "จำนวนเงินรวม (บาท)"],
         ["ค่าแรงพนักงานรวม", currentMonthlyCache.totalSalary],
-        ["ค่าน้ำมันและค่าซ่อมรถ (อนุมัติแล้ว)", currentMonthlyCache.totalFuel],
-        ["ค่าใช้จ่ายบริษัทรวมทั้งหมดสุทธิ", currentMonthlyCache.totalSalary + currentMonthlyCache.totalFuel]
+        ["ค่าน้ำมันรถ (อนุมัติแล้ว)", currentMonthlyCache.totalFuel],
+        ["ค่าซ่อมรถ / ค่าอะไหล่ (อนุมัติแล้ว)", currentMonthlyCache.totalRepair],
+        ["ค่าใช้จ่ายบริษัทรวมทั้งหมดสุทธิ", currentMonthlyCache.totalSalary + currentMonthlyCache.totalFuel + currentMonthlyCache.totalRepair]
       ];
 
       downloadCSV(`Monthly_Expense_Summary_${ym}.csv`, rows);
@@ -3562,7 +3629,7 @@
           });
 
           if (currentUser.isDriver) {
-            html += `<br><b>⛽ ประวัติเบิกค่าน้ำมัน / ค่าซ่อม:</b>`;
+            html += `<br><b>⛽/🔧 ประวัติเบิกค่าน้ำมัน / ค่าซ่อม:</b>`;
             if (myFuels.length === 0) html += `<div style="color:#888; font-size:12px;">ไม่มีประวัติเบิกจ่าย</div>`;
             myFuels.forEach(item => {
               let typeLabel = item.requestType || 'เบิกค่าน้ำมัน';
