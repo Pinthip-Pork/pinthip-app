@@ -271,26 +271,26 @@
   <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer(false)"></div>
   <div class="drawer-menu" id="drawerMenu">
     <div class="drawer-header">
-      <span>👑 เมนูผู้ดูแลระบบ</span>
+      <span id="menuAdminTitle">👑 เมนูผู้ดูแลระบบ</span>
       <span onclick="toggleDrawer(false)" style="cursor:pointer; font-size:22px;">&times;</span>
     </div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()">🏠 แดสบอร์ดภาพรวม</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()">⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Center)</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()">📦 จัดการ & มอบหมายจ๊อบส่งของ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()">📜 ประวัติการส่งของย้อนหลัง</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showCustomerManagementPanel()">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">👥 สรุปสถิติ ขาด ลา มาสาย</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">📜 ดูการลงเวลาทำงานย้อนหลัง</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">🌴 อนุมัติคำขอลา</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaveHistory()">📜 ประวัติการขอลางานทั้งหมด</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">⛽ อนุมัติเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelHistory()">📜 ประวัติ & จัดการเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showDailyPayroll()">💵 สรุปค่าแรงรายวัน (เจาะลึกย้อนหลัง)</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAnalyticsReport()">📈 สรุปค่าใช้จ่ายประจำเดือน</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showLocationManagement()">📍 จัดการพิกัด GPS & รัศมี</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showHolidayManagement()">🗓️ จัดการวันหยุดร้าน</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showEmpManagement()">⚙️ จัดการพนักงาน & สิทธิ์ขับรถ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); handleLogout()" style="color:#dc3545; margin-top:auto;">🚪 ออกจากระบบ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()" data-i18n="menuDashboard">🏠 แดสบอร์ดภาพรวม</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()" data-i18n="menuCommand">⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Center)</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()" data-i18n="menuJobAssign">📦 จัดการ & มอบหมายจ๊อบส่งของ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()" data-i18n="menuDeliveryHist">📜 ประวัติการส่งของย้อนหลัง</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showCustomerManagementPanel()" data-i18n="menuCustomer">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()" data-i18n="menuAttendanceRep">👥 สรุปสถิติ ขาด ลา มาสาย</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()" data-i18n="menuLogHist">📜 ดูการลงเวลาทำงานย้อนหลัง</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()" data-i18n="menuLeaves">🌴 อนุมัติคำขอลา</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaveHistory()" data-i18n="menuLeaveHist">📜 ประวัติการขอลางานทั้งหมด</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()" data-i18n="menuFuelReq">⛽ อนุมัติเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelHistory()" data-i18n="menuFuelHist">📜 ประวัติ & จัดการเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showDailyPayroll()" data-i18n="menuPayroll">💵 สรุปค่าแรงรายวัน (เจาะลึกย้อนหลัง)</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAnalyticsReport()" data-i18n="menuAnalytics">📈 สรุปค่าใช้จ่ายประจำเดือน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showLocationManagement()" data-i18n="menuLocation">📍 จัดการพิกัด GPS & รัศมี</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showHolidayManagement()" data-i18n="menuHoliday">🗓️ จัดการวันหยุดร้าน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showEmpManagement()" data-i18n="menuEmpMgmt">⚙️ จัดการพนักงาน & สิทธิ์ขับรถ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); handleLogout()" style="color:#dc3545; margin-top:auto;" data-i18n="btnLogout">🚪 ออกจากระบบ</div>
   </div>
 
   <div class="modal-overlay" id="customModal">
@@ -320,6 +320,25 @@
     let currentLang = 'TH';
     let currentUser = null;
     let isAdmin = false;
+
+    // ตัวแปรสำหรับเก็บ Reference ของ Firebase Listeners ป้องกัน Memory Leak
+    let activeListeners = {
+      leaves: null,
+      fuels: null,
+      empJobs: null,
+      logs: null,
+      todayLeaves: null,
+      commandCenter: null
+    };
+
+    function clearAllListeners() {
+      if (activeListeners.leaves) db.ref('leaves').off('value', activeListeners.leaves);
+      if (activeListeners.fuels) db.ref('fuel_requests').off('value', activeListeners.fuels);
+      if (activeListeners.empJobs) db.ref('delivery_jobs').off('value', activeListeners.empJobs);
+      if (activeListeners.logs) db.ref('logs').off('value', activeListeners.logs);
+      if (activeListeners.todayLeaves) db.ref('leaves').off('value', activeListeners.todayLeaves);
+      activeListeners = { leaves: null, fuels: null, empJobs: null, logs: null, todayLeaves: null, commandCenter: null };
+    }
 
     function playNotificationSound() {
       try {
@@ -406,7 +425,24 @@
         emptyInputErr: "⚠️ กรุณากรอกรหัสและ PIN",
         successTitle: "🎉 สำเร็จ!",
         errTitle: "🚫 แจ้งเตือน",
-        btnOk: "ตกลง"
+        btnOk: "ตกลง",
+        menuAdminTitle: "👑 เมนูผู้ดูแลระบบ",
+        menuDashboard: "🏠 แดสบอร์ดภาพรวม",
+        menuCommand: "⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Center)",
+        menuJobAssign: "📦 จัดการ & มอบหมายจ๊อบส่งของ",
+        menuDeliveryHist: "📜 ประวัติการส่งของย้อนหลัง",
+        menuCustomer: "🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)",
+        menuAttendanceRep: "👥 สรุปสถิติ ขาด ลา มาสาย",
+        menuLogHist: "📜 ดูการลงเวลาทำงานย้อนหลัง",
+        menuLeaves: "🌴 อนุมัติคำขอลา",
+        menuLeaveHist: "📜 ประวัติการขอลางานทั้งหมด",
+        menuFuelReq: "⛽ อนุมัติเบิกค่าน้ำมัน/ค่าซ่อมรถ",
+        menuFuelHist: "📜 ประวัติ & จัดการเบิกค่าน้ำมัน/ค่าซ่อมรถ",
+        menuPayroll: "💵 สรุปค่าแรงรายวัน (เจาะลึกย้อนหลัง)",
+        menuAnalytics: "📈 สรุปค่าใช้จ่ายประจำเดือน",
+        menuLocation: "📍 จัดการพิกัด GPS & รัศมี",
+        menuHoliday: "🗓️ จัดการวันหยุดร้าน",
+        menuEmpMgmt: "⚙️ จัดการพนักงาน & สิทธิ์ขับรถ"
       },
       MM: {
         companyTitle: "ပင်းသစ် ကုမ္ပဏီ လီမိတက်",
@@ -443,7 +479,24 @@
         emptyInputErr: "⚠️ ID နှင့် PIN ဖြည့်စွက်ပါ",
         successTitle: "🎉 အောင်မြင်ပါသည်!",
         errTitle: "🚫 သတိပေးချက်",
-        btnOk: "ကောင်းပြီ"
+        btnOk: "ကောင်းပြီ",
+        menuAdminTitle: "👑 အုပ်ချုပ်သူ မီနူး",
+        menuDashboard: "🏠 ပင်မဒက်ရှ်ဘုတ်",
+        menuCommand: "⚡ တိုက်ရိုက်ထိန်းချုပ်ရေးစင်တာ",
+        menuJobAssign: "📦 ပို့ဆောင်ရေးအလုပ်များ စီမံခန့်ခွဲရန်",
+        menuDeliveryHist: "📜 ယခင်ပို့ဆောင်မှု မှတ်တမ်း",
+        menuCustomer: "🏬 ဖောက်သည်ဒေတာဘေ့စ် စီမံရန်",
+        menuAttendanceRep: "👥 အလုပ်တက်/ပျက်/နောက်ကျ စာရင်းချုပ်",
+        menuLogHist: "📜 အလုပ်ဝင်ချိန် မှတ်တမ်းဟောင်း",
+        menuLeaves: "🌴 ခွင့်ပြုချက်များ စစ်ဆေးရန်",
+        menuLeaveHist: "📜 ခွင့်တောင်းမှု မှတ်တမ်းအားလုံး",
+        menuFuelReq: "⛽ ဆီဘိုး/ကားပြင်စရိတ် အတည်ပြုရန်",
+        menuFuelHist: "📜 ဆီဘိုး/စရိတ် မှတ်တမ်းများ",
+        menuPayroll: "💵 နေ့စားခ တွက်ချက်မှု",
+        menuAnalytics: "📈 လစဉ်စရိတ်သုံးစွဲမှု စာရင်းချုပ်",
+        menuLocation: "📍 GPS တည်နေရာ စီမံရန်",
+        menuHoliday: "🗓️ ပိတ်ရက်များ စီမံရန်",
+        menuEmpMgmt: "⚙️ ဝန်ထမ်းနှင့် မောင်းနှင်ခွင့် စီမံရန်"
       }
     };
 
@@ -477,6 +530,18 @@
       document.getElementById('companyTitle').innerText = i18n[lang].companyTitle;
       document.getElementById('listTitle').innerText = i18n[lang].listTitle;
 
+      // แปลข้อความใน Drawer Menu อัตโนมัติ
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang][key]) {
+          el.innerText = i18n[lang][key];
+        }
+      });
+      const menuTitle = document.getElementById('menuAdminTitle');
+      if (menuTitle && i18n[lang].menuAdminTitle) {
+        menuTitle.innerText = i18n[lang].menuAdminTitle;
+      }
+
       if (isAdmin) showAdminDashboard();
       else if (currentUser) showDashboard();
       else showLoginForm();
@@ -502,7 +567,8 @@
     function startAdminNotificationListener() {
       document.getElementById('bellBtn').style.display = 'block';
 
-      db.ref('leaves').on('value', (snap) => {
+      if (activeListeners.leaves) db.ref('leaves').off('value', activeListeners.leaves);
+      activeListeners.leaves = db.ref('leaves').on('value', (snap) => {
         const obj = snap.val() || {};
         pendingLeavesCache = [];
         let newPendingCount = 0;
@@ -522,7 +588,8 @@
         updateAdminBellBadgeCount();
       });
 
-      db.ref('fuel_requests').on('value', (snap) => {
+      if (activeListeners.fuels) db.ref('fuel_requests').off('value', activeListeners.fuels);
+      activeListeners.fuels = db.ref('fuel_requests').on('value', (snap) => {
         const obj = snap.val() || {};
         pendingFuelsCache = [];
         let newFuelPendingCount = 0;
@@ -566,7 +633,8 @@
       const bellBtn = document.getElementById('bellBtn');
       if (bellBtn) bellBtn.style.display = 'block';
 
-      db.ref('delivery_jobs/' + todayStr).on('value', (snap) => {
+      if (activeListeners.empJobs) db.ref('delivery_jobs/' + todayStr).off('value', activeListeners.empJobs);
+      activeListeners.empJobs = db.ref('delivery_jobs/' + todayStr).on('value', (snap) => {
         const obj = snap.val() || {};
         myPendingJobsCache = [];
         let myNewJobsCount = 0;
@@ -676,6 +744,7 @@
     }
 
     function showLoginForm() {
+      clearAllListeners();
       isAdmin = false;
       document.getElementById('mainCard').classList.remove('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'none';
@@ -981,7 +1050,7 @@
 
               db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
                 const jobsObj = jobSnap.val() || {};
-                let activeDeliveryMap = {}; // { driverId: [รายชื่อร้านที่กำลังไปส่ง] }
+                let activeDeliveryMap = {};
                 
                 Object.keys(jobsObj).forEach(jk => {
                   let j = jobsObj[jk];
@@ -1018,12 +1087,11 @@
                   }
                 });
 
-                // ⚡ จัดเรียงลำดับใหม่: ใครกำลังออกไปส่งของ (มี drivingInfo) ให้ดันขึ้นมาอยู่อันดับแรกสุดทันที
                 const sortByDriving = (a, b) => {
                   let aHasDriving = (a.drivingInfo && a.drivingInfo.length > 0) ? 1 : 0;
                   let bHasDriving = (b.drivingInfo && b.drivingInfo.length > 0) ? 1 : 0;
                   if (aHasDriving !== bHasDriving) {
-                    return bHasDriving - aHasDriving; // ดันคนที่มีสถานะส่งของขึ้นบน
+                    return bHasDriving - aHasDriving;
                   }
                   return (a.present.time || "").localeCompare(b.present.time || "");
                 };
@@ -1603,7 +1671,8 @@
       document.getElementById('mainContent').innerHTML = html;
       loadDriverRegularCustomersCheckboxes();
 
-      db.ref('delivery_jobs/' + todayStr).on('value', (snapshot) => {
+      if (activeListeners.empJobs) db.ref('delivery_jobs/' + todayStr).off('value', activeListeners.empJobs);
+      activeListeners.empJobs = db.ref('delivery_jobs/' + todayStr).on('value', (snapshot) => {
         const jobsObj = snapshot.val() || {};
         const container = document.getElementById('driverMyJobsContainer');
         if (!container) return;
@@ -1779,6 +1848,7 @@
     }
 
     function showDashboard() {
+      clearAllListeners();
       isAdmin = false;
       document.getElementById('mainCard').classList.remove('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'none';
@@ -2431,7 +2501,7 @@
       const chartContainer = document.getElementById('carExpenseChartContainer');
       if (!chartContainer) return;
 
-      let carData = {}; // { plateName: { fuel: 0, repair: 0 } }
+      let carData = {}; 
       let maxAmount = 1;
 
       currentFuelFilteredList.forEach(item => {
@@ -3679,6 +3749,7 @@
     }
 
     function handleLogout() {
+      clearAllListeners();
       currentUser = null;
       isAdmin = false;
       localStorage.removeItem('app_user_data');
@@ -3701,7 +3772,8 @@
           let allEmployees = [];
           Object.keys(employeesObj).forEach(k => allEmployees.push(employeesObj[k]));
 
-          db.ref('logs').on('value', (logSnap) => {
+          if (activeListeners.logs) db.ref('logs').off('value', activeListeners.logs);
+          activeListeners.logs = db.ref('logs').on('value', (logSnap) => {
             const logsObj = logSnap.val() || {};
             let checkedInList = [];
             Object.keys(logsObj).forEach(k => {
@@ -3710,7 +3782,8 @@
               }
             });
 
-            db.ref('leaves').on('value', (leaveSnap) => {
+            if (activeListeners.todayLeaves) db.ref('leaves').off('value', activeListeners.todayLeaves);
+            activeListeners.todayLeaves = db.ref('leaves').on('value', (leaveSnap) => {
               const leavesObj = leaveSnap.val() || {};
               let approvedLeavesToday = [];
               Object.keys(leavesObj).forEach(k => {
