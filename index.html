@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest -->
-  <link rel="manifest" href="manifest.json?v=20260809-12">
+  <link rel="manifest" href="manifest.json?v=20260809-13">
   <meta name="theme-color" content="#16a34a">
 
   <base target="_top">
@@ -230,16 +230,15 @@
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
     .modal-box { background: white; padding: 22px; border-radius: 16px; max-width: 340px; width: 90%; box-shadow: 0 5px 20px rgba(0,0,0,0.2); box-sizing: border-box; text-align: left; }
     
-    /* ขยายขนาด Modal สำหรับป๊อปอัพเมนูด่วนแอดมิน */
     .modal-box.modal-wide-admin {
-      max-width: 650px !important;
-      max-height: 85vh;
+      max-width: 680px !important;
+      max-height: 88vh;
       display: flex;
       flex-direction: column;
     }
     .modal-body-scroll {
       overflow-y: auto;
-      max-height: 65vh;
+      max-height: 68vh;
       padding-right: 4px;
     }
 
@@ -290,14 +289,13 @@
     </div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()" data-i18n="menuDashboard">🏠 แดสบอร์ดภาพรวม</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()" data-i18n="menuCommand">⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Center)</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()" data-i18n="menuJobAssign">📦 จัดการ & มอบหมายจ๊อบส่งของ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); openAdminJobAssignModal()" data-i18n="menuJobAssign">📦 จัดการ & มอบหมายจ๊อบส่งของ</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()" data-i18n="menuDeliveryHist">📜 ประวัติการส่งของย้อนหลัง</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showCustomerManagementPanel()" data-i18n="menuCustomer">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()" data-i18n="menuAttendanceRep">👥 สรุปสถิติ ขาด ลา มาสาย</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()" data-i18n="menuLogHist">📜 ดูการลงเวลาทำงานย้อนหลัง</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()" data-i18n="menuLeaves">🌴 อนุมัติคำขอลา</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); openAdminLeavesModal()" data-i18n="menuLeaves">🌴 อนุมัติคำขอลา</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaveHistory()" data-i18n="menuLeaveHist">📜 ประวัติการขอลางานทั้งหมด</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()" data-i18n="menuFuelReq">⛽ อนุมัติเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); openAdminFuelRequestsModal()" data-i18n="menuFuelReq">⛽ อนุมัติเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelHistory()" data-i18n="menuFuelHist">📜 ประวัติ & จัดการเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showDailyPayroll()" data-i18n="menuPayroll">💵 สรุปค่าแรงรายวัน (เจาะลึกย้อนหลัง)</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAnalyticsReport()" data-i18n="menuAnalytics">📈 สรุปค่าใช้จ่ายประจำเดือน</div>
@@ -934,7 +932,6 @@
                   <div>
                     <button class="btn-fuel" onclick="openAdminJobAssignModal()">📦 มอบหมายจ๊อบส่งของวันนี้ (Pop-up)</button>
                     <button class="btn-history" onclick="showAdminDeliveryHistory()" style="margin-top:5px;">📜 ประวัติการส่งของย้อนหลัง</button>
-                    <button class="btn-blue" onclick="showCustomerManagementPanel()" style="margin-top:5px;">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</button>
                   </div>
                 </div>
 
@@ -987,7 +984,7 @@
 
     /* --- ฟังก์ชันเปิด Pop-up สำหรับเมนูด่วนแอดมิน --- */
 
-    // 1. Pop-up จัดการจ๊อบส่งของ
+    // 1. Pop-up จัดการจ๊อบส่งของ (รวมปุ่มจัดการฐานข้อมูลลูกค้าไว้ในแถวเดียวกัน)
     function openAdminJobAssignModal() {
       const todayStr = getLocalDateTimeString();
       showModal("📦 จัดการ & มอบหมายจ๊อบส่งของวันนี้", "กำลังโหลดข้อมูล...", "", `<button class="btn-ok" onclick="closeModal()">ปิดหน้าต่าง</button>`);
@@ -1054,8 +1051,11 @@
                         ${customerCheckboxesHtml}
                       </div>
                     </div>
-                    <div style="display:flex; gap:6px; margin-top:8px;">
-                      <button class="btn-fuel" onclick="saveAssignedJobsFromModal()" style="margin:0; flex:2; padding:10px;">💾 บันทึกจ๊อบส่ง</button>
+
+                    <!-- แถวปุ่มกดตามที่ต้องการ: จัดการฐานข้อมูลลูกค้า | บันทึกจ๊อบส่ง | บันทึกเส้นทาง -->
+                    <div style="display:flex; gap:6px; margin-top:10px;">
+                      <button class="btn-blue" onclick="openCustomerManagementModal()" style="margin:0; flex:1; font-size:12px; padding:10px;">🏬 จัดการฐานข้อมูลลูกค้า</button>
+                      <button class="btn-fuel" onclick="saveAssignedJobsFromModal()" style="margin:0; flex:1; font-size:12px; padding:10px;">💾 บันทึกจ๊อบส่ง</button>
                       <button class="btn-purple" onclick="saveAsPresetRouteFromModal()" style="margin:0; flex:1; font-size:12px; padding:10px;">📌 บันทึกเส้นทาง</button>
                     </div>
                   </div>
@@ -1072,6 +1072,61 @@
           });
         });
       });
+    }
+
+    // Modal ย่อย: จัดการฐานข้อมูลลูกค้า (เปิดซ้อนในป๊อปอัพได้ทันที)
+    function openCustomerManagementModal() {
+      db.ref('customers').once('value', (snapshot) => {
+        const custObj = snapshot.val() || {};
+        let custList = [];
+        Object.keys(custObj).forEach(k => custList.push({ key: k, ...custObj[k] }));
+
+        let html = `
+          <div class="modal-body-scroll" style="max-height: 50vh;">
+            <div style="background: #eef2f5; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px dashed #0d6efd; text-align: left;">
+              <b>➕ เพิ่มร้านค้า/ลูกค้าใหม่:</b>
+              <input type="text" id="modalNewCustName" placeholder="ชื่อร้าน / ชื่อลูกค้า" style="margin-top:4px; font-size:13px; padding:8px;">
+              <input type="text" id="modalNewCustPhone" placeholder="เบอร์โทรศัพท์ (ถ้ามี)" style="margin-top:4px; font-size:13px; padding:8px;">
+              <input type="text" id="modalNewCustAddress" placeholder="โซน / ที่อยู่คร่าวๆ" style="margin-top:4px; font-size:13px; padding:8px;">
+              <button class="btn-blue" onclick="addNewCustomerFromModal()" style="margin-top:6px; padding:8px; font-size:13px;">💾 บันทึกลูกค้าใหม่</button>
+            </div>
+            <b>🏬 รายชื่อลูกค้าทั้งหมด (${custList.length}):</b>
+        `;
+
+        if (custList.length === 0) {
+          html += `<div style="color:#888; font-size:12px; text-align:center; padding:10px;">ยังไม่มีข้อมูลร้านค้า</div>`;
+        } else {
+          custList.forEach(c => {
+            html += `
+              <div class="history-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; margin:4px 0;">
+                <span style="font-size:12px;">🏬 <b>${c.name}</b> (${c.address || '-'})</span>
+                <button class="btn-danger" style="width:auto; margin:0; padding:2px 6px; font-size:11px;" onclick="deleteCustomerFromModal('${c.key}')">🗑️ ลบ</button>
+              </div>
+            `;
+          });
+        }
+        html += `</div><button class="btn-back" onclick="openAdminJobAssignModal()" style="margin-top:10px; padding:8px; font-size:13px;">⬅️ กลับหน้าจัดการจ๊อบ</button>`;
+
+        document.getElementById('modalText').innerText = "จัดการฐานข้อมูลลูกค้า (ร้านค้าส่งหมู)";
+        document.getElementById('modalCustomContent').innerHTML = html;
+      });
+    }
+
+    function addNewCustomerFromModal() {
+      const name = document.getElementById('modalNewCustName').value.trim();
+      const phone = document.getElementById('modalNewCustPhone').value.trim();
+      const address = document.getElementById('modalNewCustAddress').value.trim();
+      if (!name) { alert("กรุณากรอกชื่อร้านค้าหรือลูกค้า"); return; }
+
+      db.ref('customers').push().set({ name, phone, address, addedBy: 'Admin', regularDriverId: 'ALL' }, (err) => {
+        if (!err) openCustomerManagementModal();
+      });
+    }
+
+    function deleteCustomerFromModal(key) {
+      if (confirm("ต้องการลบร้านค้านี้?")) {
+        db.ref('customers/' + key).remove(() => openCustomerManagementModal());
+      }
     }
 
     function loadPresetRouteToModalForm() {
@@ -1603,87 +1658,6 @@
           `;
         });
         container.innerHTML = html;
-      });
-    }
-
-    function showCustomerManagementPanel() {
-      isAdmin = true;
-      document.getElementById('mainCard').classList.add('admin-wide');
-      document.getElementById('hamburgerBtn').style.display = 'block';
-      document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้าส่งหมู)";
-      document.getElementById('listBox').style.display = "none";
-      document.getElementById('status').innerHTML = i18n[currentLang].checking;
-
-      db.ref('customers').once('value', (snapshot) => {
-        document.getElementById('status').innerHTML = "";
-        const custObj = snapshot.val() || {};
-        let custList = [];
-        Object.keys(custObj).forEach(k => custList.push({ key: k, ...custObj[k] }));
-
-        let html = `
-          <h2>🏬 รายชื่อร้านค้า/ลูกค้าทั้งหมดในระบบ</h2>
-          <div style="background: #eef2f5; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left; border: 2px dashed #0d6efd;">
-            <b>➕ เพิ่มลูกค้า/ร้านค้าใหม่:</b>
-            <input type="text" id="newCustName" placeholder="ชื่อร้าน / ชื่อลูกค้า" style="margin-top:6px; font-weight:bold;">
-            <input type="text" id="newCustPhone" placeholder="เบอร์โทรศัพท์ (ถ้ามี)" style="margin-top:4px;">
-            <input type="text" id="newCustAddress" placeholder="โซน / ที่อยู่คร่าวๆ" style="margin-top:4px;">
-            <button class="btn-blue" onclick="addNewCustomer()" style="margin-top:8px;">💾 บันทึกลูกค้าใหม่</button>
-          </div>
-          <div id="customerListContainer"></div>
-          <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
-        `;
-        document.getElementById('mainContent').innerHTML = html;
-        renderCustomerListUI(custList);
-      });
-    }
-
-    function renderCustomerListUI(list) {
-      const container = document.getElementById('customerListContainer');
-      if (!container) return;
-      if (list.length === 0) {
-        container.innerHTML = `<div style="color:#888; text-align:center; padding:15px;">ยังไม่มีข้อมูลร้านค้าในระบบ</div>`;
-        return;
-      }
-      let html = '';
-      list.forEach(c => {
-        let addedByText = c.addedBy ? ` | 👤 เพิ่มโดย: ${c.addedBy}` : '';
-        html += `
-          <div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <b>🏬 ${c.name}</b><br>
-              <span style="color:#6c757d; font-size:12px;">📞 โทร: ${c.phone || '-'} | 📍 โซน: ${c.address || '-'}${addedByText}</span>
-            </div>
-            <div>
-              <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="deleteCustomer('${c.key}')">🗑️ ลบ</button>
-            </div>
-          </div>
-        `;
-      });
-      container.innerHTML = html;
-    }
-
-    function addNewCustomer() {
-      const name = document.getElementById('newCustName').value.trim();
-      const phone = document.getElementById('newCustPhone').value.trim();
-      const address = document.getElementById('newCustAddress').value.trim();
-      if (!name) { alert("กรุณากรอกชื่อร้านค้าหรือลูกค้า"); return; }
-
-      db.ref('customers').push().set({ name, phone, address, addedBy: 'Admin', regularDriverId: 'ALL' }, (err) => {
-        if (!err) showCustomerManagementPanel();
-      });
-    }
-
-    function deleteCustomer(key) {
-      showModal("❓ ยืนยันการลบ", "ต้องการลบร้านค้านี้ออกจากระบบใช่หรือไม่?", 
-        `<button class="btn-yes" onclick="executeDeleteCustomer('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
-      );
-    }
-
-    function executeDeleteCustomer(key) {
-      db.ref('customers/' + key).remove(() => {
-        closeModal();
-        showCustomerManagementPanel();
       });
     }
 
