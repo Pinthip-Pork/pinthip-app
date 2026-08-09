@@ -321,13 +321,6 @@
     let currentUser = null;
     let isAdmin = false;
 
-// เอาตัวสั่งรีเฟรชออก ปล่อยให้ระบบ Realtime ของ Firebase ทำงานต่อเองโดยไม่ต้องรีหน้าเว็บ
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        console.log("App resumed, keeping current state.");
-      }
-    });
-
     function playNotificationSound() {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
