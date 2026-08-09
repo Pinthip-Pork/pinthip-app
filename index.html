@@ -957,9 +957,9 @@
       loadCommandCenterData(todayStr);
     }
 
-function loadCommandCenterData(todayStr) {
+    function loadCommandCenterData(todayStr) {
       db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
-        const globalLateTime = settingsSnap.val() || "08:00";
+        const globalLateTime = settingsSnap.val() || "09:30";
 
         db.ref('employees').once('value', (empSnap) => {
           const empObj = empSnap.val() || {};
@@ -986,7 +986,6 @@ function loadCommandCenterData(todayStr) {
                 }
               });
 
-              // ดึงข้อมูลจ๊อบส่งของวันนี้มาเช็กสถานะคนขับ
               db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
                 const jobsObj = jobSnap.val() || {};
                 let activeDeliveryMap = {}; // { driverId: [รายชื่อร้านที่กำลังไปส่ง] }
@@ -994,7 +993,6 @@ function loadCommandCenterData(todayStr) {
                 Object.keys(jobsObj).forEach(jk => {
                   let j = jobsObj[jk];
                   let jStatus = String(j.status || '');
-                  // ถ้ายังส่งไม่เสร็จ (กำลังเดินทาง หรือ รอจัดส่ง)
                   if (!jStatus.includes('สำเร็จ')) {
                     if (!activeDeliveryMap[j.driverId]) {
                       activeDeliveryMap[j.driverId] = [];
@@ -1012,7 +1010,6 @@ function loadCommandCenterData(todayStr) {
                   const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
                   const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
 
-                  // เช็กว่าพนักงานคนนี้กำลังออกไปส่งของอยู่หรือไม่
                   let drivingInfo = activeDeliveryMap[emp.empId];
 
                   if (leave) {
@@ -1027,6 +1024,19 @@ function loadCommandCenterData(todayStr) {
                     absentList.push({ emp });
                   }
                 });
+
+                // ⚡ จัดเรียงลำดับใหม่: ใครกำลังออกไปส่งของ (มี drivingInfo) ให้ดันขึ้นมาอยู่อันดับแรกสุดทันที
+                const sortByDriving = (a, b) => {
+                  let aHasDriving = (a.drivingInfo && a.drivingInfo.length > 0) ? 1 : 0;
+                  let bHasDriving = (b.drivingInfo && b.drivingInfo.length > 0) ? 1 : 0;
+                  if (aHasDriving !== bHasDriving) {
+                    return bHasDriving - aHasDriving; // ดันคนที่มีสถานะส่งของขึ้นบน
+                  }
+                  return (a.present.time || "").localeCompare(b.present.time || "");
+                };
+
+                presentList.sort(sortByDriving);
+                lateList.sort(sortByDriving);
 
                 let totalPresent = presentList.length + lateList.length;
 
@@ -1055,7 +1065,7 @@ function loadCommandCenterData(todayStr) {
                 presentList.forEach(item => {
                   let statusBadge = `<b>${item.present.time} น.</b>`;
                   if (item.drivingInfo && item.drivingInfo.length > 0) {
-                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px;">🚚 กำลังไปส่ง (${item.drivingInfo.join(', ')})</span>`;
+                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">🚚 กำลังไปส่ง (${item.drivingInfo.join(', ')})</span>`;
                   }
                   attHtml += `<div class="emp-tag-present" style="font-size:12px; display:flex; justify-content:space-between; align-items:center;"><span>🟢 ${item.emp.empName}</span><span>${statusBadge}</span></div>`;
                 });
@@ -1063,7 +1073,7 @@ function loadCommandCenterData(todayStr) {
                 lateList.forEach(item => {
                   let statusBadge = `<b style="color:#d9534f;">สาย ${item.present.time}</b>`;
                   if (item.drivingInfo && item.drivingInfo.length > 0) {
-                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px;">🚚 กำลังไปส่ง (${item.drivingInfo.join(', ')})</span>`;
+                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">🚚 กำลังไปส่ง (${item.drivingInfo.join(', ')})</span>`;
                   }
                   attHtml += `<div class="emp-tag-late" style="font-size:12px; display:flex; justify-content:space-between; align-items:center;"><span>⏰ ${item.emp.empName}</span><span>${statusBadge}</span></div>`;
                 });
@@ -1074,7 +1084,6 @@ function loadCommandCenterData(todayStr) {
 
                 document.getElementById('ccAttendanceList').innerHTML = attHtml;
 
-                // โหลดฝั่งรายการส่งของ (Live Tracking) ต่อเนื่อง
                 let jobList = [];
                 Object.keys(jobsObj).forEach(k => jobList.push({ key: k, ...jobsObj[k] }));
 
