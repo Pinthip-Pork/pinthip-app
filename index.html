@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-8">
+  <link rel="manifest" href="manifest.json?v=20260809-9">
   <meta name="theme-color" content="#16a34a">
 
   <base target="_top">
@@ -179,7 +179,6 @@
       padding-bottom: 8px;
     }
 
-    /* สไตล์สำหรับหน้าศูนย์บัญชาการเบ็ดเสร็จ (Command Center 3 Columns) */
     .command-center-container {
       display: grid;
       grid-template-columns: 280px 1fr 1fr;
@@ -322,7 +321,6 @@
     let currentUser = null;
     let isAdmin = false;
 
-    // ระบบอุดรอยรั่ว: ตรวจจับเมื่อผู้ใช้สลับกลับมาเปิดแอปจากหน้าจอโฮม ให้รีเฟรชหน้าเว็บอัตโนมัติทันที
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         console.log("App resumed, reloading for fresh data...");
@@ -837,7 +835,6 @@
                 </div>
               </div>
 
-              <!-- ปุ่มทางลัดสู่หน้าศูนย์บัญชาการเบ็ดเสร็จ -->
               <div style="margin-bottom: 15px;">
                 <button class="btn-fuel" onclick="showAdminCommandCenter()" style="padding: 16px; font-size: 17px; background: linear-gradient(135deg, #0d6efd, #6f42c1) !important;">⚡ เปิดหน้าศูนย์บัญชาการเบ็ดเสร็จ (Live Command Center)</button>
               </div>
@@ -902,9 +899,6 @@
       });
     }
 
-    // ==========================================
-    // ฟังก์ชันสำหรับหน้า "ศูนย์บัญชาการเบ็ดเสร็จ (Live Command Center)"
-    // ==========================================
     function showAdminCommandCenter() {
       isAdmin = true;
       document.getElementById('mainCard').classList.add('admin-wide');
@@ -923,7 +917,6 @@
         </div>
 
         <div class="command-center-container">
-          <!-- โซนซ้าย: สรุปภาพรวมด่วน (KPIs) -->
           <div class="command-column">
             <h3>📊 สรุปกำลังพลวันนี้</h3>
             <div id="ccSummaryStats" style="margin-top:10px;">กำลังโหลด...</div>
@@ -934,13 +927,11 @@
             <button class="btn-orange" onclick="showAdminLeaves()" style="font-size:13px; padding:10px; margin-top:5px;">🌴 อนุมัติใบลา</button>
           </div>
 
-          <!-- โซนกลาง: สถานะพนักงานมาทำงาน (Attendance Live) -->
           <div class="command-column">
             <h3>👥 สถานะพนักงานวันนี้ (Live)</h3>
             <div id="ccAttendanceList" style="margin-top:10px;">กำลังโหลด...</div>
           </div>
 
-          <!-- โซนขวา: สถานะการส่งของ (Delivery Live Tracking) -->
           <div class="command-column">
             <h3>🚚 ติดตามการส่งของ (Live Tracking)</h3>
             <div id="ccDeliveryList" style="margin-top:10px;">กำลังโหลด...</div>
@@ -1007,7 +998,6 @@
 
               let totalPresent = presentList.length + lateList.length;
 
-              // เรนเดอร์โซนซ้าย (Summary Stats)
               document.getElementById('ccSummaryStats').innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
                   <div style="background:#e8f5e9; color:#2e7d32; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
@@ -1025,7 +1015,6 @@
                 </div>
               `;
 
-              // เรนเดอร์โซนกลาง (Attendance List)
               let attHtml = '';
               leaveList.forEach(item => {
                 attHtml += `<div class="emp-tag-leave" style="font-size:12px;"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
@@ -1041,7 +1030,6 @@
               });
               document.getElementById('ccAttendanceList').innerHTML = attHtml;
 
-              // โหลดโซนขวาต่อ (Delivery Jobs Live)
               db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
                 document.getElementById('status').innerHTML = "";
                 const jobsObj = jobSnap.val() || {};
@@ -1057,7 +1045,8 @@
 
                   jobList.forEach(j => {
                     let isCompleted = String(j.status).includes('สำเร็จ');
-                    let badgeColor = isCompleted ? '#28a745' : '#e67e22';
+                    let isOnTheWay = String(j.status).includes('กำลังเดินทาง');
+                    let badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
                     let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#0d6efd; font-size:11px; text-decoration:underline;">ดูรูปหลักฐาน</a>` : '';
 
                     delivHtml += `
@@ -1080,7 +1069,6 @@
         });
       });
     }
-    // ==========================================
 
     function showAdminDeliveryHistory() {
       isAdmin = true;
@@ -1145,7 +1133,8 @@
 
         list.forEach(j => {
           let isCompleted = String(j.status).includes('สำเร็จ');
-          let badgeColor = isCompleted ? '#28a745' : '#e67e22';
+          let isOnTheWay = String(j.status).includes('กำลังเดินทาง');
+          let badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
           let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปหลักฐานจาก Google Drive</a>` : '<span style="color:#888; font-size:12px;">(ยังไม่มีรูปแนบ)</span>';
 
           html += `
@@ -1206,11 +1195,12 @@
 
       let html = '';
       list.forEach(c => {
+        let addedByText = c.addedBy ? ` | 👤 เพิ่มโดย: ${c.addedBy}` : '';
         html += `
           <div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
               <b>🏬 ${c.name}</b><br>
-              <span style="color:#6c757d; font-size:12px;">📞 โทร: ${c.phone || '-'} | 📍 โซน: ${c.address || '-'}</span>
+              <span style="color:#6c757d; font-size:12px;">📞 โทร: ${c.phone || '-'} | 📍 โซน: ${c.address || '-'}${addedByText}</span>
             </div>
             <div>
               <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="deleteCustomer('${c.key}')">🗑️ ลบ</button>
@@ -1231,7 +1221,7 @@
         return;
       }
 
-      db.ref('customers').push().set({ name, phone, address }, (err) => {
+      db.ref('customers').push().set({ name, phone, address, addedBy: 'Admin' }, (err) => {
         if (!err) {
           showCustomerManagementPanel();
         }
@@ -1294,7 +1284,7 @@
 
               let customerCheckboxesHtml = '';
               if (custList.length === 0) {
-                customerCheckboxesHtml = `<div style="color:#888; font-size:13px;">ยังไม่มีรายชื่อลูกค้าในระบบ (กรุณาไปเพิ่มที่เมนูลูกค้า)</div>`;
+                customerCheckboxesHtml = `<div style="color:#888; font-size:13px;">ยังไม่มีรายชื่อลูกค้าในระบบ</div>`;
               } else {
                 custList.forEach(c => {
                   customerCheckboxesHtml += `
@@ -1479,7 +1469,8 @@
 
         g.jobs.forEach(j => {
           let isCompleted = String(j.status).includes('สำเร็จ');
-          let badgeColor = isCompleted ? '#28a745' : '#e67e22';
+          let isOnTheWay = String(j.status).includes('กำลังเดินทาง');
+          let badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
           let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:4px; padding:4px 8px; font-size:11px; text-decoration:none; border-radius:4px;">🖼️ ดูรูป Drive</a>` : '';
           
           html += `
@@ -1490,7 +1481,7 @@
                 ${viewPhotoBtn}
               </div>
               <div style="display:flex; gap:4px;">
-                <button class="btn-blue" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}')">🔄 รีเซ็ต/สลับสถานะ</button>
+                <button class="btn-blue" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}')">🔄 สลับสถานะ</button>
                 <button class="btn-danger" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminDeleteJob('${j.key}')">🗑️ ลบ</button>
               </div>
             </div>
@@ -1515,8 +1506,10 @@
         if (!err) {
           if (document.getElementById('pageTitle').innerText.includes('ศูนย์บัญชาการ')) {
             showAdminCommandCenter();
-          } else {
+          } else if (document.getElementById('pageTitle').innerText.includes('จัดการ')) {
             showAdminJobAssignPanel();
+          } else {
+            showDriverMyJobsView();
           }
         }
       });
@@ -1533,6 +1526,9 @@
       }
     }
 
+    // ==========================================
+    // ฟังก์ชันฝั่งพนักงานขับรถ: จัดการจ๊อบ + เพิ่มร้านเอง + ลูกค้าประจำ
+    // ==========================================
     function showDriverMyJobsView() {
       const t = i18n[currentLang];
       document.getElementById('pageTitle').innerText = "📦 งานส่งของของฉันวันนี้";
@@ -1541,10 +1537,39 @@
 
       const html = `
         <div class="user-banner">${currentUser.empName} (${currentUser.empId}) | วันที่: ${todayStr}</div>
+        
+        <!-- แผงให้พนักงานเพิ่มร้านค้า/สถานที่ส่งของเอง -->
+        <div style="background: #eef2f5; border: 2px dashed #0d6efd; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+          <b>➕ เพิ่มร้านค้า/สถานที่ส่งของใหม่ (เพิ่มเข้าจ๊อบทันที):</b>
+          <input type="text" id="driverNewCustName" placeholder="ชื่อร้านค้า / ลูกค้า" style="margin-top:6px; font-weight:bold;">
+          <input type="text" id="driverNewCustPhone" placeholder="เบอร์โทรศัพท์ (ถ้ามี)" style="margin-top:4px;">
+          <input type="text" id="driverNewCustZone" placeholder="โซน / ที่อยู่ (เช่น ตลาดสดโซน B)" style="margin-top:4px;">
+          
+          <label style="display:flex; align-items:center; gap:6px; margin:6px 0; font-size:13px; font-weight:bold; cursor:pointer;">
+            <input type="checkbox" id="driverSaveAsRegular" style="width:16px; height:16px; margin:0;" checked> 
+            📌 บันทึกเป็น "ลูกค้าประจำของฉัน" ไว้เลือกส่งรอบหน้า
+          </label>
+
+          <button class="btn-blue" onclick="driverAddNewCustomerAndJob()" style="margin-top:6px; font-size:14px; padding:10px;">💾 เพิ่มร้านใหม่ & ใส่ในจ๊อบวันนี้</button>
+        </div>
+
+        <!-- แผงเลือกจากลูกค้าประจำของฉัน (Quick Add) -->
+        <div style="background: #f8f9fa; border: 1px solid #ced4da; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+          <b>⭐ เลือกจาก "ลูกค้าประจำของฉัน":</b>
+          <div style="display:flex; gap:6px; margin-top:6px;">
+            <select id="driverRegularCustSelect" style="margin:0; font-size:13px;">
+              <option value="">-- โหลดรายชื่อลูกค้าประจำ --</option>
+            </select>
+            <button class="btn-fuel" onclick="driverAddJobFromRegularList()" style="width:auto; margin:0; padding:8px 12px; font-size:13px;">➕ ดึงไปส่งวันนี้</button>
+          </div>
+        </div>
+
+        <h3>📦 รายการจ๊อบส่งของวันนี้:</h3>
         <div id="driverMyJobsContainer"><div style="color:#888;">กำลังโหลดรายการจ๊อบส่งของ...</div></div>
         <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
       `;
       document.getElementById('mainContent').innerHTML = html;
+      loadDriverRegularCustomersDropdown();
 
       db.ref('delivery_jobs/' + todayStr).on('value', (snapshot) => {
         const jobsObj = snapshot.val() || {};
@@ -1559,20 +1584,30 @@
         });
 
         if (myList.length === 0) {
-          container.innerHTML = `<div style="color:#888; text-align:center; padding:20px;">🎉 วันนี้คุณยังไม่มีจ๊อบส่งของที่ได้รับมอบหมาย</div>`;
+          container.innerHTML = `<div style="color:#888; text-align:center; padding:20px;">🎉 วันนี้คุณยังไม่มีจ๊อบส่งของที่ได้รับมอบหมาย (สามารถเพิ่มร้านเองด้านบนได้เลย)</div>`;
           return;
         }
 
         let htmlList = '';
         myList.forEach(j => {
           let isCompleted = String(j.status).includes('สำเร็จ');
-          let badgeColor = isCompleted ? '#28a745' : '#e67e22';
+          let isOnTheWay = String(j.status).includes('กำลังเดินทาง');
+          let badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
           
           let viewPhotoLink = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปที่แนบไว้แล้ว</a>` : '<span style="color:#888; font-size:12px;">(ยังไม่มีรูปแนบ)</span>';
 
-          let actionBtnHtml = isCompleted 
-            ? `<button class="btn-clock" style="margin:0; padding:10px; font-size:14px; flex:1;" disabled>✅ ส่งเรียบร้อยแล้ว</button>`
-            : `<button class="btn-clock" style="margin:0; padding:10px; font-size:14px; flex:1;" onclick="driverMarkAsDelivered('${j.key}')">✅ กดส่งของแล้ว</button>`;
+          let actionBtnHtml = '';
+          if (isCompleted) {
+            actionBtnHtml = `<button class="btn-clock" style="margin:0; padding:8px; font-size:13px; flex:1;" disabled>✅ ส่งเรียบร้อยแล้ว</button>`;
+          } else if (isOnTheWay) {
+            actionBtnHtml = `
+              <button class="btn-blue" style="margin:0; padding:8px; font-size:13px; flex:1; background:linear-gradient(135deg, #0d6efd, #0dcaf0);" onclick="driverMarkAsDelivered('${j.key}')">✅ กดส่งของเสร็จแล้ว</button>
+            `;
+          } else {
+            actionBtnHtml = `
+              <button class="btn-orange" style="margin:0; padding:8px; font-size:13px; flex:1;" onclick="driverMarkAsOnTheWay('${j.key}')">🚚 กำลังไปส่ง</button>
+            `;
+          }
 
           htmlList += `
             <div class="history-item" style="border-left: 4px solid ${badgeColor};">
@@ -1580,19 +1615,119 @@
               สถานะ: <b style="color:${badgeColor};">${j.status} (${j.deliveredTime})</b><br>
               <div style="margin-top:6px;">${viewPhotoLink}</div><br>
 
-              <div style="display:flex; gap:8px;">
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
                 ${actionBtnHtml}
                 
-                <label class="btn-fuel" style="margin:0; padding:10px; font-size:14px; flex:1; text-align:center; border-radius:8px; cursor:pointer; display:inline-block; box-sizing:border-box;">
-                  📸 แนบรูปหลักฐาน
+                <label class="btn-fuel" style="margin:0; padding:8px; font-size:13px; flex:1; text-align:center; border-radius:8px; cursor:pointer; display:inline-block; box-sizing:border-box;">
+                  📸 ถ่ายรูปหลักฐาน
                   <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadDeliveryPhotoToDrive(event, '${j.key}', '${j.customerName}')">
                 </label>
+
+                <button class="btn-danger" style="width:auto; margin:0; padding:8px 12px; font-size:12px;" onclick="driverDeleteMyJob('${j.key}')">🗑️ ลบ</button>
               </div>
             </div>
           `;
         });
 
         container.innerHTML = htmlList;
+      });
+    }
+
+    function loadDriverRegularCustomersDropdown() {
+      const select = document.getElementById('driverRegularCustSelect');
+      if (!select) return;
+
+      db.ref('customers').once('value', (snapshot) => {
+        const custObj = snapshot.val() || {};
+        let options = `<option value="">-- เลือกลูกค้าประจำของฉัน --</option>`;
+        
+        Object.keys(custObj).forEach(k => {
+          let c = custObj[k];
+          // เงื่อนไข: เป็นลูกค้าที่ถูกบันทึกโดยพนักงานคนนี้ หรือถูกเพิ่มเป็นลูกค้าประจำ
+          if (c.regularDriverId === currentUser.empId || c.addedBy === currentUser.empName) {
+            options += `<option value="${c.name}">🏬 ${c.name} (${c.address || 'ลูกค้าประจำ'})</option>`;
+          }
+        });
+
+        // หากยังไม่มีลูกค้าประจำเฉพาะตัว ให้โชว์ลูกค้าทั้งหมดในระบบเป็นทางเลือกด้วย
+        if (options === `<option value="">-- เลือกลูกค้าประจำของฉัน --</option>`) {
+          Object.keys(custObj).forEach(k => {
+            let c = custObj[k];
+            options += `<option value="${c.name}">🏬 ${c.name} (${c.address || 'ทั่วไป'})</option>`;
+          });
+        }
+
+        select.innerHTML = options;
+      });
+    }
+
+    function driverAddJobFromRegularList() {
+      const select = document.getElementById('driverRegularCustSelect');
+      const custName = select.value;
+      if (!custName) {
+        alert("กรุณาเลือกลูกค้าจากรายชื่อก่อน");
+        return;
+      }
+
+      const todayStr = getLocalDateTimeString();
+      db.ref('delivery_jobs/' + todayStr).push().set({
+        driverId: currentUser.empId,
+        driverName: currentUser.empName,
+        customerName: custName,
+        status: "รอจัดส่ง ⏳",
+        deliveredTime: "-"
+      }, (err) => {
+        if (!err) {
+          select.value = "";
+        }
+      });
+    }
+
+    function driverAddNewCustomerAndJob() {
+      const name = document.getElementById('driverNewCustName').value.trim();
+      const phone = document.getElementById('driverNewCustPhone').value.trim();
+      const address = document.getElementById('driverNewCustZone').value.trim();
+      const saveAsRegular = document.getElementById('driverSaveAsRegular').checked;
+
+      if (!name) {
+        alert("กรุณากรอกชื่อร้านค้าหรือลูกค้าใหม่");
+        return;
+      }
+
+      // 1. บันทึกลงฐานข้อมูลลูกค้ากลาง (customers) และผูกว่าเป็นลูกค้าประจำของคนขับคนนี้
+      db.ref('customers').push().set({
+        name: name,
+        phone: phone,
+        address: address || 'เพิ่มโดยพนักงาน',
+        addedBy: currentUser.empName,
+        regularDriverId: saveAsRegular ? currentUser.empId : ""
+      });
+
+      // 2. เพิ่มเข้าจ๊อบส่งของวันนี้ทันที
+      const todayStr = getLocalDateTimeString();
+      db.ref('delivery_jobs/' + todayStr).push().set({
+        driverId: currentUser.empId,
+        driverName: currentUser.empName,
+        customerName: name,
+        status: "รอจัดส่ง ⏳",
+        deliveredTime: "-"
+      }, (err) => {
+        if (!err) {
+          document.getElementById('driverNewCustName').value = '';
+          document.getElementById('driverNewCustPhone').value = '';
+          document.getElementById('driverNewCustZone').value = '';
+          loadDriverRegularCustomersDropdown();
+        }
+      });
+    }
+
+    function driverMarkAsOnTheWay(jobKey) {
+      const todayStr = getLocalDateTimeString();
+      let timeStr = new Date().toTimeString().substring(0, 5) + " น.";
+
+      db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
+        status: "กำลังเดินทางไปส่ง 🚚",
+        deliveredTime: timeStr
       });
     }
 
@@ -1603,11 +1738,14 @@
       db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
         status: "ส่งสำเร็จแล้ว 🟢",
         deliveredTime: timeStr
-      }, (err) => {
-        if (!err) {
-          // อัปเดตสำเร็จเรียบร้อย
-        }
       });
+    }
+
+    function driverDeleteMyJob(jobKey) {
+      const todayStr = getLocalDateTimeString();
+      if (confirm("ต้องการลบรายการส่งของนี้ออก?")) {
+        db.ref(`delivery_jobs/${todayStr}/${jobKey}`).remove();
+      }
     }
 
     function showDashboard() {
@@ -1830,7 +1968,7 @@
         `;
 
         if (locList.length === 0) {
-          html += `<div style="color:#888; margin-bottom:15px;">ยังไม่มีการตั้งค่าพิกัดในระบบ (ระบบจะใช้พิกัดเริ่มต้น)</div>`;
+          html += `<div style="color:#888; margin-bottom:15px;">ยังไม่มีการตั้งค่าพิกัดในระบบ</div>`;
         } else {
           locList.forEach(loc => {
             html += `
@@ -1860,7 +1998,7 @@
       const radius = document.getElementById('locRadius').value.trim();
 
       if (!name || !lat || !lng || !radius) {
-        alert("กรุณากรอกข้อมูลสถานที่ ละติจูด ลองจิจูด และรัศมีให้ครบถ้วน");
+        alert("กรุณากรอกข้อมูลสถานที่ให้ครบถ้วน");
         return;
       }
 
@@ -1945,7 +2083,7 @@
 
         let optionsHtml = `<option value="">-- เลือกทะเบียนรถ --</option>`;
         if (platesList.length === 0) {
-          optionsHtml += `<option value="รถส่วนกลาง">รถส่วนกลาง (ยังไม่ได้เพิ่มทะเบียน)</option>`;
+          optionsHtml += `<option value="รถส่วนกลาง">รถส่วนกลาง</option>`;
         } else {
           platesList.forEach(p => {
             optionsHtml += `<option value="${p}">${p}</option>`;
@@ -1966,7 +2104,7 @@
           </select>
 
           <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>📍 รายละเอียด / เส้นทาง / รายการซ่อม:</b></div>
-          <textarea id="fuelRoute" rows="3" placeholder="เช่น ไปส่งหมูตลาดสุพรรณ หรือ เปลี่ยนยางนอกล้อหลัง (เว้นว่างได้)"></textarea>
+          <textarea id="fuelRoute" rows="3" placeholder="เช่น ไปส่งหมูตลาดสุพรรณ หรือ เปลี่ยนยางนอกล้อหลัง"></textarea>
           
           <button class="btn-fuel" onclick="handleFuelSubmit()">💾 ส่งคำขอเบิกจ่าย</button>
           <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
@@ -2086,7 +2224,7 @@
         <h2>📜 ประวัติรายการเบิกจ่าย & จัดการทะเบียนรถกลาง</h2>
         
         <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 2px dashed #e67e22; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
-          <b>🚗 จัดการทะเบียนรถในระบบ (สำหรับให้พนักงานเลือก):</b>
+          <b>🚗 จัดการทะเบียนรถในระบบ:</b>
           <div style="display: flex; gap: 8px; margin-top: 8px;">
             <input type="text" id="newCarPlateInput" placeholder="เพิ่มทะเบียนรถใหม่ (เช่น 3กฐ 1234)" style="margin:0; font-weight:bold;">
             <button class="btn-fuel" onclick="addCarPlate()" style="width: auto; margin: 0; padding: 10px 15px;">➕ เพิ่มทะเบียน</button>
@@ -2114,7 +2252,7 @@
 
         <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: left;">
           <div style="font-size: 14px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; padding-bottom: 6px;">
-            📊 สรุปยอดค่าน้ำมันแยกตามทะเบียนรถ (ช่วงเวลานี้)
+            📊 สรุปยอดค่าน้ำมันแยกตามทะเบียนรถ
           </div>
           <div id="carExpenseChartContainer"></div>
         </div>
@@ -2146,7 +2284,7 @@
           html += `
             <span style="background: white; border: 1px solid #ced4da; padding: 4px 10px; border-radius: 6px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
               🚗 ${item.plate}
-              <span onclick="deleteCarPlate('${item.key}')" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 15px;" title="ลบทะเบียนนี้">&times;</span>
+              <span onclick="deleteCarPlate('${item.key}')" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 15px;" title="ลบ">&times;</span>
             </span>
           `;
         });
@@ -2234,7 +2372,7 @@
                 
                 <div style="margin-top:8px; display:flex; gap:6px;">
                   <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${item.key}', '${item.carPlate || ''}', '${item.route || ''}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
-                  <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${item.key}', '${item.empName}')">🗑️ ลบรายการ</button>
+                  <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${item.key}', '${item.empName}')">🗑️ ลบ</button>
                 </div>
               </div>
             `;
@@ -2538,8 +2676,8 @@
                     <option value="ไม่อนุมัติ 🔴" ${statusStr.includes('ไม่อนุมัติ') ? 'selected' : ''}>🔴 ไม่อนุมัติ</option>
                     <option value="รออนุมัติ ⏳" ${statusStr.includes('รออนุมัติ') ? 'selected' : ''}>⏳ รออนุมัติ</option>
                   </select>
-                  <button onclick="adminUpdateLeaveStatus('${item.key}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#0d6efd;">อัปเดตสถานะ</button>
-                  <button onclick="adminDeleteLeave('${item.key}', '${item.empName}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#dc3545;">ลบใบลา</button>
+                  <button onclick="adminUpdateLeaveStatus('${item.key}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#0d6efd;">อัปเดต</button>
+                  <button onclick="adminDeleteLeave('${item.key}', '${item.empName}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#dc3545;">ลบ</button>
                 </div>
               </div>
             `;
@@ -3164,13 +3302,12 @@
       return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))));
     }
 
-function executeClockIn(lateReason) {
+    function executeClockIn(lateReason) {
       if (!navigator.geolocation) {
         alert("อุปกรณ์ไม่รองรับ GPS");
         return;
       }
 
-      // ระบบหน่วงเวลา 10 วินาที ป้องกันการกดรัว
       const btn = document.getElementById('btnSubmitClock');
       if (btn) {
         if (btn.disabled) return;
@@ -3528,11 +3665,11 @@ function executeClockIn(lateReason) {
               });
 
               lateList.forEach(item => {
-                html += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b> (เกณฑ์ ${globalLateTime})</span></div>`;
+                html += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b></span></div>`;
               });
 
               absentList.forEach(item => {
-                html += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลาทำงาน</span></div>`;
+                html += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
               });
 
               let totalPresentCount = presentList.length + lateList.length;
