@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-11">
+  <link rel="manifest" href="manifest.json?v=20260809-12">
   <meta name="theme-color" content="#16a34a">
 
   <base target="_top">
@@ -236,9 +236,27 @@
     .btn-yes { background: linear-gradient(135deg, #28a745, #20c997) !important; color: white; }
     .btn-no { background: linear-gradient(135deg, #dc3545, #e83e8c) !important; color: white; }
     .btn-ok { background-color: #0d6efd; width: 100%; margin: 0 !important; padding: 12px 0; font-size: 16px; border-radius: 8px; }
+
+    /* Pull-to-Refresh Indicator Styling */
+    #pullRefreshIndicator {
+      position: absolute;
+      top: -45px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 13px;
+      color: #fff;
+      font-weight: bold;
+      transition: top 0.2s ease;
+      z-index: 9999;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Pull-to-Refresh Indicator -->
+  <div id="pullRefreshIndicator">⬇️ ดึงลงเพื่อรีเฟรช...</div>
 
   <div class="card" id="mainCard">
     <div class="top-bar">
@@ -278,7 +296,6 @@
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()">⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Center)</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()">📦 จัดการ & มอบหมายจ๊อบส่งของ</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()">📜 ประวัติการส่งของย้อนหลัง</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showCustomerManagementPanel()">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">👥 สรุปสถิติ ขาด ลา มาสาย</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">📜 ดูการลงเวลาทำงานย้อนหลัง</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">🌴 อนุมัติคำขอลา</div>
@@ -321,7 +338,38 @@
     let currentUser = null;
     let isAdmin = false;
 
-// เอาตัวสั่งรีเฟรชออก ปล่อยให้ระบบ Realtime ของ Firebase ทำงานต่อเองโดยไม่ต้องรีหน้าเว็บ
+    // ระบบ Pull-to-Refresh (ดึงลงเพื่อรีเฟรชหน้าเว็บ)
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e) => {
+      if (window.scrollY === 0) {
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (window.scrollY === 0) {
+        let touchY = e.touches[0].clientY;
+        let diff = touchY - touchStartY;
+        let indicator = document.getElementById('pullRefreshIndicator');
+        if (diff > 70 && indicator) {
+          indicator.style.top = '10px';
+          indicator.innerText = "🔄 ปล่อยมือเพื่อรีเฟรช...";
+        }
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      let indicator = document.getElementById('pullRefreshIndicator');
+      if (window.scrollY === 0 && indicator && indicator.style.top === '10px') {
+        indicator.innerText = "⏳ กำลังรีเฟรชข้อมูล...";
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else if (indicator) {
+        indicator.style.top = '-45px';
+      }
+    });
+
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         console.log("App resumed, keeping current state.");
@@ -860,7 +908,6 @@
                   <div>
                     <button class="btn-fuel" onclick="showAdminJobAssignPanel()">📦 มอบหมายจ๊อบส่งของวันนี้</button>
                     <button class="btn-history" onclick="showAdminDeliveryHistory()" style="margin-top:5px;">📜 ประวัติการส่งของย้อนหลัง</button>
-                    <button class="btn-blue" onclick="showCustomerManagementPanel()" style="margin-top:5px;">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</button>
                   </div>
                 </div>
 
@@ -988,7 +1035,7 @@
 
               db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
                 const jobsObj = jobSnap.val() || {};
-                let activeDeliveryMap = {}; // { driverId: [รายชื่อร้านที่กำลังไปส่ง] }
+                let activeDeliveryMap = {};
                 
                 Object.keys(jobsObj).forEach(jk => {
                   let j = jobsObj[jk];
@@ -1025,12 +1072,11 @@
                   }
                 });
 
-                // ⚡ จัดเรียงลำดับใหม่: ใครกำลังออกไปส่งของ (มี drivingInfo) ให้ดันขึ้นมาอยู่อันดับแรกสุดทันที
                 const sortByDriving = (a, b) => {
                   let aHasDriving = (a.drivingInfo && a.drivingInfo.length > 0) ? 1 : 0;
                   let bHasDriving = (b.drivingInfo && b.drivingInfo.length > 0) ? 1 : 0;
                   if (aHasDriving !== bHasDriving) {
-                    return bHasDriving - aHasDriving; // ดันคนที่มีสถานะส่งของขึ้นบน
+                    return bHasDriving - aHasDriving;
                   }
                   return (a.present.time || "").localeCompare(b.present.time || "");
                 };
@@ -1227,7 +1273,7 @@
             <button class="btn-blue" onclick="addNewCustomer()" style="margin-top:8px;">💾 บันทึกลูกค้าใหม่</button>
           </div>
           <div id="customerListContainer"></div>
-          <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
+          <button class="btn-back" onclick="showAdminJobAssignPanel()" style="margin-top:15px;">⬅️ กลับหน้าจัดการจ๊อบส่งของ</button>
         `;
 
         document.getElementById('mainContent').innerHTML = html;
@@ -1374,9 +1420,11 @@
                     </div>
                   </div>
 
-                  <div style="display:flex; gap:8px; margin-top:10px;">
-                    <button class="btn-fuel" onclick="saveAssignedJobs()" style="margin:0; flex:2;">💾 บันทึก & ส่งงานให้พนักงาน</button>
-                    <button class="btn-purple" onclick="saveAsPresetRoute()" style="margin:0; flex:1; font-size:13px;" title="บันทึกรายการที่ติ๊กไว้เป็นเส้นทางประจำของคนนี้">📌 บันทึกเป็นเส้นทางประจำ</button>
+                  <!-- ย้ายปุ่มจัดการฐานข้อมูลมาไว้แถวเดียวกันตามคำขอ -->
+                  <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                    <button class="btn-fuel" onclick="saveAssignedJobs()" style="margin:0; flex:2; min-width:180px;">💾 บันทึกจ๊อบส่ง</button>
+                    <button class="btn-purple" onclick="saveAsPresetRoute()" style="margin:0; flex:1; font-size:13px; min-width:140px;" title="บันทึกรายการที่ติ๊กไว้เป็นเส้นทางประจำของคนนี้">📌 บันทึกเส้นทาง</button>
+                    <button class="btn-blue" onclick="showCustomerManagementPanel()" style="margin:0; flex:1; font-size:13px; min-width:140px;">🏬 จัดการฐานข้อมูลลูกค้า</button>
                   </div>
                 </div>
 
@@ -2318,7 +2366,7 @@
 
         let html = '';
         list.forEach(item => {
-          html += `
+          html = html + `
             <span style="background: white; border: 1px solid #ced4da; padding: 4px 10px; border-radius: 6px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
               🚗 ${item.plate}
               <span onclick="deleteCarPlate('${item.key}')" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 15px;" title="ลบ">&times;</span>
@@ -2438,7 +2486,7 @@
       const chartContainer = document.getElementById('carExpenseChartContainer');
       if (!chartContainer) return;
 
-      let carData = {}; // { plateName: { fuel: 0, repair: 0 } }
+      let carData = {}; 
       let maxAmount = 1;
 
       currentFuelFilteredList.forEach(item => {
@@ -2471,7 +2519,6 @@
         let fAmt = carData[plate].fuel;
         let rAmt = carData[plate].repair;
         let total = fAmt + rAmt;
-        let percent = Math.round((total / maxAmount) * 100);
 
         chartHtml += `
           <div style="margin-bottom: 12px;">
