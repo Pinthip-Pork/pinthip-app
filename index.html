@@ -3,8 +3,8 @@
 <head>
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
-  <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-11">
+  <!-- เรียกใช้งาน Manifest -->
+  <link rel="manifest" href="manifest.json?v=20260809-12">
   <meta name="theme-color" content="#16a34a">
 
   <base target="_top">
@@ -229,6 +229,20 @@
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
     .modal-box { background: white; padding: 22px; border-radius: 16px; max-width: 340px; width: 90%; box-shadow: 0 5px 20px rgba(0,0,0,0.2); box-sizing: border-box; text-align: left; }
+    
+    /* ขยายขนาด Modal สำหรับป๊อปอัพเมนูด่วนแอดมิน */
+    .modal-box.modal-wide-admin {
+      max-width: 650px !important;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-body-scroll {
+      overflow-y: auto;
+      max-height: 65vh;
+      padding-right: 4px;
+    }
+
     .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; color: #2c3e50; text-align: center; }
     .modal-text { font-size: 15px; color: #555; margin-bottom: 12px; line-height: 1.5; white-space: pre-line; }
     .modal-btns { display: flex; gap: 10px; width: 100%; margin-top: 15px; }
@@ -294,7 +308,7 @@
   </div>
 
   <div class="modal-overlay" id="customModal">
-    <div class="modal-box">
+    <div class="modal-box" id="modalBoxContainer">
       <div class="modal-title" id="modalTitle">ยืนยัน</div>
       <div class="modal-text" id="modalText">ข้อความ...</div>
       <div id="modalCustomContent"></div>
@@ -321,7 +335,6 @@
     let currentUser = null;
     let isAdmin = false;
 
-    // ตัวแปรสำหรับเก็บ Reference ของ Firebase Listeners ป้องกัน Memory Leak
     let activeListeners = {
       leaves: null,
       fuels: null,
@@ -530,7 +543,6 @@
       document.getElementById('companyTitle').innerText = i18n[lang].companyTitle;
       document.getElementById('listTitle').innerText = i18n[lang].listTitle;
 
-      // แปลข้อความใน Drawer Menu อัตโนมัติ
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (i18n[lang][key]) {
@@ -686,7 +698,7 @@
           html += `<div style="font-weight:bold; color:#fd7e14; margin-bottom:5px;">🌴 รายการขอลางาน (${pendingLeavesCache.length}):</div>`;
           pendingLeavesCache.forEach(item => {
             html += `
-              <div class="history-item" style="cursor:pointer; background:#fff3cd;" onclick="closeModal(); showAdminLeaves();">
+              <div class="history-item" style="cursor:pointer; background:#fff3cd;" onclick="closeModal(); openAdminLeavesModal();">
                 <b>👤 ${item.empName}</b> (${item.leaveType})<br>
                 📅 ${item.startDate} ถึง ${item.endDate}<br>
                 💬 เหตุผล: ${item.reason}
@@ -701,7 +713,7 @@
             let typeLabel = item.requestType || 'เบิกค่าน้ำมัน';
             let plateText = item.carPlate ? `ทะเบียน: ${item.carPlate}` : '';
             html += `
-              <div class="history-item" style="cursor:pointer; background:#fff3cd;" onclick="closeModal(); showAdminFuelRequests();">
+              <div class="history-item" style="cursor:pointer; background:#fff3cd;" onclick="closeModal(); openAdminFuelRequestsModal();">
                 <b>👤 ${item.empName}</b> [${typeLabel}] ${plateText}<br>
                 📍 รายละเอียด: ${item.route || '-'}
               </div>
@@ -920,7 +932,7 @@
                     <p>มอบหมายงานส่งของ & ดูประวัติย้อนหลัง</p>
                   </div>
                   <div>
-                    <button class="btn-fuel" onclick="showAdminJobAssignPanel()">📦 มอบหมายจ๊อบส่งของวันนี้</button>
+                    <button class="btn-fuel" onclick="openAdminJobAssignModal()">📦 มอบหมายจ๊อบส่งของวันนี้ (Pop-up)</button>
                     <button class="btn-history" onclick="showAdminDeliveryHistory()" style="margin-top:5px;">📜 ประวัติการส่งของย้อนหลัง</button>
                     <button class="btn-blue" onclick="showCustomerManagementPanel()" style="margin-top:5px;">🏬 จัดการฐานข้อมูลลูกค้า (ร้านค้า)</button>
                   </div>
@@ -943,7 +955,7 @@
                     <p>จัดการคำขอลาและตรวจสอบสถานะ</p>
                   </div>
                   <div>
-                    <button class="btn-orange" onclick="showAdminLeaves()">🌴 ตรวจสอบ/อนุมัติใบลา</button>
+                    <button class="btn-orange" onclick="openAdminLeavesModal()">🌴 ตรวจสอบ/อนุมัติใบลา (Pop-up)</button>
                     <button class="btn-history" onclick="showAdminLeaveHistory()" style="margin-top:5px;">📜 ประวัติการลาทั้งหมด</button>
                   </div>
                 </div>
@@ -954,7 +966,7 @@
                     <p>รออนุมัติ: <b style="color:#d9534f;">${pendingFuel}</b> รายการ</p>
                   </div>
                   <div>
-                    <button class="btn-fuel" onclick="showAdminFuelRequests()">⛽/🔧 ตรวจสอบ/อนุมัติเบิกจ่าย</button>
+                    <button class="btn-fuel" onclick="openAdminFuelRequestsModal()">⛽/🔧 ตรวจสอบ/อนุมัติเบิกจ่าย (Pop-up)</button>
                     <button class="btn-history" onclick="showAdminFuelHistory()" style="margin-top:5px;">📜 ประวัติ & จัดการเบิกจ่าย</button>
                   </div>
                 </div>
@@ -972,6 +984,355 @@
         });
       });
     }
+
+    /* --- ฟังก์ชันเปิด Pop-up สำหรับเมนูด่วนแอดมิน --- */
+
+    // 1. Pop-up จัดการจ๊อบส่งของ
+    function openAdminJobAssignModal() {
+      const todayStr = getLocalDateTimeString();
+      showModal("📦 จัดการ & มอบหมายจ๊อบส่งของวันนี้", "กำลังโหลดข้อมูล...", "", `<button class="btn-ok" onclick="closeModal()">ปิดหน้าต่าง</button>`);
+      document.getElementById('modalBoxContainer').classList.add('modal-wide-admin');
+
+      db.ref('employees').once('value', (empSnap) => {
+        const empObj = empSnap.val() || {};
+        let driversList = [];
+        Object.keys(empObj).forEach(k => {
+          if (empObj[k].isDriver) driversList.push(empObj[k]);
+        });
+
+        db.ref('customers').once('value', (custSnap) => {
+          const custObj = custSnap.val() || {};
+          let custList = [];
+          Object.keys(custObj).forEach(k => custList.push({ key: k, ...custObj[k] }));
+
+          db.ref('routes_preset').once('value', (presetSnap) => {
+            const presetObj = presetSnap.val() || {};
+
+            db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
+              const todayJobsObj = jobSnap.val() || {};
+
+              let driverOptions = `<option value="">-- เลือกพนักงานขับรถ --</option>`;
+              driversList.forEach(d => {
+                driverOptions += `<option value="${d.empId}" data-name="${d.empName}">${d.empName} (${d.empId})</option>`;
+              });
+
+              let presetOptions = `<option value="">-- เลือกโหลดเส้นทางประจำ (Preset) --</option>`;
+              Object.keys(presetObj).forEach(pk => {
+                let p = presetObj[pk];
+                presetOptions += `<option value="${pk}">${p.routeName} (สำหรับ ${p.driverName})</option>`;
+              });
+
+              let customerCheckboxesHtml = '';
+              if (custList.length === 0) {
+                customerCheckboxesHtml = `<div style="color:#888; font-size:13px;">ยังไม่มีรายชื่อลูกค้าในระบบ</div>`;
+              } else {
+                custList.forEach(c => {
+                  customerCheckboxesHtml += `
+                    <label style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:14px; background:white; padding:6px 10px; border-radius:6px; border:1px solid #ddd; cursor:pointer;">
+                      <input type="checkbox" class="cust-checkbox-modal" value="${c.name}" style="width:18px; height:18px; margin:0;">
+                      <span>🏬 ${c.name} (${c.address || 'ทั่วไป'})</span>
+                    </label>
+                  `;
+                });
+              }
+
+              let html = `
+                <div class="modal-body-scroll">
+                  <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 12px; padding: 12px; margin-bottom: 15px; text-align: left;">
+                    <b>➕ มอบหมายจ๊อบให้พนักงาน:</b>
+                    <div style="margin-top:6px;">
+                      <span style="font-size:12px; color:#555;">1. เลือกพนักงานขับรถ:</span>
+                      <select id="modalAssignDriverSelect" style="font-weight:bold; margin:4px 0;">${driverOptions}</select>
+                    </div>
+                    <div style="margin-top:4px;">
+                      <span style="font-size:12px; color:#555;">(ทางเลือก) โหลดเส้นทางประจำ:</span>
+                      <select id="modalAssignPresetSelect" onchange="loadPresetRouteToModalForm()" style="margin:4px 0;">${presetOptions}</select>
+                    </div>
+                    <div style="margin-top:8px;">
+                      <span style="font-size:12px; color:#555;">2. ติ๊กเลือกร้านค้าที่ต้องไปส่งวันนี้:</span>
+                      <div style="max-height: 140px; overflow-y: auto; border: 1px solid #ccc; padding: 6px; border-radius: 8px; background: #fff; margin-top:4px;">
+                        ${customerCheckboxesHtml}
+                      </div>
+                    </div>
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                      <button class="btn-fuel" onclick="saveAssignedJobsFromModal()" style="margin:0; flex:2; padding:10px;">💾 บันทึกจ๊อบส่ง</button>
+                      <button class="btn-purple" onclick="saveAsPresetRouteFromModal()" style="margin:0; flex:1; font-size:12px; padding:10px;">📌 บันทึกเส้นทาง</button>
+                    </div>
+                  </div>
+
+                  <div style="font-weight:bold; color:#2c3e50; margin-bottom:6px;">📋 สถานะการส่งของพนักงานวันนี้:</div>
+                  <div id="modalTodayJobsContainer">กำลังโหลด...</div>
+                </div>
+              `;
+
+              document.getElementById('modalText').innerText = `วันที่: ${todayStr}`;
+              document.getElementById('modalCustomContent').innerHTML = html;
+              renderModalTodayJobsList(todayJobsObj, driversList);
+            });
+          });
+        });
+      });
+    }
+
+    function loadPresetRouteToModalForm() {
+      const presetId = document.getElementById('modalAssignPresetSelect').value;
+      if (!presetId) return;
+
+      db.ref('routes_preset/' + presetId).once('value', (snapshot) => {
+        const preset = snapshot.val();
+        if (!preset || !preset.customers) return;
+
+        const driverSelect = document.getElementById('modalAssignDriverSelect');
+        driverSelect.value = preset.driverId;
+
+        const checkboxes = document.querySelectorAll('.cust-checkbox-modal');
+        checkboxes.forEach(cb => {
+          if (preset.customers.includes(cb.value)) cb.checked = true;
+          else cb.checked = false;
+        });
+      });
+    }
+
+    function saveAsPresetRouteFromModal() {
+      const driverSelect = document.getElementById('modalAssignDriverSelect');
+      const driverId = driverSelect.value;
+      if (!driverId) { alert("กรุณาเลือกพนักงานขับรถก่อน"); return; }
+      const driverName = driverSelect.options[driverSelect.selectedIndex].getAttribute('data-name');
+
+      const checkboxes = document.querySelectorAll('.cust-checkbox-modal:checked');
+      let selectedCusts = [];
+      checkboxes.forEach(cb => selectedCusts.push(cb.value));
+
+      if (selectedCusts.length === 0) { alert("กรุณาติ๊กเลือกร้านค้าอย่างน้อย 1 ร้าน"); return; }
+
+      const routeName = prompt("ตั้งชื่อเส้นทางประจำนี้:", `${driverName} - สายประจำ`);
+      if (!routeName) return;
+
+      db.ref('routes_preset').push().set({
+        routeName: routeName,
+        driverId: driverId,
+        driverName: driverName,
+        customers: selectedCusts
+      }, (err) => {
+        if (!err) { alert("บันทึกเส้นทางประจำเรียบร้อย"); openAdminJobAssignModal(); }
+      });
+    }
+
+    function saveAssignedJobsFromModal() {
+      const driverSelect = document.getElementById('modalAssignDriverSelect');
+      const driverId = driverSelect.value;
+      if (!driverId) { alert("กรุณาเลือกพนักงานขับรถ"); return; }
+      const driverName = driverSelect.options[driverSelect.selectedIndex].getAttribute('data-name');
+
+      const checkboxes = document.querySelectorAll('.cust-checkbox-modal:checked');
+      let selectedCusts = [];
+      checkboxes.forEach(cb => selectedCusts.push(cb.value));
+
+      if (selectedCusts.length === 0) { alert("กรุณาติ๊กเลือกร้านค้า"); return; }
+
+      const todayStr = getLocalDateTimeString();
+      const jobsRef = db.ref('delivery_jobs/' + todayStr);
+
+      selectedCusts.forEach(custName => {
+        jobsRef.push({
+          driverId: driverId,
+          driverName: driverName,
+          customerName: custName,
+          status: "รอจัดส่ง ⏳",
+          deliveredTime: "-"
+        });
+      });
+
+      alert(`มอบหมายจ๊อบให้ "${driverName}" จำนวน ${selectedCusts.length} ร้านเรียบร้อย`);
+      openAdminJobAssignModal();
+    }
+
+    function renderModalTodayJobsList(jobsObj, driversList) {
+      const container = document.getElementById('modalTodayJobsContainer');
+      if (!container) return;
+
+      let list = [];
+      Object.keys(jobsObj).forEach(k => list.push({ key: k, ...jobsObj[k] }));
+
+      if (list.length === 0) {
+        container.innerHTML = `<div style="color:#888; font-size:12px; text-align:center; padding:10px;">ยังไม่มีการมอบหมายจ๊อบในวันนี้</div>`;
+        return;
+      }
+
+      let grouped = {};
+      driversList.forEach(d => { grouped[d.empId] = { name: d.empName, jobs: [] }; });
+
+      list.forEach(j => {
+        if (!grouped[j.driverId]) grouped[j.driverId] = { name: j.driverName, jobs: [] };
+        grouped[j.driverId].jobs.push(j);
+      });
+
+      let html = '';
+      Object.keys(grouped).forEach(did => {
+        let g = grouped[did];
+        if (g.jobs.length === 0) return;
+        let completedCount = g.jobs.filter(j => String(j.status).includes('สำเร็จ')).length;
+
+        html += `
+          <div class="history-item" style="margin:4px 0; padding:8px;">
+            <b>🚚 ${g.name}</b> (เสร็จ ${completedCount}/${g.jobs.length})
+            <div style="margin-top:4px; display:flex; flex-direction:column; gap:4px;">
+        `;
+        g.jobs.forEach(j => {
+          let isCompleted = String(j.status).includes('สำเร็จ');
+          let badgeColor = isCompleted ? '#28a745' : '#e67e22';
+          html += `
+            <div style="background:white; padding:6px; border-radius:4px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+              <span>🏬 <b>${j.customerName}</b> <b style="color:${badgeColor};">(${j.status})</b></span>
+              <div style="display:flex; gap:4px;">
+                <button class="btn-blue" style="width:auto; margin:0; padding:2px 6px; font-size:11px;" onclick="modalToggleJobStatus('${j.key}')">🔄 สลับ</button>
+                <button class="btn-danger" style="width:auto; margin:0; padding:2px 6px; font-size:11px;" onclick="modalDeleteJob('${j.key}')">🗑️ ลบ</button>
+              </div>
+            </div>
+          `;
+        });
+        html += `</div></div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function modalToggleJobStatus(jobKey) {
+      const todayStr = getLocalDateTimeString();
+      db.ref(`delivery_jobs/${todayStr}/${jobKey}`).once('value', (snap) => {
+        let j = snap.val();
+        if (!j) return;
+        let newStatus = String(j.status).includes('สำเร็จ') ? "รอจัดส่ง ⏳" : "ส่งสำเร็จแล้ว 🟢";
+        let timeStr = String(j.status).includes('สำเร็จ') ? "-" : (new Date().toTimeString().substring(0, 5) + " น.");
+        db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({ status: newStatus, deliveredTime: timeStr }, () => {
+          openAdminJobAssignModal();
+        });
+      });
+    }
+
+    function modalDeleteJob(jobKey) {
+      const todayStr = getLocalDateTimeString();
+      if (confirm("ต้องการลบจ๊อบนี้?")) {
+        db.ref(`delivery_jobs/${todayStr}/${jobKey}`).remove(() => {
+          openAdminJobAssignModal();
+        });
+      }
+    }
+
+
+    // 2. Pop-up อนุมัติเบิกค่าน้ำมัน / ค่าซ่อม
+    function openAdminFuelRequestsModal() {
+      showModal("⛽/🔧 ตรวจสอบ & อนุมัติเบิกจ่าย", "กำลังโหลดข้อมูล...", "", `<button class="btn-ok" onclick="closeModal()">ปิดหน้าต่าง</button>`);
+      document.getElementById('modalBoxContainer').classList.add('modal-wide-admin');
+
+      db.ref('fuel_requests').once('value', (snapshot) => {
+        const fuelObj = snapshot.val() || {};
+        let list = [];
+        Object.keys(fuelObj).forEach(k => list.push({ key: k, ...fuelObj[k] }));
+        let pendingList = list.filter(item => String(item.status || '').includes('รออนุมัติ'));
+
+        let html = `<div class="modal-body-scroll">`;
+        if (pendingList.length === 0) {
+          html += `<div style="color:#888; text-align:center; padding:20px;">🎉 ไม่มีรายการเบิกจ่ายที่รออนุมัติในขณะนี้</div>`;
+        } else {
+          pendingList.reverse().forEach(item => {
+            let badgeType = item.requestType || '⛽ เบิกค่าน้ำมัน';
+            let plateText = item.carPlate ? `🚗 ทะเบียน: <b>${item.carPlate}</b>` : '';
+            html += `
+              <div class="history-item" style="background:#fff3cd;">
+                <b>👤 ${item.empName} (${item.empId})</b> [${badgeType}] ⏳<br>
+                ${plateText}📍 รายละเอียด: <b>${item.route || '-'}</b><br>
+                📅 วันที่ขอ: ${item.date}<br><br>
+                <div style="font-size:12px; font-weight:bold; margin-bottom:2px;">💵 จำนวนเงินอนุมัติ (บาท):</div>
+                <input type="number" id="modalFuelAmount_${item.key}" value="${item.amount || ''}" placeholder="ระบุยอดเงิน" style="margin-bottom:6px; padding:8px;">
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <select id="modalFuelStatus_${item.key}" style="margin:0; padding:6px; font-size:12px; font-weight:bold;">
+                    <option value="อนุมัติแล้ว 🟢">🟢 อนุมัติ</option>
+                    <option value="ไม่อนุมัติ 🔴">🔴 ไม่อนุมัติ</option>
+                  </select>
+                  <button onclick="modalUpdateFuel('${item.key}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#0d6efd;">บันทึก</button>
+                </div>
+              </div>
+            `;
+          });
+        }
+        html += `</div>`;
+        document.getElementById('modalText').innerText = `รายการรออนุมัติ (${pendingList.length} รายการ)`;
+        document.getElementById('modalCustomContent').innerHTML = html;
+      });
+    }
+
+    function modalUpdateFuel(key) {
+      const newStatus = document.getElementById(`modalFuelStatus_${key}`).value;
+      const amountVal = document.getElementById(`modalFuelAmount_${key}`).value.trim();
+
+      if (newStatus.includes('อนุมัติ') && (!amountVal || Number(amountVal) <= 0)) {
+        alert("กรุณากรอกจำนวนเงินอนุมัติ");
+        return;
+      }
+
+      db.ref('fuel_requests/' + key).update({ 
+        status: newStatus,
+        amount: Number(amountVal || 0)
+      }, () => {
+        alert("บันทึกการอนุมัติเรียบร้อย");
+        openAdminFuelRequestsModal();
+      });
+    }
+
+
+    // 3. Pop-up อนุมัติใบลา
+    function openAdminLeavesModal() {
+      showModal("🌴 ตรวจสอบ & อนุมัติคำขอลา", "กำลังโหลดข้อมูล...", "", `<button class="btn-ok" onclick="closeModal()">ปิดหน้าต่าง</button>`);
+      document.getElementById('modalBoxContainer').classList.add('modal-wide-admin');
+
+      db.ref('leaves').once('value', (snapshot) => {
+        const leavesObj = snapshot.val() || {};
+        let pendingList = [];
+        Object.keys(leavesObj).forEach(k => {
+          let item = leavesObj[k];
+          let statusStr = String(item.status || '');
+          if (statusStr.includes('รออนุมัติ') || statusStr === '') {
+            pendingList.push({ key: k, ...item });
+          }
+        });
+
+        let html = `<div class="modal-body-scroll">`;
+        if (pendingList.length === 0) {
+          html += `<div style="color:#888; text-align:center; padding:20px;">🎉 ไม่มีรายการใบลาที่รออนุมัติในขณะนี้</div>`;
+        } else {
+          pendingList.reverse().forEach(item => {
+            html += `
+              <div class="history-item" style="background:#fff3cd;">
+                <b>👤 ${item.empName}</b> (${item.leaveType}) ⏳<br>
+                📅 ${item.startDate} ถึง ${item.endDate}<br>
+                💬 เหตุผล: ${item.reason}<br><br>
+                <div style="display:flex; gap:6px;">
+                  <select id="modalLeaveStatus_${item.key}" style="margin:0; padding:6px; font-weight:bold; font-size:12px;">
+                    <option value="อนุมัติแล้ว 🟢">🟢 อนุมัติ</option>
+                    <option value="ไม่อนุมัติ 🔴">🔴 ไม่อนุมัติ</option>
+                  </select>
+                  <button onclick="modalUpdateLeave('${item.key}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#0d6efd;">บันทึก</button>
+                </div>
+              </div>
+            `;
+          });
+        }
+        html += `</div>`;
+        document.getElementById('modalText').innerText = `ใบลาที่รออนุมัติ (${pendingList.length} รายการ)`;
+        document.getElementById('modalCustomContent').innerHTML = html;
+      });
+    }
+
+    function modalUpdateLeave(key) {
+      const status = document.getElementById(`modalLeaveStatus_${key}`).value;
+      db.ref('leaves/' + key).update({ status: status }, () => {
+        alert("บันทึกผลการพิจารณาใบลาเรียบร้อย");
+        openAdminLeavesModal();
+      });
+    }
+
+
+    /* --- ฟังก์ชันมาตรฐานเดิม --- */
 
     function showAdminCommandCenter() {
       isAdmin = true;
@@ -996,9 +1357,9 @@
             <div id="ccSummaryStats" style="margin-top:10px;">กำลังโหลด...</div>
             
             <h3 style="margin-top:20px;">⚡ เมนูด่วนแอดมิน</h3>
-            <button class="btn-fuel" onclick="showAdminJobAssignPanel()" style="font-size:13px; padding:10px;">📦 จัดการจ๊อบส่งของ</button>
-            <button class="btn-blue" onclick="showAdminFuelRequests()" style="font-size:13px; padding:10px; margin-top:5px;">⛽/🔧 อนุมัติเบิกค่าน้ำมัน/ค่าซ่อม</button>
-            <button class="btn-orange" onclick="showAdminLeaves()" style="font-size:13px; padding:10px; margin-top:5px;">🌴 อนุมัติใบลา</button>
+            <button class="btn-fuel" onclick="openAdminJobAssignModal()" style="font-size:13px; padding:10px;">📦 จัดการจ๊อบส่งของ (Pop-up)</button>
+            <button class="btn-blue" onclick="openAdminFuelRequestsModal()" style="font-size:13px; padding:10px; margin-top:5px;">⛽/🔧 อนุมัติเบิกจ่าย (Pop-up)</button>
+            <button class="btn-orange" onclick="openAdminLeavesModal()" style="font-size:13px; padding:10px; margin-top:5px;">🌴 อนุมัติใบลา (Pop-up)</button>
           </div>
 
           <div class="command-column">
@@ -1056,9 +1417,7 @@
                   let j = jobsObj[jk];
                   let jStatus = String(j.status || '');
                   if (!jStatus.includes('สำเร็จ')) {
-                    if (!activeDeliveryMap[j.driverId]) {
-                      activeDeliveryMap[j.driverId] = [];
-                    }
+                    if (!activeDeliveryMap[j.driverId]) activeDeliveryMap[j.driverId] = [];
                     activeDeliveryMap[j.driverId].push(j.customerName);
                   }
                 });
@@ -1071,17 +1430,13 @@
                 allEmployees.forEach(emp => {
                   const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
                   const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
-
                   let drivingInfo = activeDeliveryMap[emp.empId];
 
                   if (leave) {
                     leaveList.push({ emp, leave });
                   } else if (present) {
-                    if (present.time > globalLateTime) {
-                      lateList.push({ emp, present, drivingInfo });
-                    } else {
-                      presentList.push({ emp, present, drivingInfo });
-                    }
+                    if (present.time > globalLateTime) lateList.push({ emp, present, drivingInfo });
+                    else presentList.push({ emp, present, drivingInfo });
                   } else {
                     absentList.push({ emp });
                   }
@@ -1090,15 +1445,12 @@
                 const sortByDriving = (a, b) => {
                   let aHasDriving = (a.drivingInfo && a.drivingInfo.length > 0) ? 1 : 0;
                   let bHasDriving = (b.drivingInfo && b.drivingInfo.length > 0) ? 1 : 0;
-                  if (aHasDriving !== bHasDriving) {
-                    return bHasDriving - aHasDriving;
-                  }
+                  if (aHasDriving !== bHasDriving) return bHasDriving - aHasDriving;
                   return (a.present.time || "").localeCompare(b.present.time || "");
                 };
 
                 presentList.sort(sortByDriving);
                 lateList.sort(sortByDriving);
-
                 let totalPresent = presentList.length + lateList.length;
 
                 document.getElementById('ccSummaryStats').innerHTML = `
@@ -1122,23 +1474,20 @@
                 leaveList.forEach(item => {
                   attHtml += `<div class="emp-tag-leave" style="font-size:12px;"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
                 });
-
                 presentList.forEach(item => {
                   let statusBadge = `<b>${item.present.time} น.</b>`;
                   if (item.drivingInfo && item.drivingInfo.length > 0) {
-                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">🚚 กำลังไปส่ง (${item.drivingInfo.join(', ')})</span>`;
+                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">🚚 กำลังไป (${item.drivingInfo.join(', ')})</span>`;
                   }
                   attHtml += `<div class="emp-tag-present" style="font-size:12px; display:flex; justify-content:space-between; align-items:center;"><span>🟢 ${item.emp.empName}</span><span>${statusBadge}</span></div>`;
                 });
-
                 lateList.forEach(item => {
                   let statusBadge = `<b style="color:#d9534f;">สาย ${item.present.time}</b>`;
                   if (item.drivingInfo && item.drivingInfo.length > 0) {
-                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">🚚 กำลังไปส่ง (${item.drivingInfo.join(', ')})</span>`;
+                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">🚚 กำลังไป (${item.drivingInfo.join(', ')})</span>`;
                   }
                   attHtml += `<div class="emp-tag-late" style="font-size:12px; display:flex; justify-content:space-between; align-items:center;"><span>⏰ ${item.emp.empName}</span><span>${statusBadge}</span></div>`;
                 });
-
                 absentList.forEach(item => {
                   attHtml += `<div class="emp-tag-absent" style="font-size:12px;"><span>🔴 ${item.emp.empName}</span><span>ยังไม่สแกน</span></div>`;
                 });
@@ -1150,10 +1499,10 @@
 
                 let delivHtml = '';
                 if (jobList.length === 0) {
-                  delivHtml = `<div style="color:#888; font-size:13px; text-align:center; padding:15px;">ยังไม่มีการมอบหมายจ๊อบส่งของวันนี้</div>`;
+                  delivHtml = `<div style="color:#888; font-size:13px; text-align:center; padding:15px;">ยังไม่มีการมอบหมายจ๊อบวันนี้</div>`;
                 } else {
                   let completedCount = jobList.filter(j => String(j.status).includes('สำเร็จ')).length;
-                  delivHtml += `<div style="font-size:13px; font-weight:bold; margin-bottom:8px; color:#495057;">ส่งสำเร็จแล้ว: ${completedCount} / ${jobList.length} ร้าน</div>`;
+                  delivHtml += `<div style="font-size:13px; font-weight:bold; margin-bottom:8px; color:#495057;">ส่งสำเร็จ: ${completedCount} / ${jobList.length} ร้าน</div>`;
 
                   jobList.forEach(j => {
                     let isCompleted = String(j.status).includes('สำเร็จ');
@@ -1166,9 +1515,6 @@
                         <b>🚚 ${j.driverName}</b><br>
                         🏬 ร้าน: <b>${j.customerName}</b><br>
                         <span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span> ${viewPhotoBtn}<br>
-                        <div style="margin-top:4px; display:flex; gap:4px;">
-                          <button class="btn-blue" style="width:auto; margin:0; padding:2px 6px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}'); showAdminCommandCenter();">🔄 สลับสถานะ</button>
-                        </div>
                       </div>
                     `;
                   });
@@ -1221,7 +1567,6 @@
       const selectedDate = document.getElementById('deliveryHistDate').value;
       const container = document.getElementById('adminDeliveryHistContainer');
       if (!container) return;
-
       container.innerHTML = i18n[currentLang].checking;
 
       db.ref('delivery_jobs/' + selectedDate).once('value', (snapshot) => {
@@ -1236,7 +1581,6 @@
         }
 
         let completedCount = list.filter(j => String(j.status).includes('สำเร็จ')).length;
-
         let html = `
           <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
             <b>📊 สรุปผลวันที่ ${selectedDate}:</b> ส่งสำเร็จแล้ว <b>${completedCount} / ${list.length} ร้าน</b>
@@ -1258,7 +1602,6 @@
             </div>
           `;
         });
-
         container.innerHTML = html;
       });
     }
@@ -1282,7 +1625,7 @@
           <h2>🏬 รายชื่อร้านค้า/ลูกค้าทั้งหมดในระบบ</h2>
           <div style="background: #eef2f5; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left; border: 2px dashed #0d6efd;">
             <b>➕ เพิ่มลูกค้า/ร้านค้าใหม่:</b>
-            <input type="text" id="newCustName" placeholder="ชื่อร้าน / ชื่อลูกค้า (เช่น เจ๊ I, ตลาดสดโซน A)" style="margin-top:6px; font-weight:bold;">
+            <input type="text" id="newCustName" placeholder="ชื่อร้าน / ชื่อลูกค้า" style="margin-top:6px; font-weight:bold;">
             <input type="text" id="newCustPhone" placeholder="เบอร์โทรศัพท์ (ถ้ามี)" style="margin-top:4px;">
             <input type="text" id="newCustAddress" placeholder="โซน / ที่อยู่คร่าวๆ" style="margin-top:4px;">
             <button class="btn-blue" onclick="addNewCustomer()" style="margin-top:8px;">💾 บันทึกลูกค้าใหม่</button>
@@ -1290,7 +1633,6 @@
           <div id="customerListContainer"></div>
           <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
         `;
-
         document.getElementById('mainContent').innerHTML = html;
         renderCustomerListUI(custList);
       });
@@ -1299,12 +1641,10 @@
     function renderCustomerListUI(list) {
       const container = document.getElementById('customerListContainer');
       if (!container) return;
-
       if (list.length === 0) {
-        container.innerHTML = `<div style="color:#888; text-align:center; padding:15px;">ยังไม่มีข้อมูลร้านค้าในระบบ (กรุณาเพิ่มด้านบน)</div>`;
+        container.innerHTML = `<div style="color:#888; text-align:center; padding:15px;">ยังไม่มีข้อมูลร้านค้าในระบบ</div>`;
         return;
       }
-
       let html = '';
       list.forEach(c => {
         let addedByText = c.addedBy ? ` | 👤 เพิ่มโดย: ${c.addedBy}` : '';
@@ -1327,16 +1667,10 @@
       const name = document.getElementById('newCustName').value.trim();
       const phone = document.getElementById('newCustPhone').value.trim();
       const address = document.getElementById('newCustAddress').value.trim();
-
-      if (!name) {
-        alert("กรุณากรอกชื่อร้านค้าหรือลูกค้า");
-        return;
-      }
+      if (!name) { alert("กรุณากรอกชื่อร้านค้าหรือลูกค้า"); return; }
 
       db.ref('customers').push().set({ name, phone, address, addedBy: 'Admin', regularDriverId: 'ALL' }, (err) => {
-        if (!err) {
-          showCustomerManagementPanel();
-        }
+        if (!err) showCustomerManagementPanel();
       });
     }
 
@@ -1347,535 +1681,10 @@
     }
 
     function executeDeleteCustomer(key) {
-      db.ref('customers/' + key).remove((err) => {
+      db.ref('customers/' + key).remove(() => {
         closeModal();
         showCustomerManagementPanel();
       });
-    }
-
-    function showAdminJobAssignPanel() {
-      isAdmin = true;
-      document.getElementById('mainCard').classList.add('admin-wide');
-      document.getElementById('hamburgerBtn').style.display = 'block';
-      document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "📦 จัดการ & มอบหมายจ๊อบส่งของประจำวัน";
-      document.getElementById('listBox').style.display = "none";
-      document.getElementById('status').innerHTML = i18n[currentLang].checking;
-
-      const todayStr = getLocalDateTimeString();
-
-      db.ref('employees').once('value', (empSnap) => {
-        const empObj = empSnap.val() || {};
-        let driversList = [];
-        Object.keys(empObj).forEach(k => {
-          if (empObj[k].isDriver) driversList.push(empObj[k]);
-        });
-
-        db.ref('customers').once('value', (custSnap) => {
-          const custObj = custSnap.val() || {};
-          let custList = [];
-          Object.keys(custObj).forEach(k => custList.push({ key: k, ...custObj[k] }));
-
-          db.ref('routes_preset').once('value', (presetSnap) => {
-            const presetObj = presetSnap.val() || {};
-
-            db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
-              const todayJobsObj = jobSnap.val() || {};
-              document.getElementById('status').innerHTML = "";
-
-              let driverOptions = `<option value="">-- เลือกพนักงานขับรถ --</option>`;
-              driversList.forEach(d => {
-                driverOptions += `<option value="${d.empId}" data-name="${d.empName}">${d.empName} (${d.empId})</option>`;
-              });
-
-              let presetOptions = `<option value="">-- เลือกโหลดเส้นทางประจำ (Preset) --</option>`;
-              Object.keys(presetObj).forEach(pk => {
-                let p = presetObj[pk];
-                presetOptions += `<option value="${pk}">${p.routeName} (สำหรับ ${p.driverName})</option>`;
-              });
-
-              let customerCheckboxesHtml = '';
-              if (custList.length === 0) {
-                customerCheckboxesHtml = `<div style="color:#888; font-size:13px;">ยังไม่มีรายชื่อลูกค้าในระบบ</div>`;
-              } else {
-                custList.forEach(c => {
-                  customerCheckboxesHtml += `
-                    <label style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:14px; background:white; padding:6px 10px; border-radius:6px; border:1px solid #ddd; cursor:pointer;">
-                      <input type="checkbox" class="cust-checkbox" value="${c.name}" style="width:18px; height:18px; margin:0;">
-                      <span>🏬 ${c.name} (${c.address || 'ทั่วไป'})</span>
-                    </label>
-                  `;
-                });
-              }
-
-              let html = `
-                <h2>📦 จัดการจ๊อบส่งของประจำวันนี้: <b style="color:#0d6efd;">${todayStr}</b></h2>
-
-                <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: left;">
-                  <b>➕ มอบหมายจ๊อบให้พนักงาน (เลือกคนขับ + ติ๊กเลือกร้านค้า):</b>
-                  
-                  <div style="margin-top:8px;">
-                    <span style="font-size:12px; color:#555;">1. เลือกพนักงานขับรถ:</span>
-                    <select id="assignDriverSelect" style="font-weight:bold;">
-                      ${driverOptions}
-                    </select>
-                  </div>
-
-                  <div style="margin-top:6px;">
-                    <span style="font-size:12px; color:#555;">(ทางเลือก) โหลดเส้นทางประจำ:</span>
-                    <select id="assignPresetSelect" onchange="loadPresetRouteToForm()">
-                      ${presetOptions}
-                    </select>
-                  </div>
-
-                  <div style="margin-top:10px;">
-                    <span style="font-size:12px; color:#555;">2. ติ๊กเลือกร้านค้าที่ต้องไปส่งในวันนี้:</span>
-                    <div style="max-height: 180px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; border-radius: 8px; background: #fff;">
-                      ${customerCheckboxesHtml}
-                    </div>
-                  </div>
-
-                  <div style="display:flex; gap:8px; margin-top:10px;">
-                    <button class="btn-fuel" onclick="saveAssignedJobs()" style="margin:0; flex:2;">💾 บันทึก & ส่งงานให้พนักงาน</button>
-                    <button class="btn-purple" onclick="saveAsPresetRoute()" style="margin:0; flex:1; font-size:13px;" title="บันทึกรายการที่ติ๊กไว้เป็นเส้นทางประจำของคนนี้">📌 บันทึกเป็นเส้นทางประจำ</button>
-                  </div>
-                </div>
-
-                <h3>📋 สรุปสถานะการส่งของพนักงานวันนี้ & จัดการแก้ไข:</h3>
-                <div id="todayJobsOverviewContainer"></div>
-
-                <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
-              `;
-
-              document.getElementById('mainContent').innerHTML = html;
-              renderTodayJobsOverviewAdminEditable(todayJobsObj, driversList);
-            });
-          });
-        });
-      });
-    }
-
-    function loadPresetRouteToForm() {
-      const presetId = document.getElementById('assignPresetSelect').value;
-      if (!presetId) return;
-
-      db.ref('routes_preset/' + presetId).once('value', (snapshot) => {
-        const preset = snapshot.val();
-        if (!preset || !preset.customers) return;
-
-        const driverSelect = document.getElementById('assignDriverSelect');
-        driverSelect.value = preset.driverId;
-
-        const checkboxes = document.querySelectorAll('.cust-checkbox');
-        checkboxes.forEach(cb => {
-          if (preset.customers.includes(cb.value)) {
-            cb.checked = true;
-          } else {
-            cb.checked = false;
-          }
-        });
-      });
-    }
-
-    function saveAsPresetRoute() {
-      const driverSelect = document.getElementById('assignDriverSelect');
-      const driverId = driverSelect.value;
-      if (!driverId) {
-        alert("กรุณาเลือกพนักงานขับรถก่อนบันทึกเป็นเส้นทางประจำ");
-        return;
-      }
-      const driverName = driverSelect.options[driverSelect.selectedIndex].getAttribute('data-name');
-
-      const checkboxes = document.querySelectorAll('.cust-checkbox:checked');
-      let selectedCusts = [];
-      checkboxes.forEach(cb => selectedCusts.push(cb.value));
-
-      if (selectedCusts.length === 0) {
-        alert("กรุณาติ๊กเลือกร้านค้าอย่างน้อย 1 ร้าน");
-        return;
-      }
-
-      const routeName = prompt("ตั้งชื่อเส้นทางประจำนี้ (เช่น รอบส่งตลาดสดเช้า):", `${driverName} - สายประจำ`);
-      if (!routeName) return;
-
-      db.ref('routes_preset').push().set({
-        routeName: routeName,
-        driverId: driverId,
-        driverName: driverName,
-        customers: selectedCusts
-      }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "บันทึกเป็นเส้นทางประจำเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showAdminJobAssignPanel();">ตกลง</button>`);
-        }
-      });
-    }
-
-    function saveAssignedJobs() {
-      const driverSelect = document.getElementById('assignDriverSelect');
-      const driverId = driverSelect.value;
-      if (!driverId) {
-        alert("กรุณาเลือกพนักงานขับรถ");
-        return;
-      }
-      const driverName = driverSelect.options[driverSelect.selectedIndex].getAttribute('data-name');
-
-      const checkboxes = document.querySelectorAll('.cust-checkbox:checked');
-      let selectedCusts = [];
-      checkboxes.forEach(cb => selectedCusts.push(cb.value));
-
-      if (selectedCusts.length === 0) {
-        alert("กรุณาติ๊กเลือกร้านค้าที่ต้องไปส่ง");
-        return;
-      }
-
-      const todayStr = getLocalDateTimeString();
-      const jobsRef = db.ref('delivery_jobs/' + todayStr);
-
-      selectedCusts.forEach(custName => {
-        jobsRef.push({
-          driverId: driverId,
-          driverName: driverName,
-          customerName: custName,
-          status: "รอจัดส่ง ⏳",
-          deliveredTime: "-"
-        });
-      });
-
-      showModal("🎉 สำเร็จ", `มอบหมายจ๊อบส่งของให้ "${driverName}" จำนวน ${selectedCusts.length} ร้าน เรียบร้อย`, `<button class="btn-ok" onclick="closeModal(); showAdminJobAssignPanel();">ตกลง</button>`);
-    }
-
-    function renderTodayJobsOverviewAdminEditable(jobsObj, driversList) {
-      const container = document.getElementById('todayJobsOverviewContainer');
-      if (!container) return;
-
-      let list = [];
-      Object.keys(jobsObj).forEach(k => list.push({ key: k, ...jobsObj[k] }));
-
-      if (list.length === 0) {
-        container.innerHTML = `<div style="color:#888; font-size:13px; text-align:center; padding:10px;">ยังไม่มีการมอบหมายจ๊อบส่งของในวันนี้</div>`;
-        return;
-      }
-
-      let grouped = {};
-      driversList.forEach(d => { grouped[d.empId] = { name: d.empName, jobs: [] }; });
-
-      list.forEach(j => {
-        if (!grouped[j.driverId]) {
-          grouped[j.driverId] = { name: j.driverName, jobs: [] };
-        }
-        grouped[j.driverId].jobs.push(j);
-      });
-
-      let html = '';
-      Object.keys(grouped).forEach(did => {
-        let g = grouped[did];
-        if (g.jobs.length === 0) return;
-
-        let completedCount = g.jobs.filter(j => String(j.status).includes('สำเร็จ')).length;
-
-        html += `
-          <div class="history-item">
-            <b>🚚 พนักงาน: ${g.name}</b> (ส่งแล้ว ${completedCount} / ${g.jobs.length} ร้าน)<br>
-            <div style="margin-top:6px; display:flex; flex-direction:column; gap:6px;">
-        `;
-
-        g.jobs.forEach(j => {
-          let isCompleted = String(j.status).includes('สำเร็จ');
-          let isOnTheWay = String(j.status).includes('กำลังเดินทาง');
-          let badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
-          let viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:4px; padding:4px 8px; font-size:11px; text-decoration:none; border-radius:4px;">🖼️ ดูรูป Drive</a>` : '';
-          
-          html += `
-            <div style="background:white; padding:8px 10px; border-radius:6px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
-              <div>
-                🏬 <b>${j.customerName}</b><br>
-                <span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span>
-                ${viewPhotoBtn}
-              </div>
-              <div style="display:flex; gap:4px;">
-                <button class="btn-blue" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}')">🔄 สลับสถานะ</button>
-                <button class="btn-danger" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminDeleteJob('${j.key}')">🗑️ ลบ</button>
-              </div>
-            </div>
-          `;
-        });
-
-        html += `</div></div>`;
-      });
-
-      container.innerHTML = html;
-    }
-
-    function adminToggleJobStatus(jobKey, currentStatus) {
-      const todayStr = getLocalDateTimeString();
-      let newStatus = String(currentStatus).includes('สำเร็จ') ? "รอจัดส่ง ⏳" : "ส่งสำเร็จแล้ว 🟢";
-      let timeStr = String(currentStatus).includes('สำเร็จ') ? "-" : (new Date().toTimeString().substring(0, 5) + " น.");
-
-      db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
-        status: newStatus,
-        deliveredTime: timeStr
-      }, (err) => {
-        if (!err) {
-          if (document.getElementById('pageTitle').innerText.includes('ศูนย์บัญชาการ')) {
-            showAdminCommandCenter();
-          } else if (document.getElementById('pageTitle').innerText.includes('จัดการ')) {
-            showAdminJobAssignPanel();
-          } else {
-            showDriverMyJobsView();
-          }
-        }
-      });
-    }
-
-    function adminDeleteJob(jobKey) {
-      const todayStr = getLocalDateTimeString();
-      if (confirm("ต้องการลบจ๊อบส่งของนี้ใช่หรือไม่?")) {
-        db.ref(`delivery_jobs/${todayStr}/${jobKey}`).remove((err) => {
-          if (!err) {
-            showAdminJobAssignPanel();
-          }
-        });
-      }
-    }
-
-    function showDriverMyJobsView() {
-      const t = i18n[currentLang];
-      document.getElementById('pageTitle').innerText = "📦 งานส่งของของฉันวันนี้";
-      document.getElementById('listBox').style.display = "none";
-      const todayStr = getLocalDateTimeString();
-
-      const html = `
-        <div class="user-banner">${currentUser.empName} (${currentUser.empId}) | วันที่: ${todayStr}</div>
-        
-        <div style="background: #eef2f5; border: 2px dashed #0d6efd; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
-          <b>➕ เพิ่มร้านค้า/สถานที่ส่งของใหม่ (เข้าสู่ระบบ):</b>
-          <input type="text" id="driverNewCustName" placeholder="ชื่อร้านค้า / ลูกค้า" style="margin-top:6px; font-weight:bold;">
-          <input type="text" id="driverNewCustPhone" placeholder="เบอร์โทรศัพท์ (ถ้ามี)" style="margin-top:4px;">
-          <input type="text" id="driverNewCustZone" placeholder="โซน / ที่อยู่ (เช่น ตลาดสดโซน B)" style="margin-top:4px;">
-          
-          <button class="btn-blue" onclick="driverAddNewCustomerOnly()" style="margin-top:6px; font-size:14px; padding:10px;">💾 บันทึกเก็บไว้เป็นลูกค้าประจำของฉัน</button>
-        </div>
-
-        <div style="background: #f8f9fa; border: 1px solid #ced4da; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
-          <b>⭐ เลือกจาก "ลูกค้าประจำของฉัน" (ติ๊กเลือกหลายร้านพร้อมกัน):</b>
-          <div style="max-height: 180px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; border-radius: 8px; background: #fff; margin-top:6px;" id="driverRegularCustCheckboxContainer">
-            <span style="color:#888; font-size:13px;">กำลังโหลดรายชื่อลูกค้าประจำ...</span>
-          </div>
-          <button class="btn-fuel" onclick="driverAddMultipleJobsFromRegular()" style="margin-top:8px; font-size:14px; padding:10px;">➕ ดึงร้านที่เลือกไปส่งวันนี้ทั้งหมด</button>
-        </div>
-
-        <h3>📦 รายการจ๊อบส่งของวันนี้:</h3>
-        <div id="driverMyJobsContainer"><div style="color:#888;">กำลังโหลดรายการจ๊อบส่งของ...</div></div>
-        <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
-      `;
-      document.getElementById('mainContent').innerHTML = html;
-      loadDriverRegularCustomersCheckboxes();
-
-      if (activeListeners.empJobs) db.ref('delivery_jobs/' + todayStr).off('value', activeListeners.empJobs);
-      activeListeners.empJobs = db.ref('delivery_jobs/' + todayStr).on('value', (snapshot) => {
-        const jobsObj = snapshot.val() || {};
-        const container = document.getElementById('driverMyJobsContainer');
-        if (!container) return;
-
-        let myList = [];
-        Object.keys(jobsObj).forEach(k => {
-          if (String(jobsObj[k].driverId) === String(currentUser.empId)) {
-            myList.push({ key: k, ...jobsObj[k] });
-          }
-        });
-
-        if (myList.length === 0) {
-          container.innerHTML = `<div style="color:#888; text-align:center; padding:20px;">🎉 วันนี้คุณยังไม่มีจ๊อบส่งของ (สามารถติ๊กเลือกจากลูกค้าประจำด้านบนได้เลย)</div>`;
-          return;
-        }
-
-        let htmlList = '';
-        myList.forEach(j => {
-          let isCompleted = String(j.status).includes('สำเร็จ');
-          let isOnTheWay = String(j.status).includes('กำลังเดินทาง');
-          let badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
-          
-          let viewPhotoLink = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" class="btn-blue" style="display:inline-block; margin-top:6px; padding:6px 12px; font-size:12px; text-decoration:none; border-radius:6px;">🖼️ ดูรูปที่แนบไว้แล้ว</a>` : '<span style="color:#888; font-size:12px;">(ยังไม่มีรูปแนบ)</span>';
-
-          let actionBtnHtml = '';
-          if (isCompleted) {
-            actionBtnHtml = `<button class="btn-clock" style="margin:0; padding:8px; font-size:13px; flex:1;" disabled>✅ ส่งเรียบร้อยแล้ว</button>`;
-          } else if (isOnTheWay) {
-            actionBtnHtml = `
-              <button class="btn-blue" style="margin:0; padding:8px; font-size:13px; flex:1; background:linear-gradient(135deg, #0d6efd, #0dcaf0);" onclick="driverMarkAsDelivered('${j.key}')">✅ กดส่งของเสร็จแล้ว</button>
-            `;
-          } else {
-            actionBtnHtml = `
-              <button class="btn-orange" style="margin:0; padding:8px; font-size:13px; flex:1;" onclick="driverMarkAsOnTheWay('${j.key}')">🚚 กำลังไปส่ง</button>
-            `;
-          }
-
-          htmlList += `
-            <div class="history-item" style="border-left: 4px solid ${badgeColor};">
-              <b>🏬 ร้าน/ลูกค้า: ${j.customerName}</b><br>
-              สถานะ: <b style="color:${badgeColor};">${j.status} (${j.deliveredTime})</b><br>
-              <div style="margin-top:6px;">${viewPhotoLink}</div><br>
-
-              <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                ${actionBtnHtml}
-                
-                <label class="btn-fuel" style="margin:0; padding:8px; font-size:13px; flex:1; text-align:center; border-radius:8px; cursor:pointer; display:inline-block; box-sizing:border-box;">
-                  📸 ถ่ายรูปหลักฐาน
-                  <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadDeliveryPhotoToDrive(event, '${j.key}', '${j.customerName}')">
-                </label>
-
-                <button class="btn-danger" style="width:auto; margin:0; padding:8px 12px; font-size:12px;" onclick="driverDeleteMyJob('${j.key}')">🗑️ ลบ</button>
-              </div>
-            </div>
-          `;
-        });
-
-        container.innerHTML = htmlList;
-      });
-    }
-
-    function loadDriverRegularCustomersCheckboxes() {
-      const container = document.getElementById('driverRegularCustCheckboxContainer');
-      if (!container) return;
-
-      db.ref('customers').once('value', (snapshot) => {
-        const custObj = snapshot.val() || {};
-        let myCustomers = [];
-
-        Object.keys(custObj).forEach(k => {
-          let c = custObj[k];
-          if (c.regularDriverId === currentUser.empId || c.regularDriverId === 'ALL' || c.addedBy === currentUser.empName) {
-            myCustomers.push(c);
-          }
-        });
-
-        if (myCustomers.length === 0) {
-          container.innerHTML = `<span style="color:#888; font-size:13px; font-style:italic;">ยังไม่มีลูกค้าประจำ (สามารถเพิ่มร้านใหม่ด้านบนได้เลย)</span>`;
-          return;
-        }
-
-        let html = '';
-        myCustomers.forEach(c => {
-          html += `
-            <label style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:14px; background:#fff; padding:6px 8px; border-radius:6px; border:1px solid #e9ecef; cursor:pointer;">
-              <input type="checkbox" class="driver-cust-checkbox" value="${c.name}" style="width:18px; height:18px; margin:0;">
-              <span>🏬 ${c.name} (${c.address || 'ลูกค้าประจำ'})</span>
-            </label>
-          `;
-        });
-        container.innerHTML = html;
-      });
-    }
-
-    function driverAddMultipleJobsFromRegular() {
-      const checkboxes = document.querySelectorAll('.driver-cust-checkbox:checked');
-      let selectedCusts = [];
-      checkboxes.forEach(cb => selectedCusts.push(cb.value));
-
-      if (selectedCusts.length === 0) {
-        alert("กรุณาติ๊กเลือกร้านค้าอย่างน้อย 1 ร้าน");
-        return;
-      }
-
-      const todayStr = getLocalDateTimeString();
-      const jobsRef = db.ref('delivery_jobs/' + todayStr);
-
-      selectedCusts.forEach(custName => {
-        jobsRef.push({
-          driverId: currentUser.empId,
-          driverName: currentUser.empName,
-          customerName: custName,
-          status: "รอจัดส่ง ⏳",
-          deliveredTime: "-"
-        });
-      });
-
-      showModal("🎉 สำเร็จ", `ดึงรายชื่อลูกค้า ${selectedCusts.length} ร้าน มาเป็นจ๊อบส่งของวันนี้เรียบร้อย`, `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ตกลง</button>`);
-    }
-
-    function driverAddNewCustomerOnly() {
-      const name = document.getElementById('driverNewCustName').value.trim();
-      const phone = document.getElementById('driverNewCustPhone').value.trim();
-      const address = document.getElementById('driverNewCustZone').value.trim();
-
-      if (!name) {
-        alert("กรุณากรอกชื่อร้านค้าหรือลูกค้าใหม่");
-        return;
-      }
-
-      db.ref('customers').push().set({
-        name: name,
-        phone: phone,
-        address: address || 'เพิ่มโดยพนักงาน',
-        addedBy: currentUser.empName,
-        regularDriverId: currentUser.empId
-      }, (err) => {
-        if (!err) {
-          document.getElementById('driverNewCustName').value = '';
-          document.getElementById('driverNewCustPhone').value = '';
-          document.getElementById('driverNewCustZone').value = '';
-          loadDriverRegularCustomersCheckboxes();
-          alert("บันทึกเป็นลูกค้าประจำของคุณเรียบร้อย!");
-        }
-      });
-    }
-
-    function driverMarkAsOnTheWay(jobKey) {
-      const todayStr = getLocalDateTimeString();
-      let timeStr = new Date().toTimeString().substring(0, 5) + " น.";
-
-      db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
-        status: "กำลังเดินทางไปส่ง 🚚",
-        deliveredTime: timeStr
-      });
-    }
-
-    function driverMarkAsDelivered(jobKey) {
-      const todayStr = getLocalDateTimeString();
-      let timeStr = new Date().toTimeString().substring(0, 5) + " น.";
-
-      db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
-        status: "ส่งสำเร็จแล้ว 🟢",
-        deliveredTime: timeStr
-      });
-    }
-
-    function driverDeleteMyJob(jobKey) {
-      const todayStr = getLocalDateTimeString();
-      if (confirm("ต้องการลบรายการส่งของนี้ออก?")) {
-        db.ref(`delivery_jobs/${todayStr}/${jobKey}`).remove();
-      }
-    }
-
-    function showDashboard() {
-      clearAllListeners();
-      isAdmin = false;
-      document.getElementById('mainCard').classList.remove('admin-wide');
-      document.getElementById('hamburgerBtn').style.display = 'none';
-      const t = i18n[currentLang];
-      document.getElementById('pageTitle').innerText = t.pageTitleDashboard;
-      document.getElementById('status').innerText = "";
-      document.getElementById('listBox').style.display = "block";
-
-      let driverExtrasHtml = '';
-      if (currentUser.isDriver) {
-        driverExtrasHtml = `
-          <button class="btn-fuel" onclick="showDriverMyJobsView()">📦 งานส่งของของฉันวันนี้</button>
-          <button class="btn-fuel" onclick="showFuelRequestForm()">${t.btnFuelMenu}</button>
-        `;
-      }
-
-      const html = `
-        <div class="user-banner">${t.welcome(currentUser.empName)} (${currentUser.empId})</div>
-        <button class="btn-clock" onclick="showClockInForm()">${t.btnClockInMenu}</button>
-        ${driverExtrasHtml}
-        <button class="btn-leave" onclick="showLeaveForm()">${t.btnLeaveMenu}</button>
-        <button class="btn-history" onclick="showMyAttendance()">${t.btnMyAttendance}</button>
-        <button class="btn-purple" onclick="showHistory()">${t.btnHistoryMenu}</button>
-        <button class="btn-logout" onclick="handleLogout()">${t.btnLogout}</button>
-      `;
-      document.getElementById('mainContent').innerHTML = html;
-      loadTodayListRealtime();
     }
 
     function showAdminAttendanceSummaryReport() {
@@ -1885,7 +1694,6 @@
       document.getElementById('bellBtn').style.display = 'block';
       document.getElementById('pageTitle').innerText = "👥 สรุปสถิติ ขาด ลา มาสาย (รายบุคคล)";
       document.getElementById('listBox').style.display = "none";
-
       const todayStr = getLocalDateTimeString();
 
       const html = `
@@ -1928,7 +1736,6 @@
       const endDate = document.getElementById('attEndDate').value;
       const container = document.getElementById('attendanceSummaryResultContainer');
       if (!container) return;
-
       container.innerHTML = i18n[currentLang].checking;
 
       db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
@@ -1942,14 +1749,7 @@
               const leaves = leaveSnap.val() || {};
 
               let summaryList = [];
-              let empKeys = Object.keys(employees);
-
-              if (empKeys.length === 0) {
-                container.innerHTML = `<div style="color:#888; margin:20px 0;">ไม่มีข้อมูลพนักงานในระบบ</div>`;
-                return;
-              }
-
-              empKeys.forEach(ek => {
+              Object.keys(employees).forEach(ek => {
                 let emp = employees[ek];
                 let presentCount = 0;
                 let lateCount = 0;
@@ -1959,9 +1759,7 @@
                   let log = logs[lk];
                   if (String(log.empId) === String(emp.empId) && log.date && log.date >= startDate && log.date <= endDate && log.type === "เข้างาน") {
                     presentCount++;
-                    if (log.time > globalLateTime) {
-                      lateCount++;
-                    }
+                    if (log.time > globalLateTime) lateCount++;
                   }
                 });
 
@@ -1973,21 +1771,14 @@
                   }
                 });
 
-                summaryList.push({
-                  empId: emp.empId,
-                  empName: emp.empName,
-                  presentCount: presentCount,
-                  lateCount: lateCount,
-                  leaveCount: leaveCount
-                });
+                summaryList.push({ empId: emp.empId, empName: emp.empName, presentCount, lateCount, leaveCount });
               });
 
               currentAttendanceSummaryCache = summaryList;
-
               let html = `
                 <div style="background: linear-gradient(135deg, #0dcaf0, #0d6efd); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
                   <b>📊 สรุปสถิติพนักงานช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-                  👥 จำนวนพนักงานทั้งหมด: <b>${summaryList.length} คน</b> (เกณฑ์มาสาย: หลัง ${globalLateTime} น.)
+                  👥 จำนวนพนักงานทั้งหมด: <b>${summaryList.length} คน</b>
                 </div>
               `;
 
@@ -2005,7 +1796,6 @@
                   </div>
                 `;
               });
-
               container.innerHTML = html;
             });
           });
@@ -2020,21 +1810,10 @@
       }
       const startDate = document.getElementById('attStartDate').value;
       const endDate = document.getElementById('attEndDate').value;
-
-      let rows = [
-        ["รหัสพนักงาน", "ชื่อพนักงาน", "มาทำงาน (วัน)", "มาสาย (ครั้ง)", "ลา (วัน)", "ช่วงวันที่ตรวจสอบ", `${startDate} ถึง ${endDate}`]
-      ];
-
+      let rows = [["รหัสพนักงาน", "ชื่อพนักงาน", "มาทำงาน (วัน)", "มาสาย (ครั้ง)", "ลา (วัน)", "ช่วงวันที่", `${startDate} ถึง ${endDate}`]];
       currentAttendanceSummaryCache.forEach(item => {
-        rows.push([
-          item.empId,
-          item.empName,
-          item.presentCount,
-          item.lateCount,
-          item.leaveCount
-        ]);
+        rows.push([item.empId, item.empName, item.presentCount, item.lateCount, item.leaveCount]);
       });
-
       downloadCSV(`Attendance_Summary_${startDate}_to_${endDate}.csv`, rows);
     }
 
@@ -2057,35 +1836,30 @@
           <h2>📍 กำหนดจุดพิกัดร้าน/โรงงาน สำหรับเช็กอิน</h2>
           <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
             <b>➕ เพิ่มจุดเช็กอินใหม่:</b>
-            <input type="text" id="locName" placeholder="ชื่อสถานที่ (เช่น หน้าร้านปิ่นทิพย์, คลังสินค้า)">
-            <input type="text" id="locLat" placeholder="ละติจูด (Lat) เช่น 13.813105">
-            <input type="text" id="locLng" placeholder="ลองจิจูด (Lng) เช่น 100.067600">
-            <input type="number" id="locRadius" placeholder="รัศมีที่อนุญาต (เมตร) เช่น 100" value="100">
-            <button class="btn-blue" onclick="addNewLocation()" style="margin-top:8px;">💾 บันทึกจุดเช็กอินใหม่</button>
+            <input type="text" id="locName" placeholder="ชื่อสถานที่">
+            <input type="text" id="locLat" placeholder="ละติจูด (Lat)">
+            <input type="text" id="locLng" placeholder="ลองจิจูด (Lng)">
+            <input type="number" id="locRadius" placeholder="รัศมี (เมตร)" value="100">
+            <button class="btn-blue" onclick="addNewLocation()" style="margin-top:8px;">💾 บันทึกจุดเช็กอิน</button>
           </div>
-
-          <h3>📋 รายการจุดเช็กอินที่มีอยู่ทั้งหมด:</h3>
+          <h3>📋 รายการจุดเช็กอินทั้งหมด:</h3>
         `;
 
         if (locList.length === 0) {
-          html += `<div style="color:#888; margin-bottom:15px;">ยังไม่มีการตั้งค่าพิกัดในระบบ</div>`;
+          html += `<div style="color:#888; margin-bottom:15px;">ยังไม่มีการตั้งค่าพิกัด</div>`;
         } else {
           locList.forEach(loc => {
             html += `
               <div class="history-item">
                 <b>📍 ${loc.name}</b><br>
-                ละติจูด: ${loc.lat} | ลองจิจูด: ${loc.lng}<br>
-                📏 รัศมีอนุญาต: <b style="color:#28a745; font-size:15px;">${loc.radius || 100} เมตร</b><br>
-                
-                <div style="margin-top:8px; display:flex; gap:6px;">
-                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditLocationModal('${loc.key}', '${loc.name}', ${loc.lat}, ${loc.lng}, ${loc.radius || 100})">✏️ แก้ไข</button>
-                  <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="deleteLocation('${loc.key}')">🗑️ ลบ</button>
+                Lat: ${loc.lat} | Lng: ${loc.lng} | รัศมี: <b style="color:#28a745;">${loc.radius || 100} ม.</b><br>
+                <div style="margin-top:6px;">
+                  <button class="btn-danger" style="width:auto; margin:0; padding:4px 10px; font-size:11px;" onclick="deleteLocation('${loc.key}')">🗑️ ลบ</button>
                 </div>
               </div>
             `;
           });
         }
-
         html += `<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>`;
         document.getElementById('mainContent').innerHTML = html;
       });
@@ -2096,77 +1870,17 @@
       const lat = document.getElementById('locLat').value.trim();
       const lng = document.getElementById('locLng').value.trim();
       const radius = document.getElementById('locRadius').value.trim();
+      if (!name || !lat || !lng || !radius) { alert("กรุณากรอกข้อมูลให้ครบถ้วน"); return; }
 
-      if (!name || !lat || !lng || !radius) {
-        alert("กรุณากรอกข้อมูลสถานที่ให้ครบถ้วน");
-        return;
-      }
-
-      db.ref('locations').push().set({
-        name: name,
-        lat: Number(lat),
-        lng: Number(lng),
-        radius: Number(radius)
-      }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "เพิ่มพิกัดจุดเช็กอินเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showLocationManagement();">ตกลง</button>`);
-        }
-      });
-    }
-
-    function showEditLocationModal(key, name, lat, lng, radius) {
-      const html = `
-        <div class="user-banner">✏️ แก้ไขจุดเช็กอิน: ${name}</div>
-        <input type="hidden" id="editLocKey" value="${key}">
-        <div style="text-align:left; font-size:13px; color:#555;">ชื่อสถานที่:</div>
-        <input type="text" id="editLocName" value="${name}">
-        <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">ละติจูด (Lat):</div>
-        <input type="text" id="editLocLat" value="${lat}">
-        <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">ลองจิจูด (Lng):</div>
-        <input type="text" id="editLocLng" value="${lng}">
-        <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">รัศมี (เมตร):</div>
-        <input type="number" id="editLocRadius" value="${radius}">
-        <button class="btn-blue" onclick="submitEditLocation()">💾 บันทึกการแก้ไข</button>
-        <button class="btn-back" onclick="showLocationManagement()">⬅️ ย้อนกลับ</button>
-      `;
-      document.getElementById('mainContent').innerHTML = html;
-    }
-
-    function submitEditLocation() {
-      const key = document.getElementById('editLocKey').value;
-      const name = document.getElementById('editLocName').value.trim();
-      const lat = document.getElementById('editLocLat').value.trim();
-      const lng = document.getElementById('editLocLng').value.trim();
-      const radius = document.getElementById('editLocRadius').value.trim();
-
-      if (!name || !lat || !lng || !radius) {
-        alert("กรุณากรอกข้อมูลให้ครบถ้วน");
-        return;
-      }
-
-      db.ref('locations/' + key).update({
-        name: name,
-        lat: Number(lat),
-        lng: Number(lng),
-        radius: Number(radius)
-      }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "แก้ไขพิกัดจุดเช็กอินเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showLocationManagement();">ตกลง</button>`);
-        }
+      db.ref('locations').push().set({ name, lat: Number(lat), lng: Number(lng), radius: Number(radius) }, () => {
+        showLocationManagement();
       });
     }
 
     function deleteLocation(key) {
-      showModal("❓ ยืนยันการลบ", "ต้องการลบจุดเช็กอินนี้ใช่หรือไม่?", 
-        `<button class="btn-yes" onclick="executeDeleteLocation('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
-      );
-    }
-
-    function executeDeleteLocation(key) {
-      db.ref('locations/' + key).remove((err) => {
-        closeModal();
-        showLocationManagement();
-      });
+      if (confirm("ต้องการลบจุดเช็กอินนี้?")) {
+        db.ref('locations/' + key).remove(() => showLocationManagement());
+      }
     }
 
     function showFuelRequestForm() {
@@ -2182,30 +1896,20 @@
         Object.keys(platesObj).forEach(k => platesList.push(platesObj[k].plate));
 
         let optionsHtml = `<option value="">-- เลือกทะเบียนรถ --</option>`;
-        if (platesList.length === 0) {
-          optionsHtml += `<option value="รถส่วนกลาง">รถส่วนกลาง</option>`;
-        } else {
-          platesList.forEach(p => {
-            optionsHtml += `<option value="${p}">${p}</option>`;
-          });
-        }
+        if (platesList.length === 0) optionsHtml += `<option value="รถส่วนกลาง">รถส่วนกลาง</option>`;
+        else platesList.forEach(p => { optionsHtml += `<option value="${p}">${p}</option>`; });
 
         const html = `
           <div class="user-banner">${currentUser.empName} (${currentUser.empId})</div>
-          <div style="text-align:left; font-size:13px; color:#555; margin-bottom:5px;"><b>📌 ประเภทการเบิก:</b></div>
+          <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>📌 ประเภทการเบิก:</b></div>
           <select id="requestType" style="margin-bottom:8px;">
             <option value="⛽ เบิกค่าน้ำมัน">⛽ เบิกค่าน้ำมันรถส่งของ</option>
             <option value="🔧 เบิกค่าซ่อมรถ">🔧 เบิกค่าซ่อมรถ / ค่าอะไหล่</option>
           </select>
-
           <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>🚗 เลือกทะเบียนรถ:</b></div>
-          <select id="carPlateSelect" style="margin-bottom:8px;">
-            ${optionsHtml}
-          </select>
-
+          <select id="carPlateSelect" style="margin-bottom:8px;">${optionsHtml}</select>
           <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>📍 รายละเอียด / เส้นทาง / รายการซ่อม:</b></div>
-          <textarea id="fuelRoute" rows="3" placeholder="เช่น ไปส่งหมูตลาดสุพรรณ หรือ เปลี่ยนยางนอกล้อหลัง"></textarea>
-          
+          <textarea id="fuelRoute" rows="3" placeholder="ระบุรายละเอียด"></textarea>
           <button class="btn-fuel" onclick="handleFuelSubmit()">💾 ส่งคำขอเบิกจ่าย</button>
           <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
         `;
@@ -2217,96 +1921,20 @@
       const reqType = document.getElementById('requestType').value;
       const carPlate = document.getElementById('carPlateSelect').value;
       const route = document.getElementById('fuelRoute').value.trim();
+      if (!carPlate) { alert("กรุณาเลือกทะเบียนรถ"); return; }
 
-      if (!carPlate) {
-        alert("กรุณาเลือกทะเบียนรถ");
-        return;
-      }
-
-      const newRef = db.ref('fuel_requests').push();
-      newRef.set({
+      db.ref('fuel_requests').push().set({
         empId: currentUser.empId,
         empName: currentUser.empName,
         requestType: reqType,
         carPlate: carPlate,
         route: route || "-",
-        amount: 0, 
+        amount: 0,
         date: getLocalDateTimeString(),
         status: "รออนุมัติ ⏳",
         applyDate: new Date().toLocaleDateString()
-      }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "ส่งคำขอเบิกค่าใช้จ่ายเรียบร้อย (รอแอดมินพิจารณายอดเงิน)", `<button class="btn-ok" onclick="closeModal(); showDashboard();">ตกลง</button>`);
-        }
-      });
-    }
-
-    function showAdminFuelRequests() {
-      isAdmin = true;
-      document.getElementById('mainCard').classList.add('admin-wide');
-      document.getElementById('hamburgerBtn').style.display = 'block';
-      document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "⛽/🔧 อนุมัติเบิกค่าน้ำมัน / ค่าซ่อมรถ";
-      document.getElementById('listBox').style.display = "none";
-      document.getElementById('status').innerHTML = i18n[currentLang].checking;
-
-      db.ref('fuel_requests').once('value', (snapshot) => {
-        document.getElementById('status').innerHTML = "";
-        const fuelObj = snapshot.val() || {};
-        let list = [];
-        Object.keys(fuelObj).forEach(k => list.push({ key: k, ...fuelObj[k] }));
-
-        let html = `<h2>⛽/🔧 รายการคำขอเบิกจ่าย (รออนุมัติ & กำหนดเงิน)</h2>`;
-        let pendingList = list.filter(item => String(item.status || '').includes('รออนุมัติ'));
-
-        if (pendingList.length === 0) {
-          html += `<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายที่รออนุมัติในขณะนี้</div>`;
-        } else {
-          pendingList.reverse().forEach(item => {
-            let badgeType = item.requestType || '⛽ เบิกค่าน้ำมัน';
-            let plateText = item.carPlate ? `🚗 ทะเบียน: <b>${item.carPlate}</b>` : '';
-            html += `
-              <div class="history-item">
-                <b>👤 ${item.empName} (${item.empId})</b> [${badgeType}] ⏳<br>
-                ${plateText}<br>
-                📍 รายละเอียด: <b>${item.route || '-'}</b><br>
-                📅 วันที่ขอ: ${item.date} <br><br>
-                
-                <div style="text-align:left; font-size:13px; font-weight:bold; margin-bottom:3px;">💵 กำหนดจำนวนเงินอนุมัติ (บาท):</div>
-                <input type="number" id="fuelAmount_${item.key}" value="${item.amount || ''}" placeholder="ระบุยอดเงินที่ให้เบิก" style="margin-bottom:8px;">
-
-                <div style="display:flex; gap:8px; align-items:center;">
-                  <select id="fuelStatus_${item.key}" style="margin:0; padding:8px; font-size:13px; font-weight:bold;">
-                    <option value="อนุมัติแล้ว 🟢">🟢 อนุมัติ</option>
-                    <option value="ไม่อนุมัติ 🔴">🔴 ไม่อนุมัติ</option>
-                  </select>
-                  <button onclick="updateFuelStatusWithAmount('${item.key}')" style="width:auto; margin:0; padding:8px 12px; font-size:13px; background:#0d6efd;">บันทึกยอด & สถานะ</button>
-                </div>
-              </div>
-            `;
-          });
-        }
-        html += `<button class="btn-back" onclick="showAdminDashboard()">⬅️ กลับหน้าแดสบอร์ด</button>`;
-        document.getElementById('mainContent').innerHTML = html;
-      });
-    }
-
-    function updateFuelStatusWithAmount(key) {
-      const newStatus = document.getElementById(`fuelStatus_${key}`).value;
-      const amountVal = document.getElementById(`fuelAmount_${key}`).value.trim();
-
-      if (newStatus.includes('อนุมัติ') && (!amountVal || Number(amountVal) <= 0)) {
-        alert("กรุณากรอกจำนวนเงินอนุมัติให้ถูกต้อง");
-        return;
-      }
-
-      db.ref('fuel_requests/' + key).update({ 
-        status: newStatus,
-        amount: Number(amountVal || 0)
-      }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "บันทึกข้อมูลการอนุมัติและจำนวนเงินเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showAdminFuelRequests();">ตกลง</button>`);
-        }
+      }, () => {
+        showModal("🎉 สำเร็จ", "ส่งคำขอเบิกค่าใช้จ่ายเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showDashboard();">ตกลง</button>`);
       });
     }
 
@@ -2315,48 +1943,31 @@
       document.getElementById('mainCard').classList.add('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'block';
       document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "📜 ประวัติ & จัดการเบิกจ่ายทั้งหมด (แยกน้ำมัน/ค่าซ่อม)";
+      document.getElementById('pageTitle').innerText = "📜 ประวัติ & จัดการเบิกจ่ายทั้งหมด";
       document.getElementById('listBox').style.display = "none";
-
       const todayStr = getLocalDateTimeString();
 
       const html = `
         <h2>📜 ประวัติรายการเบิกจ่ายค่าน้ำมัน & ค่าซ่อมรถ</h2>
-        
-        <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 2px dashed #e67e22; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
+        <div style="background: #f8f9fa; border: 2px dashed #e67e22; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
           <b>🚗 จัดการทะเบียนรถในระบบ:</b>
           <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <input type="text" id="newCarPlateInput" placeholder="เพิ่มทะเบียนรถใหม่ (เช่น 3กฐ 1234)" style="margin:0; font-weight:bold;">
+            <input type="text" id="newCarPlateInput" placeholder="เพิ่มทะเบียนรถใหม่" style="margin:0; font-weight:bold;">
             <button class="btn-fuel" onclick="addCarPlate()" style="width: auto; margin: 0; padding: 10px 15px;">➕ เพิ่มทะเบียน</button>
           </div>
           <div id="carPlatesListContainer" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
         </div>
-
         <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
           <b>📅 เลือกช่วงเวลาตรวจสอบประวัติการเบิก:</b>
           <div style="display:flex; gap:10px; margin-top:5px;">
-            <div style="flex:1;">
-              <span style="font-size:12px; color:#555;">จากวันที่:</span>
-              <input type="date" id="fuelStartDate" value="${todayStr}" onchange="renderFuelHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
-            </div>
-            <div style="flex:1;">
-              <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
-              <input type="date" id="fuelEndDate" value="${todayStr}" onchange="renderFuelHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
-            </div>
+            <div style="flex:1;"><input type="date" id="fuelStartDate" value="${todayStr}" onchange="renderFuelHistoryList()" style="font-weight:bold;"></div>
+            <div style="flex:1;"><input type="date" id="fuelEndDate" value="${todayStr}" onchange="renderFuelHistoryList()" style="font-weight:bold;"></div>
           </div>
           <div style="display:flex; gap:8px; margin-top:8px;">
-            <button class="btn-blue" onclick="setFuelDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
-            <button class="btn-excel" onclick="exportFuelHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+            <button class="btn-blue" onclick="setFuelDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 วันนี้</button>
+            <button class="btn-excel" onclick="exportFuelHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออก Excel</button>
           </div>
         </div>
-
-        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: left;">
-          <div style="font-size: 14px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; padding-bottom: 6px;">
-            📊 สรุปยอดแยกตามทะเบียนรถ (ค่าน้ำมัน vs ค่าซ่อมรถ)
-          </div>
-          <div id="carExpenseChartContainer"></div>
-        </div>
-
         <div id="fuelHistoryContainer"></div>
         <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
       `;
@@ -2368,25 +1979,14 @@
     function loadCarPlatesManagementList() {
       const container = document.getElementById('carPlatesListContainer');
       if (!container) return;
-
       db.ref('car_plates').once('value', (snapshot) => {
         const obj = snapshot.val() || {};
         let list = [];
         Object.keys(obj).forEach(k => list.push({ key: k, ...obj[k] }));
-
-        if (list.length === 0) {
-          container.innerHTML = `<span style="color:#888; font-size:13px; font-style:italic;">ยังไม่มีทะเบียนรถในระบบ</span>`;
-          return;
-        }
-
+        if (list.length === 0) { container.innerHTML = `<span style="color:#888; font-size:13px;">ยังไม่มีทะเบียนรถ</span>`; return; }
         let html = '';
         list.forEach(item => {
-          html += `
-            <span style="background: white; border: 1px solid #ced4da; padding: 4px 10px; border-radius: 6px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
-              🚗 ${item.plate}
-              <span onclick="deleteCarPlate('${item.key}')" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 15px;" title="ลบ">&times;</span>
-            </span>
-          `;
+          html += `<span style="background:white; border:1px solid #ced4da; padding:4px 10px; border-radius:6px; font-size:13px; display:inline-flex; align-items:center; gap:6px; font-weight:bold;">🚗 ${item.plate} <span onclick="deleteCarPlate('${item.key}')" style="cursor:pointer; color:#dc3545;">&times;</span></span>`;
         });
         container.innerHTML = html;
       });
@@ -2394,25 +1994,15 @@
 
     function addCarPlate() {
       const val = document.getElementById('newCarPlateInput').value.trim();
-      if (!val) {
-        alert("กรุณากรอกเลขทะเบียนรถ");
-        return;
-      }
-
-      db.ref('car_plates').push().set({ plate: val }, (err) => {
-        if (!err) {
-          document.getElementById('newCarPlateInput').value = '';
-          loadCarPlatesManagementList();
-        }
+      if (!val) return;
+      db.ref('car_plates').push().set({ plate: val }, () => {
+        document.getElementById('newCarPlateInput').value = '';
+        loadCarPlatesManagementList();
       });
     }
 
     function deleteCarPlate(key) {
-      db.ref('car_plates/' + key).remove((err) => {
-        if (!err) {
-          loadCarPlatesManagementList();
-        }
-      });
+      db.ref('car_plates/' + key).remove(() => loadCarPlatesManagementList());
     }
 
     function setFuelDateToday() {
@@ -2429,7 +2019,6 @@
       const endDate = document.getElementById('fuelEndDate').value;
       const container = document.getElementById('fuelHistoryContainer');
       if (!container) return;
-
       container.innerHTML = i18n[currentLang].checking;
 
       db.ref('fuel_requests').once('value', (snapshot) => {
@@ -2437,282 +2026,54 @@
         let list = [];
         Object.keys(fuelObj).forEach(k => list.push({ key: k, ...fuelObj[k] }));
 
-        currentFuelFilteredList = list.filter(item => {
-          if (!item.date) return false;
-          return item.date >= startDate && item.date <= endDate;
-        });
-
+        currentFuelFilteredList = list.filter(item => item.date && item.date >= startDate && item.date <= endDate);
         let totalFuelOnly = 0;
         let totalRepairOnly = 0;
 
         currentFuelFilteredList.forEach(item => {
           let statusStr = String(item.status || '');
           let reqType = item.requestType || 'เบิกค่าน้ำมัน';
-          if (statusStr.includes('อนุมัติแล้ว') || statusStr.includes('อนุมัติ')) {
+          if (statusStr.includes('อนุมัติ')) {
             let amt = Number(item.amount || 0);
-            if (reqType.includes('ซ่อม')) {
-              totalRepairOnly += amt;
-            } else {
-              totalFuelOnly += amt;
-            }
+            if (reqType.includes('ซ่อม')) totalRepairOnly += amt;
+            else totalFuelOnly += amt;
           }
         });
 
-        let grandTotalApproved = totalFuelOnly + totalRepairOnly;
-
         let html = `
-          <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #e67e22; color: #333; padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
+          <div style="background:#f8f9fa; border:1px solid #e9ecef; border-left:4px solid #e67e22; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left; font-size:14px;">
             <b>📊 สรุปยอดเบิกจ่ายช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-            • ⛽ ค่าน้ำมันรวม: <b style="color: #e67e22;">${totalFuelOnly.toLocaleString()} บาท</b><br>
-            • 🔧 ค่าซ่อมรถรวม: <b style="color: #d9534f;">${totalRepairOnly.toLocaleString()} บาท</b><br>
-            💰 รวมยอดอนุมัติจ่ายทั้งหมด: <b style="color: #2c3e50; font-size: 16px;">${grandTotalApproved.toLocaleString()} บาท</b> (${currentFuelFilteredList.length} รายการ)
+            • ⛽ ค่าน้ำมัน: <b style="color:#e67e22;">${totalFuelOnly.toLocaleString()} บาท</b><br>
+            • 🔧 ค่าซ่อมรถ: <b style="color:#d9534f;">${totalRepairOnly.toLocaleString()} บาท</b><br>
+            💰 รวมสุทธิ: <b style="color:#2c3e50;">${(totalFuelOnly + totalRepairOnly).toLocaleString()} บาท</b>
           </div>
         `;
 
         if (currentFuelFilteredList.length === 0) {
-          html += `<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายในช่วงเวลาดังกล่าว</div>`;
+          html += `<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายในช่วงเวลานี้</div>`;
         } else {
           currentFuelFilteredList.slice().reverse().forEach(item => {
-            let statusBadge = String(item.status || '').includes('อนุมัติแล้ว') ? '🟢 อนุมัติแล้ว' : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รออนุมัติ');
-            let badgeType = item.requestType || '⛽ เบิกค่าน้ำมัน';
-            let plateText = item.carPlate ? `🚗 ทะเบียน: ${item.carPlate} | ` : '';
-            let typeColor = badgeType.includes('ซ่อม') ? '#d9534f' : '#e67e22';
-
+            let statusBadge = String(item.status || '').includes('อนุมัติ') ? '🟢 อนุมัติแล้ว' : '⏳ รออนุมัติ';
             html += `
               <div class="history-item">
-                <b>👤 ${item.empName} (${item.empId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b><br>
-                ${plateText}📍 รายละเอียด: ${item.route || '-'} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
-                📅 วันที่: ${item.date}<br>
-                
-                <div style="margin-top:8px; display:flex; gap:6px;">
-                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${item.key}', '${item.carPlate || ''}', '${item.route || ''}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
-                  <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${item.key}', '${item.empName}')">🗑️ ลบ</button>
-                </div>
+                <b>👤 ${item.empName}</b> [${item.requestType || 'เบิกค่าน้ำมัน'}] | <b>${statusBadge}</b><br>
+                🚗 ทะเบียน: ${item.carPlate || '-'} | รายละเอียด: ${item.route || '-'}<br>
+                💵 ยอด: <b style="color:#e67e22;">${Number(item.amount || 0).toLocaleString()} บาท</b> | 📅 ${item.date}
               </div>
             `;
           });
         }
         container.innerHTML = html;
-        renderCarExpenseChart();
       });
-    }
-
-    function renderCarExpenseChart() {
-      const chartContainer = document.getElementById('carExpenseChartContainer');
-      if (!chartContainer) return;
-
-      let carData = {}; 
-      let maxAmount = 1;
-
-      currentFuelFilteredList.forEach(item => {
-        let plate = item.carPlate || 'ไม่ระบุทะเบียน';
-        let statusStr = String(item.status || '');
-        let reqType = item.requestType || 'เบิกค่าน้ำมัน';
-        if (statusStr.includes('อนุมัติ')) {
-          let amt = Number(item.amount || 0);
-          if (!carData[plate]) carData[plate] = { fuel: 0, repair: 0 };
-          
-          if (reqType.includes('ซ่อม')) {
-            carData[plate].repair += amt;
-          } else {
-            carData[plate].fuel += amt;
-          }
-
-          let totalForPlate = carData[plate].fuel + carData[plate].repair;
-          if (totalForPlate > maxAmount) maxAmount = totalForPlate;
-        }
-      });
-
-      let plates = Object.keys(carData);
-      if (plates.length === 0) {
-        chartContainer.innerHTML = `<div style="color: #888; font-size: 13px; text-align: center; padding: 10px;">ไม่มีข้อมูลยอดเงินที่อนุมัติในช่วงเวลานี้</div>`;
-        return;
-      }
-
-      let chartHtml = '';
-      plates.forEach(plate => {
-        let fAmt = carData[plate].fuel;
-        let rAmt = carData[plate].repair;
-        let total = fAmt + rAmt;
-        let percent = Math.round((total / maxAmount) * 100);
-
-        chartHtml += `
-          <div style="margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; color: #495057;">
-              <span>🚗 <b>${plate}</b> (⛽ ค่าน้ำมัน: <b style="color:#e67e22;">${fAmt.toLocaleString()} ฿</b> | 🔧 ค่าซ่อม: <b style="color:#d9534f;">${rAmt.toLocaleString()} ฿</b>)</span>
-              <span style="font-weight: bold; color: #2c3e50;">รวม ${total.toLocaleString()} บาท</span>
-            </div>
-            <div style="background: #e9ecef; border-radius: 6px; height: 10px; width: 100%; overflow: hidden; display: flex;">
-              <div style="background: #e67e22; width: ${Math.round((fAmt/total)*100 || 0)}%; height: 100%;" title="ค่าน้ำมัน"></div>
-              <div style="background: #d9534f; width: ${Math.round((rAmt/total)*100 || 0)}%; height: 100%;" title="ค่าซ่อม"></div>
-            </div>
-          </div>
-        `;
-      });
-
-      chartContainer.innerHTML = chartHtml;
     }
 
     function exportFuelHistoryExcel() {
-      if (!currentFuelFilteredList || currentFuelFilteredList.length === 0) {
-        alert("ไม่มีข้อมูลสำหรับส่งออกเป็น Excel");
-        return;
-      }
+      if (!currentFuelFilteredList || currentFuelFilteredList.length === 0) { alert("ไม่มีข้อมูล"); return; }
       const startDate = document.getElementById('fuelStartDate').value;
       const endDate = document.getElementById('fuelEndDate').value;
-
-      let rows = [
-        ["รหัสพนักงาน", "ชื่อพนักงาน", "ประเภทการเบิก", "ทะเบียนรถ", "รายละเอียดเส้นทาง/การซ่อม", "จำนวนเงินที่อนุมัติ (บาท)", "สถานะ", "วันที่ขอ"]
-      ];
-
-      currentFuelFilteredList.forEach(item => {
-        rows.push([
-          item.empId,
-          item.empName,
-          item.requestType || 'เบิกค่าน้ำมัน',
-          item.carPlate || '-',
-          item.route || '-',
-          item.amount || 0,
-          item.status || '',
-          item.date || ''
-        ]);
-      });
-
-      downloadCSV(`Fuel_Repair_Requests_${startDate}_to_${endDate}.csv`, rows);
-    }
-
-    function showEditFuelModal(key, carPlate, route, amount, reqType) {
-      db.ref('car_plates').once('value', (snapshot) => {
-        const platesObj = snapshot.val() || {};
-        let platesList = [];
-        Object.keys(platesObj).forEach(k => platesList.push(platesObj[k].plate));
-
-        let optionsHtml = `<option value="">-- เลือกทะเบียนรถ --</option>`;
-        if (platesList.length === 0) {
-          optionsHtml += `<option value="${carPlate || 'รถส่วนกลาง'}">${carPlate || 'รถส่วนกลาง'}</option>`;
-        } else {
-          platesList.forEach(p => {
-            let selected = (p === carPlate) ? 'selected' : '';
-            optionsHtml += `<option value="${p}" ${selected}>${p}</option>`;
-          });
-        }
-
-        const html = `
-          <div class="user-banner">✏️ แก้ไขข้อมูลการเบิกจ่าย</div>
-          <input type="hidden" id="editFuelKey" value="${key}">
-          
-          <div style="text-align:left; font-size:13px; color:#555;">ประเภทการเบิก:</div>
-          <select id="editFuelType" style="margin-bottom:8px;">
-            <option value="⛽ เบิกค่าน้ำมัน" ${reqType.includes('น้ำมัน') ? 'selected' : ''}>⛽ เบิกค่าน้ำมันรถส่งของ</option>
-            <option value="🔧 เบิกค่าซ่อมรถ" ${reqType.includes('ซ่อม') ? 'selected' : ''}>🔧 เบิกค่าซ่อมรถ / ค่าอะไหล่</option>
-          </select>
-
-          <div style="text-align:left; font-size:13px; color:#555;">ทะเบียนรถ:</div>
-          <select id="editCarPlateSelect" style="margin-bottom:8px;">
-            ${optionsHtml}
-          </select>
-
-          <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">รายละเอียด / เส้นทาง:</div>
-          <input type="text" id="editFuelRoute" value="${route}">
-          
-          <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">จำนวนเงินอนุมัติ (บาท):</div>
-          <input type="number" id="editFuelAmount" value="${amount}">
-          
-          <button class="btn-blue" onclick="submitEditFuel()">💾 บันทึกการแก้ไข</button>
-          <button class="btn-back" onclick="showAdminFuelHistory()">⬅️ ย้อนกลับ</button>
-        `;
-        document.getElementById('mainContent').innerHTML = html;
-      });
-    }
-
-    function submitEditFuel() {
-      const key = document.getElementById('editFuelKey').value;
-      const reqType = document.getElementById('editFuelType').value;
-      const carPlate = document.getElementById('editCarPlateSelect').value;
-      const route = document.getElementById('editFuelRoute').value.trim();
-      const amount = document.getElementById('editFuelAmount').value.trim();
-
-      if (!carPlate || !amount) {
-        alert("กรุณาเลือกทะเบียนรถและกรอกจำนวนเงินให้ครบถ้วน");
-        return;
-      }
-
-      db.ref('fuel_requests/' + key).update({
-        requestType: reqType,
-        carPlate: carPlate,
-        route: route || "-",
-        amount: Number(amount)
-      }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "แก้ไขข้อมูลเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showAdminFuelHistory();">ตกลง</button>`);
-        }
-      });
-    }
-
-    function confirmDeleteFuel(key, empName) {
-      showModal("❓ ยืนยันการลบ", `ต้องการลบรายการเบิกจ่ายของ (${empName}) ใช่หรือไม่?`, 
-        `<button class="btn-yes" onclick="executeDeleteFuel('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
-      );
-    }
-
-    function executeDeleteFuel(key) {
-      db.ref('fuel_requests/' + key).remove((err) => {
-        closeModal();
-        showAdminFuelHistory();
-      });
-    }
-
-    function showAdminLeaves() {
-      isAdmin = true;
-      document.getElementById('mainCard').classList.add('admin-wide');
-      document.getElementById('hamburgerBtn').style.display = 'block';
-      document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "🌴 อนุมัติคำขอลา (รออนุมัติ)";
-      document.getElementById('listBox').style.display = "none";
-      
-      db.ref('leaves').once('value', (snapshot) => {
-        const leavesObj = snapshot.val() || {};
-        let html = `<h2>🌴 รายการขอลางานที่รอการพิจารณา</h2>`;
-        let pendingList = [];
-        
-        Object.keys(leavesObj).forEach(k => {
-          let item = leavesObj[k];
-          let statusStr = String(item.status || '');
-          if (statusStr.includes('รออนุมัติ') || statusStr === '') {
-            pendingList.push({ key: k, ...item });
-          }
-        });
-        
-        if(pendingList.length === 0) {
-          html += `<div style="color:#888; margin:20px 0;">ไม่มีรายการใบลาที่รออนุมัติในขณะนี้</div>`;
-        } else {
-          pendingList.reverse().forEach(item => {
-            html += `
-              <div class="history-item" style="background:#fff3cd;">
-                <b>👤 ${item.empName}</b> (${item.leaveType}) ⏳<br>
-                📅 ${item.startDate} ถึง ${item.endDate}<br>
-                💬 เหตุผล: ${item.reason}<br><br>
-                
-                <div style="display:flex; gap:8px;">
-                  <select id="leaveStatus_${item.key}" style="margin:0; padding:8px; font-weight:bold;">
-                    <option value="อนุมัติแล้ว 🟢">🟢 อนุมัติ</option>
-                    <option value="ไม่อนุมัติ 🔴">🔴 ไม่อนุมัติ</option>
-                  </select>
-                  <button onclick="updateLeaveStatusAndHide('${item.key}')" style="width:auto; margin:0; padding:8px 12px; background:#0d6efd;">บันทึกผลการพิจารณา</button>
-                </div>
-              </div>`;
-          });
-        }
-        html += `<button class="btn-back" onclick="showAdminDashboard()">⬅️ กลับหน้าแดสบอร์ด</button>`;
-        document.getElementById('mainContent').innerHTML = html;
-      });
-    }
-
-    function updateLeaveStatusAndHide(key) {
-      const status = document.getElementById(`leaveStatus_${key}`).value;
-      db.ref('leaves/' + key).update({ status: status }, () => {
-        showModal("🎉 สำเร็จ", "บันทึกผลการพิจารณาและย้ายไปหน้าประวัติเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showAdminLeaves();">ตกลง</button>`);
-      });
+      let rows = [["รหัส", "ชื่อพนักงาน", "ประเภท", "ทะเบียนรถ", "รายละเอียด", "จำนวนเงิน", "สถานะ", "วันที่"]];
+      currentFuelFilteredList.forEach(i => rows.push([i.empId, i.empName, i.requestType, i.carPlate, i.route, i.amount, i.status, i.date]));
+      downloadCSV(`Fuel_History_${startDate}_to_${endDate}.csv`, rows);
     }
 
     function showAdminLeaveHistory() {
@@ -2722,26 +2083,19 @@
       document.getElementById('bellBtn').style.display = 'block';
       document.getElementById('pageTitle').innerText = "📜 ประวัติการขอลางานทั้งหมด";
       document.getElementById('listBox').style.display = "none";
-
       const todayStr = getLocalDateTimeString();
 
       const html = `
-        <h2>📜 ประวัติการขอลางาน & จัดการย้อนหลัง</h2>
+        <h2>📜 ประวัติการขอลางานทั้งหมด</h2>
         <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
-          <b>📅 เลือกช่วงเวลาตรวจสอบ (อิงตามวันเริ่มลา):</b>
+          <b>📅 เลือกช่วงเวลาตรวจสอบ:</b>
           <div style="display:flex; gap:10px; margin-top:5px;">
-            <div style="flex:1;">
-              <span style="font-size:12px; color:#555;">จากวันที่:</span>
-              <input type="date" id="leaveStartDate" value="${todayStr}" onchange="renderLeaveHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
-            </div>
-            <div style="flex:1;">
-              <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
-              <input type="date" id="leaveEndDate" value="${todayStr}" onchange="renderLeaveHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
-            </div>
+            <div style="flex:1;"><input type="date" id="leaveStartDate" value="${todayStr}" onchange="renderLeaveHistoryList()" style="font-weight:bold;"></div>
+            <div style="flex:1;"><input type="date" id="leaveEndDate" value="${todayStr}" onchange="renderLeaveHistoryList()" style="font-weight:bold;"></div>
           </div>
           <div style="display:flex; gap:8px; margin-top:8px;">
-            <button class="btn-blue" onclick="setLeaveDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
-            <button class="btn-excel" onclick="exportLeaveHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+            <button class="btn-blue" onclick="setLeaveDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 วันนี้</button>
+            <button class="btn-excel" onclick="exportLeaveHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออก Excel</button>
           </div>
         </div>
         <div id="leaveHistoryContainer"></div>
@@ -2765,7 +2119,6 @@
       const endDate = document.getElementById('leaveEndDate').value;
       const container = document.getElementById('leaveHistoryContainer');
       if (!container) return;
-
       container.innerHTML = i18n[currentLang].checking;
 
       db.ref('leaves').once('value', (snapshot) => {
@@ -2773,38 +2126,18 @@
         let list = [];
         Object.keys(leavesObj).forEach(k => list.push({ key: k, ...leavesObj[k] }));
 
-        currentLeaveFilteredList = list.filter(item => {
-          if (!item.startDate) return false;
-          return item.startDate >= startDate && item.startDate <= endDate;
-        });
-
-        let html = `
-          <div style="background: linear-gradient(135deg, #fd7e14, #ffc107); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
-            <b>📊 สรุปประวัติการลาช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-            📋 พบทั้งหมด: <b>${currentLeaveFilteredList.length} รายการ</b>
-          </div>
-        `;
+        currentLeaveFilteredList = list.filter(item => item.startDate && item.startDate >= startDate && item.startDate <= endDate);
+        let html = `<div style="background:linear-gradient(135deg, #fd7e14, #ffc107); color:white; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;"><b>📊 สรุปประวัติการลา:</b> พบทั้งหมด <b>${currentLeaveFilteredList.length} รายการ</b></div>`;
 
         if (currentLeaveFilteredList.length === 0) {
-          html += `<div style="color:#888; margin:20px 0;">ไม่มีรายการลาในช่วงเวลาดังกล่าว</div>`;
+          html += `<div style="color:#888; margin:20px 0;">ไม่มีรายการลาในช่วงเวลานี้</div>`;
         } else {
           currentLeaveFilteredList.slice().reverse().forEach(item => {
-            let statusStr = item.status || 'รออนุมัติ ⏳';
             html += `
               <div class="history-item">
-                <b>👤 ${item.empName} (${item.empId})</b> | ประเภท: <b>${item.leaveType}</b><br>
-                📅 วันที่ลา: ${item.startDate} ถึง ${item.endDate}<br>
-                💬 เหตุผล: ${item.reason}<br><br>
-                
-                <div style="display:flex; gap:8px; align-items:center;">
-                  <select id="editLeaveStatus_${item.key}" style="margin:0; padding:6px; font-size:13px; font-weight:bold;">
-                    <option value="อนุมัติแล้ว 🟢" ${statusStr.includes('อนุมัติแล้ว') ? 'selected' : ''}>🟢 อนุมัติแล้ว</option>
-                    <option value="ไม่อนุมัติ 🔴" ${statusStr.includes('ไม่อนุมัติ') ? 'selected' : ''}>🔴 ไม่อนุมัติ</option>
-                    <option value="รออนุมัติ ⏳" ${statusStr.includes('รออนุมัติ') ? 'selected' : ''}>⏳ รออนุมัติ</option>
-                  </select>
-                  <button onclick="adminUpdateLeaveStatus('${item.key}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#0d6efd;">อัปเดต</button>
-                  <button onclick="adminDeleteLeave('${item.key}', '${item.empName}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#dc3545;">ลบ</button>
-                </div>
+                <b>👤 ${item.empName}</b> | ประเภท: <b>${item.leaveType}</b><br>
+                📅 ${item.startDate} ถึง ${item.endDate} | สถานะ: <b>${item.status || 'รออนุมัติ'}</b><br>
+                💬 เหตุผล: ${item.reason}
               </div>
             `;
           });
@@ -2814,53 +2147,12 @@
     }
 
     function exportLeaveHistoryExcel() {
-      if (!currentLeaveFilteredList || currentLeaveFilteredList.length === 0) {
-        alert("ไม่มีข้อมูลสำหรับส่งออกเป็น Excel");
-        return;
-      }
+      if (!currentLeaveFilteredList || currentLeaveFilteredList.length === 0) { alert("ไม่มีข้อมูล"); return; }
       const startDate = document.getElementById('leaveStartDate').value;
       const endDate = document.getElementById('leaveEndDate').value;
-
-      let rows = [
-        ["รหัสพนักงาน", "ชื่อพนักงาน", "ประเภทการลา", "วันเริ่มต้น", "วันสิ้นสุด", "เหตุผล", "สถานะการลา", "วันที่ยื่นใบลา"]
-      ];
-
-      currentLeaveFilteredList.forEach(item => {
-        rows.push([
-          item.empId,
-          item.empName,
-          item.leaveType,
-          item.startDate,
-          item.endDate,
-          item.reason,
-          item.status || 'รออนุมัติ',
-          item.applyDate || ''
-        ]);
-      });
-
+      let rows = [["รหัส", "ชื่อพนักงาน", "ประเภท", "วันเริ่มต้น", "วันสิ้นสุด", "เหตุผล", "สถานะ"]];
+      currentLeaveFilteredList.forEach(i => rows.push([i.empId, i.empName, i.leaveType, i.startDate, i.endDate, i.reason, i.status]));
       downloadCSV(`Leave_History_${startDate}_to_${endDate}.csv`, rows);
-    }
-
-    function adminUpdateLeaveStatus(key) {
-      const newStatus = document.getElementById(`editLeaveStatus_${key}`).value;
-      db.ref('leaves/' + key).update({ status: newStatus }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "อัปเดตสถานะใบลาเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); renderLeaveHistoryList();">ตกลง</button>`);
-        }
-      });
-    }
-
-    function adminDeleteLeave(key, empName) {
-      showModal("❓ ยืนยันการลบ", `ต้องการลบใบลาของ (${empName}) ใช่หรือไม่?`, 
-        `<button class="btn-yes" onclick="executeAdminDeleteLeave('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
-      );
-    }
-
-    function executeAdminDeleteLeave(key) {
-      db.ref('leaves/' + key).remove((err) => {
-        closeModal();
-        renderLeaveHistoryList();
-      });
     }
 
     function showAdminLogsHistory() {
@@ -2870,7 +2162,6 @@
       document.getElementById('bellBtn').style.display = 'block';
       document.getElementById('pageTitle').innerText = "📜 ดูการลงเวลาทำงานย้อนหลัง";
       document.getElementById('listBox').style.display = "none";
-
       const todayStr = getLocalDateTimeString();
 
       const html = `
@@ -2878,18 +2169,12 @@
         <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
           <b>📅 เลือกช่วงเวลาตรวจสอบ:</b>
           <div style="display:flex; gap:10px; margin-top:5px;">
-            <div style="flex:1;">
-              <span style="font-size:12px; color:#555;">จากวันที่:</span>
-              <input type="date" id="logStartDate" value="${todayStr}" onchange="renderLogHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
-            </div>
-            <div style="flex:1;">
-              <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
-              <input type="date" id="logEndDate" value="${todayStr}" onchange="renderLogHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
-            </div>
+            <div style="flex:1;"><input type="date" id="logStartDate" value="${todayStr}" onchange="renderLogHistoryList()" style="font-weight:bold;"></div>
+            <div style="flex:1;"><input type="date" id="logEndDate" value="${todayStr}" onchange="renderLogHistoryList()" style="font-weight:bold;"></div>
           </div>
           <div style="display:flex; gap:8px; margin-top:8px;">
-            <button class="btn-blue" onclick="setLogDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
-            <button class="btn-excel" onclick="exportLogHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+            <button class="btn-blue" onclick="setLogDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 วันนี้</button>
+            <button class="btn-excel" onclick="exportLogHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออก Excel</button>
           </div>
         </div>
         <div id="logHistoryContainer"></div>
@@ -2913,7 +2198,6 @@
       const endDate = document.getElementById('logEndDate').value;
       const container = document.getElementById('logHistoryContainer');
       if (!container) return;
-
       container.innerHTML = i18n[currentLang].checking;
 
       db.ref('logs').once('value', (snapshot) => {
@@ -2921,27 +2205,17 @@
         let list = [];
         Object.keys(logsObj).forEach(k => list.push(logsObj[k]));
 
-        currentLogFilteredList = list.filter(item => {
-          if (!item.date) return false;
-          return item.date >= startDate && item.date <= endDate;
-        });
-
-        let html = `
-          <div style="background: linear-gradient(135deg, #0dcaf0, #0d6efd); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
-            <b>📊 สรุปประวัติการลงเวลาช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-            📋 พบทั้งหมด: <b>${currentLogFilteredList.length} รายการ</b>
-          </div>
-        `;
+        currentLogFilteredList = list.filter(item => item.date && item.date >= startDate && item.date <= endDate);
+        let html = `<div style="background:linear-gradient(135deg, #0dcaf0, #0d6efd); color:white; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;"><b>📊 สรุปประวัติการลงเวลา:</b> พบทั้งหมด <b>${currentLogFilteredList.length} รายการ</b></div>`;
 
         if (currentLogFilteredList.length === 0) {
-          html += `<div style="color:#888; margin:20px 0;">ไม่มีประวัติการลงเวลาในช่วงเวลาดังกล่าว</div>`;
+          html += `<div style="color:#888; margin:20px 0;">ไม่มีประวัติการลงเวลาในช่วงเวลานี้</div>`;
         } else {
           currentLogFilteredList.slice().reverse().forEach(item => {
             html += `
               <div class="history-item">
                 📅 วันที่: ${item.date} | ⏰ เวลา: ${item.time} น.<br>
-                <b>👤 ${item.empName} (${item.empId})</b> (${item.type})<br>
-                📍 สถานที่: ${item.nearestLocation || '-'}
+                <b>👤 ${item.empName}</b> (${item.type}) | สถานที่: ${item.nearestLocation || '-'}
               </div>
             `;
           });
@@ -2951,29 +2225,11 @@
     }
 
     function exportLogHistoryExcel() {
-      if (!currentLogFilteredList || currentLogFilteredList.length === 0) {
-        alert("ไม่มีข้อมูลสำหรับส่งออกเป็น Excel");
-        return;
-      }
+      if (!currentLogFilteredList || currentLogFilteredList.length === 0) { alert("ไม่มีข้อมูล"); return; }
       const startDate = document.getElementById('logStartDate').value;
       const endDate = document.getElementById('logEndDate').value;
-
-      let rows = [
-        ["รหัสพนักงาน", "ชื่อพนักงาน", "ประเภท", "วันที่", "เวลา", "สถานที่เช็กอิน", "ระยะทาง (ม.)"]
-      ];
-
-      currentLogFilteredList.forEach(item => {
-        rows.push([
-          item.empId,
-          item.empName,
-          item.type,
-          item.date,
-          item.time,
-          item.nearestLocation || '-',
-          item.distance || 0
-        ]);
-      });
-
+      let rows = [["รหัส", "ชื่อ", "ประเภท", "วันที่", "เวลา", "สถานที่", "ระยะทาง"]];
+      currentLogFilteredList.forEach(i => rows.push([i.empId, i.empName, i.type, i.date, i.time, i.nearestLocation, i.distance]));
       downloadCSV(`Checkin_History_${startDate}_to_${endDate}.csv`, rows);
     }
 
@@ -2982,27 +2238,20 @@
       document.getElementById('mainCard').classList.add('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'block';
       document.getElementById('bellBtn').style.display = 'block';
-      document.getElementById('pageTitle').innerText = "💵 สรุปค่าแรง & ค่าใช้จ่ายรายวัน (ช่วงเวลา)";
+      document.getElementById('pageTitle').innerText = "💵 สรุปค่าแรง & ค่าใช้จ่ายรายวัน";
       document.getElementById('listBox').style.display = "none";
-
       const todayStr = getLocalDateTimeString();
 
       const html = `
         <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
           <b>📅 เลือกช่วงเวลาตรวจสอบ:</b>
           <div style="display:flex; gap:10px; margin-top:5px;">
-            <div style="flex:1;">
-              <span style="font-size:12px; color:#555;">จากวันที่:</span>
-              <input type="date" id="payrollStartDate" value="${todayStr}" onchange="renderDailyPayrollData()" style="font-weight:bold; margin:2px 0 0 0;">
-            </div>
-            <div style="flex:1;">
-              <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
-              <input type="date" id="payrollEndDate" value="${todayStr}" onchange="renderDailyPayrollData()" style="font-weight:bold; margin:2px 0 0 0;">
-            </div>
+            <div style="flex:1;"><input type="date" id="payrollStartDate" value="${todayStr}" onchange="renderDailyPayrollData()" style="font-weight:bold;"></div>
+            <div style="flex:1;"><input type="date" id="payrollEndDate" value="${todayStr}" onchange="renderDailyPayrollData()" style="font-weight:bold;"></div>
           </div>
           <div style="display:flex; gap:8px; margin-top:8px;">
-            <button class="btn-blue" onclick="setPayrollDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
-            <button class="btn-excel" onclick="exportPayrollExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+            <button class="btn-blue" onclick="setPayrollDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 วันนี้</button>
+            <button class="btn-excel" onclick="exportPayrollExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออก Excel</button>
           </div>
         </div>
         <div id="dailyPayrollResultContainer"></div>
@@ -3026,12 +2275,10 @@
       const endDate = document.getElementById('payrollEndDate').value;
       const container = document.getElementById('dailyPayrollResultContainer');
       if (!container) return;
-
       container.innerHTML = i18n[currentLang].checking;
 
       db.ref('employees').once('value', (empSnap) => {
         const employeesObj = empSnap.val() || {};
-
         db.ref('logs').once('value', (logSnap) => {
           const logsObj = logSnap.val() || {};
           let salaryTotal = 0;
@@ -3042,11 +2289,10 @@
             if (log.date >= startDate && log.date <= endDate && log.type === "เข้างาน") {
               let rate = 0;
               Object.keys(employeesObj).forEach(ek => {
-                let emp = employeesObj[ek];
-                if (String(emp.empId) === String(log.empId)) rate = Number(emp.dailyRate || 0);
+                if (String(employeesObj[ek].empId) === String(log.empId)) rate = Number(employeesObj[ek].dailyRate || 0);
               });
               salaryTotal += rate;
-              presentList.push({ name: log.empName, id: log.empId, date: log.date, time: log.time, rate: rate });
+              presentList.push({ name: log.empName, id: log.empId, date: log.date, time: log.time, rate });
             }
           });
 
@@ -3061,7 +2307,7 @@
               let f = fuelObj[k];
               let statusStr = String(f.status || '');
               let reqType = f.requestType || 'เบิกค่าน้ำมัน';
-              if (f.date >= startDate && f.date <= endDate && (statusStr.includes('อนุมัติแล้ว') || statusStr.includes('อนุมัติ'))) {
+              if (f.date >= startDate && f.date <= endDate && statusStr.includes('อนุมัติ')) {
                 let amt = Number(f.amount || 0);
                 if (reqType.includes('ซ่อม')) {
                   repairOnlyTotal += amt;
@@ -3073,49 +2319,19 @@
               }
             });
 
-            currentPayrollDataCache = { salaryList: presentList, fuelList: fuelList, repairList: repairList, salaryTotal: salaryTotal, fuelTotal: fuelOnlyTotal, repairTotal: repairOnlyTotal };
-
+            currentPayrollDataCache = { salaryList: presentList, fuelList, repairList, salaryTotal, fuelTotal: fuelOnlyTotal, repairTotal: repairOnlyTotal };
             let grandTotal = salaryTotal + fuelOnlyTotal + repairOnlyTotal;
 
             let html = `
               <div style="background: linear-gradient(135deg, #2b5876, #4e4376); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left;">
                 <b>📊 สรุปยอดช่วงวันที่: ${startDate} ถึง ${endDate}</b><br><br>
                 • ค่าแรงพนักงานรวม: <b>${salaryTotal.toLocaleString()} บาท</b><br>
-                • ⛽ ค่าน้ำมันรถรวม (อนุมัติแล้ว): <b style="color:#f39c12;">${fuelOnlyTotal.toLocaleString()} บาท</b><br>
-                • 🔧 ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#e74c3c;">${repairOnlyTotal.toLocaleString()} บาท</b><br>
+                • ⛽ ค่าน้ำมันรวม: <b style="color:#f39c12;">${fuelOnlyTotal.toLocaleString()} บาท</b><br>
+                • 🔧 ค่าซ่อมรถรวม: <b style="color:#e74c3c;">${repairOnlyTotal.toLocaleString()} บาท</b><br>
                 <hr style="border:0; border-top:1px solid rgba(255,255,255,0.4); margin:8px 0;">
                 <span style="font-size: 17px; font-weight: bold;">💰 รวมจ่ายออกทั้งหมด: ${grandTotal.toLocaleString()} บาท</span>
               </div>
-
-              <div style="text-align:left; font-weight:bold; margin-bottom:5px;">👤 รายชื่อพนักงานที่มาทำงาน (${presentList.length} รายการสแกน):</div>
             `;
-
-            if (presentList.length === 0) {
-              html += `<div style="color:#888; margin-bottom:15px;">ไม่มีพนักงานสแกนเข้างานในช่วงเวลานี้</div>`;
-            } else {
-              presentList.slice().reverse().forEach(p => {
-                html += `<div class="history-item">📅 ${p.date} | <b>${p.name} (${p.id})</b> - เวลา ${p.time} น. | ค่าแรง: <b style="color:#28a745;">${p.rate} บาท</b></div>`;
-              });
-            }
-
-            html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">⛽ รายการเบิกค่าน้ำมันที่อนุมัติแล้ว (${fuelList.length} รายการ):</div>`;
-            if (fuelList.length === 0) {
-              html += `<div style="color:#888; margin-bottom:10px;">ไม่มีการเบิกค่าน้ำมันในช่วงเวลานี้</div>`;
-            } else {
-              fuelList.slice().reverse().forEach(f => {
-                html += `<div class="history-item">📅 ${f.date} | <b>${f.name}</b> [${f.type}] (ทะเบียน: ${f.plate})<br>รายละเอียด: ${f.route} | อนุมัติจ่าย: <b style="color:#e67e22;">${f.amount} บาท</b></div>`;
-              });
-            }
-
-            html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">🔧 รายการเบิกค่าซ่อมรถที่อนุมัติแล้ว (${repairList.length} รายการ):</div>`;
-            if (repairList.length === 0) {
-              html += `<div style="color:#888;">ไม่มีการเบิกค่าซ่อมรถในช่วงเวลานี้</div>`;
-            } else {
-              repairList.slice().reverse().forEach(r => {
-                html += `<div class="history-item">📅 ${r.date} | <b>${r.name}</b> [${r.type}] (ทะเบียน: ${r.plate})<br>รายละเอียด: ${r.route} | อนุมัติจ่าย: <b style="color:#d9534f;">${r.amount} บาท</b></div>`;
-              });
-            }
-
             container.innerHTML = html;
           });
         });
@@ -3125,39 +2341,9 @@
     function exportPayrollExcel() {
       const startDate = document.getElementById('payrollStartDate').value;
       const endDate = document.getElementById('payrollEndDate').value;
-
-      let rows = [
-        ["=== สรุปค่าแรงพนักงานมาทำงาน ==="],
-        ["วันที่", "รหัสพนักงาน", "ชื่อพนักงาน", "เวลาเข้างาน", "ค่าแรง (บาท)"]
-      ];
-
-      currentPayrollDataCache.salaryList.forEach(p => {
-        rows.push([p.date, p.id, p.name, p.time, p.rate]);
-      });
-
-      rows.push([]);
-      rows.push(["=== สรุปรายการเบิกค่าน้ำมัน (อนุมัติแล้ว) ==="],
-        ["วันที่", "ชื่อพนักงาน", "ประเภทการเบิก", "ทะเบียนรถ", "รายละเอียด", "ยอดเงินอนุมัติ (บาท)"]
-      );
-      currentPayrollDataCache.fuelList.forEach(f => {
-        rows.push([f.date, f.name, f.type, f.plate, f.route, f.amount]);
-      });
-
-      rows.push([]);
-      rows.push(["=== สรุปรายการเบิกค่าซ่อมรถ (อนุมัติแล้ว) ==="],
-        ["วันที่", "ชื่อพนักงาน", "ประเภทการเบิก", "ทะเบียนรถ", "รายละเอียด", "ยอดเงินอนุมัติ (บาท)"]
-      );
-      currentPayrollDataCache.repairList.forEach(r => {
-        rows.push([r.date, r.name, r.type, r.plate, r.route, r.amount]);
-      });
-
-      rows.push([]);
-      rows.push(["รวมค่าแรงทั้งหมด", "", "", "", "", currentPayrollDataCache.salaryTotal]);
-      rows.push(["รวมค่าน้ำมันทั้งหมด", "", "", "", "", currentPayrollDataCache.fuelTotal]);
-      rows.push(["รวมค่าซ่อมรถทั้งหมด", "", "", "", "", currentPayrollDataCache.repairTotal]);
-      rows.push(["รวมจ่ายออกทั้งหมดสุทธิ", "", "", "", "", currentPayrollDataCache.salaryTotal + currentPayrollDataCache.fuelTotal + currentPayrollDataCache.repairTotal]);
-
-      downloadCSV(`Daily_Payroll_Summary_${startDate}_to_${endDate}.csv`, rows);
+      let rows = [["=== สรุปค่าแรง ==="], ["วันที่", "รหัส", "ชื่อ", "เวลา", "ค่าแรง"]];
+      currentPayrollDataCache.salaryList.forEach(p => rows.push([p.date, p.id, p.name, p.time, p.rate]));
+      downloadCSV(`Payroll_${startDate}_to_${endDate}.csv`, rows);
     }
 
     function showAnalyticsReport() {
@@ -3171,9 +2357,9 @@
 
       const html = `
         <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
-          <b>📅 เลือกเดือนที่ต้องการสรุป:</b> <input type="month" id="repMonth" value="${nowYM}" onchange="renderMonthlySummary()" style="margin-top:5px; font-weight:bold;">
+          <b>📅 เลือกเดือน:</b> <input type="month" id="repMonth" value="${nowYM}" onchange="renderMonthlySummary()" style="margin-top:5px; font-weight:bold;">
           <div style="margin-top:10px;">
-            <button class="btn-excel" onclick="exportMonthlyExcel()" style="padding:10px; font-size:14px;">📥 ส่งออกข้อมูลสรุปประจำเดือนเป็น Excel</button>
+            <button class="btn-excel" onclick="exportMonthlyExcel()" style="padding:10px; font-size:14px;">📥 ส่งออก Excel</button>
           </div>
         </div>
         <div id="repResult"></div>
@@ -3214,28 +2400,23 @@
               let f = fuelObj[fk];
               let statusStr = String(f.status || '');
               let reqType = f.requestType || 'เบิกค่าน้ำมัน';
-              if (f.date && f.date.startsWith(ym) && (statusStr.includes('อนุมัติแล้ว') || statusStr.includes('อนุมัติ'))) {
+              if (f.date && f.date.startsWith(ym) && statusStr.includes('อนุมัติ')) {
                 let amt = Number(f.amount || 0);
-                if (reqType.includes('ซ่อม')) {
-                  totalRepair += amt;
-                } else {
-                  totalFuel += amt;
-                }
+                if (reqType.includes('ซ่อม')) totalRepair += amt;
+                else totalFuel += amt;
               }
             });
 
-            currentMonthlyCache.totalSalary = totalSalary;
-            currentMonthlyCache.totalFuel = totalFuel;
-            currentMonthlyCache.totalRepair = totalRepair;
+            currentMonthlyCache = { ym, totalSalary, totalFuel, totalRepair };
 
             document.getElementById('repResult').innerHTML = `
               <div class="history-item">
                 📅 ประจำเดือน: <b>${ym}</b><br><br>
-                💵 ค่าแรงพนักงานรวม: <b style="color:#28a745; font-size:15px;">${totalSalary.toLocaleString()} บาท</b><br>
-                ⛽ ค่าน้ำมันรถรวม (อนุมัติแล้ว): <b style="color:#e67e22; font-size:15px;">${totalFuel.toLocaleString()} บาท</b><br>
-                🔧 ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#d9534f; font-size:15px;">${totalRepair.toLocaleString()} บาท</b><br>
+                💵 ค่าแรงรวม: <b style="color:#28a745;">${totalSalary.toLocaleString()} บาท</b><br>
+                ⛽ ค่าน้ำมันรวม: <b style="color:#e67e22;">${totalFuel.toLocaleString()} บาท</b><br>
+                🔧 ค่าซ่อมรถรวม: <b style="color:#d9534f;">${totalRepair.toLocaleString()} บาท</b><br>
                 <hr style="border:0; border-top:1px solid #ddd; margin:10px 0;">
-                💰 <b>ค่าใช้จ่ายบริษัทรวมทั้งหมด: <span style="font-size:18px; color:#d9534f;">${(totalSalary + totalFuel + totalRepair).toLocaleString()} บาท</span></b>
+                💰 <b>รวมทั้งหมด: <span style="font-size:18px; color:#d9534f;">${(totalSalary + totalFuel + totalRepair).toLocaleString()} บาท</span></b>
               </div>
             `;
           });
@@ -3248,14 +2429,13 @@
       let rows = [
         ["รายงานสรุปค่าใช้จ่ายประจำเดือน", ym],
         [],
-        ["รายการค่าใช้จ่าย", "จำนวนเงินรวม (บาท)"],
+        ["รายการ", "จำนวนเงิน (บาท)"],
         ["ค่าแรงพนักงานรวม", currentMonthlyCache.totalSalary],
-        ["ค่าน้ำมันรถ (อนุมัติแล้ว)", currentMonthlyCache.totalFuel],
-        ["ค่าซ่อมรถ / ค่าอะไหล่ (อนุมัติแล้ว)", currentMonthlyCache.totalRepair],
-        ["ค่าใช้จ่ายบริษัทรวมทั้งหมดสุทธิ", currentMonthlyCache.totalSalary + currentMonthlyCache.totalFuel + currentMonthlyCache.totalRepair]
+        ["ค่าน้ำมันรถรวม", currentMonthlyCache.totalFuel],
+        ["ค่าซ่อมรถรวม", currentMonthlyCache.totalRepair],
+        ["รวมทั้งหมด", currentMonthlyCache.totalSalary + currentMonthlyCache.totalFuel + currentMonthlyCache.totalRepair]
       ];
-
-      downloadCSV(`Monthly_Expense_Summary_${ym}.csv`, rows);
+      downloadCSV(`Monthly_Expense_${ym}.csv`, rows);
     }
 
     function showEmpManagement() {
@@ -3277,39 +2457,25 @@
 
           let html = `
             <h2>⚙️ จัดการพนักงาน & กำหนดเวลาเข้างาน</h2>
-            
-            <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 2px dashed #0d6efd; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
-              <b>⏰ ตั้งค่าเวลาเข้างานกลาง (สำหรับพนักงานทุกคน):</b>
+            <div style="background: #f8f9fa; border: 2px dashed #0d6efd; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
+              <b>⏰ ตั้งค่าเวลาเข้างานกลาง:</b>
               <div style="display: flex; gap: 10px; margin-top: 8px; align-items: center;">
-                <input type="time" id="globalLateInput" value="${globalLateTime}" style="margin:0; font-weight:bold; font-size:16px;">
-                <button class="btn-blue" onclick="saveGlobalLateTime()" style="width: auto; margin: 0; padding: 12px 20px;">💾 บันทึกเวลาส่วนกลาง</button>
+                <input type="time" id="globalLateInput" value="${globalLateTime}" style="margin:0; font-weight:bold;">
+                <button class="btn-blue" onclick="saveGlobalLateTime()" style="width: auto; margin: 0; padding: 10px 15px;">💾 บันทึกเวลา</button>
               </div>
             </div>
-
             <button class="btn-blue" onclick="showAddEmpModal()">➕ เพิ่มพนักงานใหม่</button>
           `;
 
-          if (empList.length === 0) {
-            html += `<div style="color:#888; margin-top:15px;">ยังไม่มีข้อมูลพนักงาน</div>`;
-          } else {
-            html += `<h3>📋 รายชื่อพนักงานทั้งหมด:</h3>`;
-            empList.forEach(emp => {
-              let driverBadge = emp.isDriver ? '🚚 <b style="color:#e67e22;">พนักงานขับรถ</b>' : '👤 พนักงานทั่วไป';
-              html += `
-                <div class="history-item" style="display:flex; justify-content:space-between; align-items:center;">
-                  <div>
-                    <b>👤 ${emp.empName}</b> (${emp.empId})<br>
-                    🔑 PIN: ${emp.pin} | ค่าแรง: ${emp.dailyRate || 0} บาท | ${driverBadge}
-                  </div>
-                  <div style="display:flex; gap:5px;">
-                    <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditEmpModal('${emp.key}', '${emp.empId}', '${emp.empName}', '${emp.pin}', '${emp.dailyRate || 0}', ${emp.isDriver || false})">✏️</button>
-                    <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteEmp('${emp.key}', '${emp.empName}')">🗑️</button>
-                  </div>
-                </div>
-              `;
-            });
-          }
-
+          empList.forEach(emp => {
+            let driverBadge = emp.isDriver ? '🚚 <b>พนักงานขับรถ</b>' : '👤 ทั่วไป';
+            html += `
+              <div class="history-item" style="display:flex; justify-content:space-between; align-items:center;">
+                <div><b>👤 ${emp.empName}</b> (${emp.empId})<br>PIN: ${emp.pin} | ค่าแรง: ${emp.dailyRate || 0} ฿ | ${driverBadge}</div>
+                <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteEmp('${emp.key}', '${emp.empName}')">🗑️ ลบ</button>
+              </div>
+            `;
+          });
           html += `<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>`;
           document.getElementById('mainContent').innerHTML = html;
         });
@@ -3318,28 +2484,22 @@
 
     function saveGlobalLateTime() {
       const val = document.getElementById('globalLateInput').value.trim();
-      if (!val) {
-        alert("กรุณาระบุเวลาให้ถูกต้อง");
-        return;
-      }
-
-      db.ref('settings/globalLateTime').set(val, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", `บันทึกเวลาเข้างานกลาง (${val} น.) เรียบร้อย\nมีผลกับพนักงานทุกคนในระบบ`, `<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>`);
-        }
+      if (!val) return;
+      db.ref('settings/globalLateTime').set(val, () => {
+        alert("บันทึกเวลาเรียบร้อย");
+        showEmpManagement();
       });
     }
 
     function showAddEmpModal() {
       const html = `
-        <div class="user-banner">➕ เพิ่มพนักงานใหม่ในระบบ</div>
-        <input type="text" id="newEmpId" placeholder="รหัสพนักงาน (4 หลัก)" maxlength="5">
+        <div class="user-banner">➕ เพิ่มพนักงานใหม่</div>
+        <input type="text" id="newEmpId" placeholder="รหัส (เช่น A001 หรือ 1001)">
         <input type="text" id="newEmpName" placeholder="ชื่อ-นามสกุล">
         <input type="password" id="newEmpPin" placeholder="รหัส PIN (4 หลัก)" maxlength="4">
         <input type="number" id="newEmpRate" placeholder="ค่าแรงต่อวัน (บาท)">
-        
         <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
-          <input type="checkbox" id="newEmpDriver" style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
+          <input type="checkbox" id="newEmpDriver" style="width:20px; height:20px;"> เป็นพนักงานขับรถ
         </label>
         <button class="btn-blue" onclick="submitAddEmp()">💾 บันทึกพนักงาน</button>
         <button class="btn-back" onclick="showEmpManagement()">⬅️ ย้อนกลับ</button>
@@ -3354,505 +2514,18 @@
       const rate = document.getElementById('newEmpRate').value.trim();
       const isDriver = document.getElementById('newEmpDriver').checked;
 
-      if (!id || !name || !pin || !rate) {
-        alert("กรุณากรอกข้อมูลให้ครบถ้วน");
-        return;
-      }
+      if (!id || !name || !pin || !rate) { alert("กรุณากรอกข้อมูลให้ครบ"); return; }
 
-      db.ref('employees').once('value', (snapshot) => {
-        const employeesObj = snapshot.val() || {};
-        let isIdDuplicate = false;
-        Object.keys(employeesObj).forEach(k => {
-          if (String(employeesObj[k].empId) === String(id)) isIdDuplicate = true;
-        });
-
-        if (isIdDuplicate) {
-          showModal("🚫 แจ้งเตือน", `⚠️ รหัสพนักงาน "${id}" นี้มีในระบบแล้ว!`, null, `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
-          return;
-        }
-
-        const newRef = db.ref('employees').push();
-        newRef.set({ 
-          empId: id, 
-          empName: name, 
-          pin: pin, 
-          dailyRate: Number(rate), 
-          isDriver: isDriver 
-        }, (err) => {
-          if (!err) {
-            showModal("🎉 สำเร็จ", "เพิ่มพนักงานเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>`);
-          }
-        });
-      });
-    }
-
-    function showEditEmpModal(key, id, name, pin, rate, isDriver) {
-      const html = `
-        <div class="user-banner">✏️ แก้ไขพนักงาน: ${name}</div>
-        <input type="hidden" id="editKey" value="${key}">
-        <input type="text" id="editEmpIdInput" value="${id}" placeholder="รหัสพนักงาน">
-        <input type="text" id="editEmpName" value="${name}" placeholder="ชื่อพนักงาน">
-        <input type="password" id="editEmpPin" value="${pin}" placeholder="รหัส PIN" maxlength="4">
-        <input type="number" id="editEmpRate" value="${rate}" placeholder="ค่าแรงต่อวัน">
-
-        <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
-          <input type="checkbox" id="editEmpDriver" ${isDriver ? 'checked' : ''} style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
-        </label>
-        <button class="btn-blue" onclick="submitEditEmp()">💾 บันทึกการแก้ไข</button>
-        <button class="btn-back" onclick="showEmpManagement()">⬅️ ย้อนกลับ</button>
-      `;
-      document.getElementById('mainContent').innerHTML = html;
-    }
-
-    function submitEditEmp() {
-      const key = document.getElementById('editKey').value;
-      const newId = document.getElementById('editEmpIdInput').value.trim();
-      const name = document.getElementById('editEmpName').value.trim();
-      const pin = document.getElementById('editEmpPin').value.trim();
-      const rate = document.getElementById('editEmpRate').value.trim();
-      const isDriver = document.getElementById('editEmpDriver').checked;
-
-      db.ref('employees/' + key).update({ 
-        empId: newId, 
-        empName: name, 
-        pin: pin, 
-        dailyRate: Number(rate), 
-        isDriver: isDriver 
-      }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "แก้ไขข้อมูลเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>`);
-        }
-      });
-    }
-
-    function confirmDeleteEmp(key, name) {
-      showModal("❓ ยืนยันการลบ", `ต้องการลบพนักงาน (${name}) ใช่หรือไม่?`, 
-        `<button class="btn-yes" onclick="executeDeleteEmp('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
-      );
-    }
-
-    function executeDeleteEmp(key) {
-      db.ref('employees/' + key).remove((err) => {
-        closeModal();
+      db.ref('employees').push().set({ empId: id, empName: name, pin, dailyRate: Number(rate), isDriver }, () => {
+        alert("เพิ่มพนักงานเรียบร้อย");
         showEmpManagement();
       });
     }
 
-    function showClockInForm() {
-      const t = i18n[currentLang];
-      document.getElementById('pageTitle').innerText = t.pageTitleClockIn;
-      document.getElementById('listBox').style.display = "none";
-
-      const html = `
-        <div class="user-banner">${currentUser.empName} (${currentUser.empId})</div>
-        <select id="clockType">
-          <option value="เข้างาน">${t.optIn}</option>
-        </select>
-        <button id="btnSubmitClock" onclick="executeClockIn('')">${t.btnSubmitClockIn}</button>
-        <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
-      `;
-      document.getElementById('mainContent').innerHTML = html;
-    }
-
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371e3;
-      const φ1 = lat1 * Math.PI/180;
-      const φ2 = lat2 * Math.PI/180;
-      const Δφ = (lat2-lat1) * Math.PI/180;
-      const Δλ = (lon2-lon1) * Math.PI/180;
-      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-      return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))));
-    }
-
-    function executeClockIn(lateReason) {
-      if (!navigator.geolocation) {
-        alert("อุปกรณ์ไม่รองรับ GPS");
-        return;
+    function confirmDeleteEmp(key, name) {
+      if (confirm(`ต้องการลบพนักงาน (${name}) ?`)) {
+        db.ref('employees/' + key).remove(() => showEmpManagement());
       }
-
-      const btn = document.getElementById('btnSubmitClock');
-      if (btn) {
-        if (btn.disabled) return;
-        btn.disabled = true;
-        let countdown = 10;
-        btn.innerText = `⏳ กรุณารอสักครู่ (${countdown}s)...`;
-        
-        const timer = setInterval(() => {
-          countdown--;
-          if (countdown > 0) {
-            if(document.getElementById('btnSubmitClock')) {
-              document.getElementById('btnSubmitClock').innerText = `⏳ กรุณารอสักครู่ (${countdown}s)...`;
-            }
-          } else {
-            clearInterval(timer);
-            const activeBtn = document.getElementById('btnSubmitClock');
-            if(activeBtn) {
-              activeBtn.disabled = false;
-              activeBtn.innerText = i18n[currentLang].btnSubmitClockIn;
-            }
-          }
-        }, 1000);
-      }
-
-      const now = new Date();
-      const dateStr = getLocalDateTimeString();
-
-      db.ref('logs').once('value', (logSnap) => {
-        const logsObj = logSnap.val() || {};
-        let alreadyCheckedInToday = false;
-
-        Object.keys(logsObj).forEach(k => {
-          let log = logsObj[k];
-          if (String(log.empId) === String(currentUser.empId) && log.date === dateStr && log.type === "เข้างาน") {
-            alreadyCheckedInToday = true;
-          }
-        });
-
-        if (alreadyCheckedInToday) {
-          showModal("⚠️ แจ้งเตือน", "คุณได้ทำการลงเวลาเข้างานของวันนี้ไปเรียบร้อยแล้ว ไม่สามารถลงซ้ำได้อีก!", null, `<button class="btn-ok" onclick="closeModal(); showDashboard();">ตกลง</button>`);
-          return;
-        }
-
-        navigator.geolocation.getCurrentPosition((pos) => {
-          const userLat = pos.coords.latitude;
-          const userLng = pos.coords.longitude;
-
-          db.ref('locations').once('value', (snapshot) => {
-            const locObj = snapshot.val();
-            let locationsList = [];
-
-            if (locObj) {
-              Object.keys(locObj).forEach(k => locationsList.push(locObj[k]));
-            } else {
-              locationsList = [
-                { name: "จุดที่ 1 (หน้าร้าน)", lat: 13.813105, lng: 100.067600, radius: 100 },
-                { name: "จุดที่ 2 (โรงงาน)", lat: 13.873747, lng: 100.073376, radius: 100 }
-              ];
-            }
-
-            let nearestLoc = locationsList[0];
-            let minDistance = calculateDistance(userLat, userLng, nearestLoc.lat, nearestLoc.lng);
-
-            locationsList.forEach(loc => {
-              let dist = calculateDistance(userLat, userLng, loc.lat, loc.lng);
-              if (dist < minDistance) { minDistance = dist; nearestLoc = loc; }
-            });
-
-            let allowedRadius = nearestLoc.radius || 100;
-            if (minDistance > allowedRadius) {
-              showModal("🚫 อยู่นอกพื้นที่", `คุณอยู่ห่างจาก "${nearestLoc.name}" (${minDistance} ม.)\nเกินรัศมีที่กำหนด (${allowedRadius} เมตร) ไม่สามารถลงเวลาได้!`, null, `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
-              return;
-            }
-
-            const timeStr = now.toTimeString().substring(0, 5);
-
-            db.ref('logs').push().set({
-              empId: currentUser.empId,
-              empName: currentUser.empName,
-              type: "เข้างาน",
-              date: dateStr,
-              time: timeStr,
-              lat: userLat,
-              lng: userLng,
-              distance: minDistance,
-              nearestLocation: nearestLoc.name,
-              device: getDeviceInfo(),
-              reason: lateReason || "-"
-            }, (err) => {
-              if (!err) {
-                showModal("🎉 สำเร็จ", `บันทึกเวลาเข้างานสำเร็จ!\n📍 พื้นที่: ${nearestLoc.name} (${minDistance} ม.)`, null, `<button class="btn-ok" onclick="closeModal(); showDashboard();">ตกลง</button>`);
-              }
-            });
-          });
-        }, (err) => {
-          alert("กรุณาเปิดและอนุญาตสิทธิ์ GPS บนมือถือของคุณ");
-        }, { enableHighAccuracy: true, timeout: 8000 });
-      });
-    }
-
-    function showLeaveForm() {
-      const t = i18n[currentLang];
-      document.getElementById('pageTitle').innerText = t.pageTitleLeave;
-      document.getElementById('listBox').style.display = "none";
-      const today = getLocalDateTimeString();
-
-      const html = `
-        <div class="user-banner">${currentUser.empName} (${currentUser.empId})</div>
-        <select id="leaveType">
-          <option value="ลาป่วย">${t.optSick}</option>
-          <option value="ลากิจ">${t.optPersonal}</option>
-          <option value="ลาพักร้อน">${t.optVacation}</option>
-        </select>
-        <input type="date" id="startDate" value="${today}">
-        <input type="date" id="endDate" value="${today}">
-        <textarea id="leaveReason" rows="2" placeholder="${t.phReason}"></textarea>
-        <button onclick="handleLeaveSubmit()">${t.btnSubmitLeave}</button>
-        <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
-      `;
-      document.getElementById('mainContent').innerHTML = html;
-    }
-
-    function handleLeaveSubmit() {
-      const leaveType = document.getElementById('leaveType').value;
-      const startDate = document.getElementById('startDate').value;
-      const endDate = document.getElementById('endDate').value;
-      const reason = document.getElementById('leaveReason').value.trim();
-
-      if (!reason) { alert("กรุณาระบุเหตุผล"); return; }
-
-      db.ref('leaves').push().set({
-        empId: currentUser.empId,
-        empName: currentUser.empName,
-        leaveType: leaveType,
-        startDate: startDate,
-        endDate: endDate,
-        reason: reason,
-        status: "รออนุมัติ ⏳",
-        applyDate: new Date().toLocaleDateString()
-      }, (err) => {
-        if (!err) {
-          showModal("🎉 สำเร็จ", "ยื่นใบลาเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showDashboard();">ตกลง</button>`);
-        }
-      });
-    }
-
-    function showMyAttendance() {
-      const t = i18n[currentLang];
-      document.getElementById('pageTitle').innerText = t.pageTitleHistory;
-      document.getElementById('listBox').style.display = "none";
-      document.getElementById('status').innerHTML = i18n[currentLang].checking;
-
-      db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
-        const globalLateTime = settingsSnap.val() || "08:00";
-
-        db.ref('logs').once('value', (logSnap) => {
-          const logsObj = logSnap.val() || {};
-          let presentDays = 0;
-          let lateRecords = [];
-
-          Object.keys(logsObj).forEach(k => {
-            let item = logsObj[k];
-            if (String(item.empId) === String(currentUser.empId) && item.type === "เข้างาน") {
-              presentDays++;
-              if (item.time > globalLateTime) {
-                lateRecords.push(item);
-              }
-            }
-          });
-
-          db.ref('leaves').once('value', (leaveSnap) => {
-            const leavesObj = leaveSnap.val() || {};
-            let leaveCount = 0;
-            let leaveRecords = [];
-
-            Object.keys(leavesObj).forEach(k => {
-              let item = leavesObj[k];
-              let statusStr = String(item.status || '');
-              if (String(item.empId) === String(currentUser.empId) && statusStr.includes('อนุมัติ')) {
-                leaveCount++;
-                leaveRecords.push(item);
-              }
-            });
-
-            document.getElementById('status').innerHTML = "";
-
-            let html = `
-              <div class="user-banner">👤 ${currentUser.empName} (${currentUser.empId})</div>
-              
-              <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                <div class="stat-box" style="background:#e8f5e9; color:#2e7d32; padding: 12px; border-radius: 10px; flex:1;">
-                  มาทำงานรวม<br><b style="font-size:20px;">${presentDays}</b> วัน
-                </div>
-                <div class="stat-box" style="background:#fff3cd; color:#856404; padding: 12px; border-radius: 10px; flex:1;">
-                  มาสาย<br><b style="font-size:20px;">${lateRecords.length}</b> ครั้ง
-                </div>
-                <div class="stat-box" style="background:#e2e3e5; color:#383d41; padding: 12px; border-radius: 10px; flex:1;">
-                  ลางาน<br><b style="font-size:20px;">${leaveCount}</b> วัน
-                </div>
-              </div>
-            `;
-
-            if (lateRecords.length > 0 || leaveRecords.length > 0) {
-              html += `<div style="text-align:left; font-weight:bold; margin: 15px 0 5px 0; color:#495057;">📌 รายละเอียดวันมาสาย หรือ วันลา:</div>`;
-
-              lateRecords.slice().reverse().forEach(item => {
-                html += `
-                  <div class="history-item" style="background: #fff3cd; border-left: 4px solid #ffc107;">
-                    ⏰ <b>มาสาย</b> วันที่: ${item.date} (เวลาสแกน: <b style="color:#d9534f;">${item.time} น.</b>)<br>
-                    <span style="font-size:12px; color:#555;">เกณฑ์เวลาเข้างาน: ${globalLateTime} น.</span>
-                  </div>
-                `;
-              });
-
-              leaveRecords.slice().reverse().forEach(item => {
-                html += `
-                  <div class="history-item" style="background: #e2e3e5; border-left: 4px solid #6c757d;">
-                    🌴 <b>${item.leaveType}</b> (${item.status})<br>
-                    📅 วันที่: ${item.startDate} ถึง ${item.endDate}<br>
-                    💬 เหตุผล: ${item.reason}
-                  </div>
-                `;
-              });
-            } else {
-              html += `<div style="color: #28a745; background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 15px; font-weight: bold;">🎉 ยอดเยี่ยม! คุณไม่เคยมาสายและไม่มีประวัติการลาเลย</div>`;
-            }
-
-            html += `<button class="btn-back" onclick="showDashboard()" style="margin-top:15px;">${t.btnBack}</button>`;
-            document.getElementById('mainContent').innerHTML = html;
-          });
-        });
-      });
-    }
-
-    function showHistory() {
-      const t = i18n[currentLang];
-      document.getElementById('pageTitle').innerText = "📜 ประวัติการลา & เบิกจ่าย";
-      document.getElementById('listBox').style.display = "none";
-
-      db.ref('leaves').once('value', (leaveSnap) => {
-        const leavesObj = leaveSnap.val() || {};
-        let myLeaves = [];
-        Object.keys(leavesObj).forEach(k => {
-          if (String(leavesObj[k].empId) === String(currentUser.empId)) myLeaves.push(leavesObj[k]);
-        });
-
-        db.ref('fuel_requests').once('value', (fuelSnap) => {
-          const fuelObj = fuelSnap.val() || {};
-          let myFuels = [];
-          Object.keys(fuelObj).forEach(k => {
-            if (String(fuelObj[k].empId) === String(currentUser.empId)) myFuels.push(fuelObj[k]);
-          });
-
-          let html = `<div class="user-banner">${currentUser.empName}</div>`;
-          html += `<b>🌴 ประวัติการลา:</b>`;
-          if (myLeaves.length === 0) html += `<div style="color:#888; font-size:12px;">ไม่มีประวัติการลา</div>`;
-          myLeaves.forEach(item => {
-            html += `<div class="history-item"><b>${item.leaveType}</b> (${item.status})<br>📅 ${item.startDate} ถึง ${item.endDate}</div>`;
-          });
-
-          if (currentUser.isDriver) {
-            html += `<br><b>⛽/🔧 ประวัติเบิกค่าน้ำมัน / ค่าซ่อม:</b>`;
-            if (myFuels.length === 0) html += `<div style="color:#888; font-size:12px;">ไม่มีประวัติเบิกจ่าย</div>`;
-            myFuels.forEach(item => {
-              let typeLabel = item.requestType || 'เบิกค่าน้ำมัน';
-              let plateInfo = item.carPlate ? ` (ทะเบียน: ${item.carPlate})` : '';
-              let amtDisplay = item.amount > 0 ? `${item.amount} บาท` : 'รอแอดมินกำหนด';
-              let routeInfo = item.route && item.route !== '-' ? `<br>รายละเอียด: ${item.route}` : '';
-              html += `<div class="history-item">[${typeLabel}]${plateInfo}${routeInfo} | <b>ยอด: ${amtDisplay}</b> (${item.status})<br>📅 วันที่: ${item.date}</div>`;
-            });
-          }
-
-          html += `<button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>`;
-          document.getElementById('mainContent').innerHTML = html;
-        });
-      });
-    }
-
-    function handleLogout() {
-      clearAllListeners();
-      currentUser = null;
-      isAdmin = false;
-      localStorage.removeItem('app_user_data');
-      localStorage.removeItem('app_is_admin');
-      showLoginForm();
-    }
-
-    function loadTodayListRealtime() {
-      const container = document.getElementById('checkinContainer');
-      const statsContainer = document.getElementById('quickStatsContainer');
-      if (!container) return;
-
-      const todayStr = getLocalDateTimeString();
-
-      db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
-        const globalLateTime = settingsSnap.val() || "08:00";
-
-        db.ref('employees').once('value', (empSnap) => {
-          const employeesObj = empSnap.val() || {};
-          let allEmployees = [];
-          Object.keys(employeesObj).forEach(k => allEmployees.push(employeesObj[k]));
-
-          if (activeListeners.logs) db.ref('logs').off('value', activeListeners.logs);
-          activeListeners.logs = db.ref('logs').on('value', (logSnap) => {
-            const logsObj = logSnap.val() || {};
-            let checkedInList = [];
-            Object.keys(logsObj).forEach(k => {
-              if (logsObj[k].date === todayStr && logsObj[k].type === "เข้างาน") {
-                checkedInList.push(logsObj[k]);
-              }
-            });
-
-            if (activeListeners.todayLeaves) db.ref('leaves').off('value', activeListeners.todayLeaves);
-            activeListeners.todayLeaves = db.ref('leaves').on('value', (leaveSnap) => {
-              const leavesObj = leaveSnap.val() || {};
-              let approvedLeavesToday = [];
-              Object.keys(leavesObj).forEach(k => {
-                let l = leavesObj[k];
-                let statusStr = String(l.status || '');
-                if (statusStr.includes('อนุมัติแล้ว') && l.startDate <= todayStr && l.endDate >= todayStr) {
-                  approvedLeavesToday.push(l);
-                }
-              });
-
-              let leaveList = [];
-              let presentList = [];
-              let lateList = [];
-              let absentList = [];
-
-              allEmployees.forEach(emp => {
-                const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
-                const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
-
-                if (leave) {
-                  leaveList.push({ emp, leave });
-                } else if (present) {
-                  if (present.time > globalLateTime) {
-                    lateList.push({ emp, present });
-                  } else {
-                    presentList.push({ emp, present });
-                  }
-                } else {
-                  absentList.push({ emp });
-                }
-              });
-
-              presentList.sort((a, b) => (a.present.time || "").localeCompare(b.present.time || ""));
-              lateList.sort((a, b) => (a.present.time || "").localeCompare(b.present.time || ""));
-
-              let html = '';
-
-              leaveList.forEach(item => {
-                html += `<div class="emp-tag-leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
-              });
-
-              presentList.forEach(item => {
-                html += `<div class="emp-tag-present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
-              });
-
-              lateList.forEach(item => {
-                html += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b></span></div>`;
-              });
-
-              absentList.forEach(item => {
-                html += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
-              });
-
-              let totalPresentCount = presentList.length + lateList.length;
-
-              if (statsContainer) {
-                statsContainer.innerHTML = `
-                  <div class="stats-card-container">
-                    <div class="stat-box" style="background:#e8f5e9; color:#2e7d32;">มา<b>${totalPresentCount}</b></div>
-                    <div class="stat-box" style="background:#fff3cd; color:#856404;">ลา<b>${leaveList.length}</b></div>
-                    <div class="stat-box" style="background:#ffebee; color:#c62828;">ไม่มา<b>${absentList.length}</b></div>
-                  </div>
-                `;
-              }
-              container.innerHTML = html;
-            });
-          });
-        });
-      });
     }
 
     function showHolidayManagement() {
@@ -3892,6 +2565,7 @@
     }
 
     function showModal(title, text, customHtml = null, btnsHtml = '') {
+      document.getElementById('modalBoxContainer').classList.remove('modal-wide-admin');
       document.getElementById('modalTitle').innerText = title;
       document.getElementById('modalText').innerText = text;
       document.getElementById('modalCustomContent').innerHTML = customHtml || '';
@@ -3901,6 +2575,7 @@
 
     function closeModal() {
       document.getElementById('customModal').style.display = 'none';
+      document.getElementById('modalBoxContainer').classList.remove('modal-wide-admin');
     }
 
     initApp();
@@ -3910,12 +2585,10 @@
       if (!file) return;
 
       showModal("⏳ กำลังอัปโหลดรูป...", "กรุณารอสักครู่ ระบบกำลังส่งรูปเข้า Google Drive...", "", "");
-
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = function () {
         const base64Data = reader.result.split(',')[1];
-        
         const payload = {
           imageBytes: base64Data,
           mimeType: file.type,
@@ -3924,25 +2597,16 @@
 
         const appsScriptUrl = "https://script.google.com/macros/s/AKfycbzTSTEwGGpnQ_JfRisJDhqZ__mqZCyfj___EyS8rhB2DKIdqedXdzPfmAL6u000BkPe/exec";
 
-        fetch(appsScriptUrl, {
-          method: "POST",
-          body: JSON.stringify(payload)
-        })
+        fetch(appsScriptUrl, { method: "POST", body: JSON.stringify(payload) })
         .then(response => response.json())
         .then(result => {
           closeModal();
           if (result.status === "success") {
             const photoUrl = result.url;
             const todayStr = getLocalDateTimeString();
-
-            db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({
-              photoUrl: photoUrl
-            }, (err) => {
-              if (!err) {
-                showModal("🎉 ยอดเยี่ยม", "แนบรูปหลักฐานเข้า Google Drive สำเร็จเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ตกลง</button>`);
-              }
+            db.ref(`delivery_jobs/${todayStr}/${jobKey}`).update({ photoUrl }, () => {
+              showModal("🎉 ยอดเยี่ยม", "แนบรูปหลักฐานเข้า Google Drive สำเร็จเรียบร้อย", `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ตกลง</button>`);
             });
-
           } else {
             alert("อัปโหลดไม่สำเร็จ: " + result.message);
           }
