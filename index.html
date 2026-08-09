@@ -3164,17 +3164,16 @@
       return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))));
     }
 
-    function executeClockIn(lateReason) {
+function executeClockIn(lateReason) {
       if (!navigator.geolocation) {
         alert("อุปกรณ์ไม่รองรับ GPS");
         return;
       }
 
-      // 🕒 ฟังก์ชันเพิ่มใหม่: ระบบดีเลย์รอ 10 วินาที / ป้องกันการกดรัวๆ
+      // ระบบหน่วงเวลา 10 วินาที ป้องกันการกดรัว
       const btn = document.getElementById('btnSubmitClock');
-      if (btn && btn.disabled) return; // ถ้าปุ่มถูกปิดอยู่ ให้กดซ้ำไม่ได้
-
       if (btn) {
+        if (btn.disabled) return;
         btn.disabled = true;
         let countdown = 10;
         btn.innerText = `⏳ กรุณารอสักครู่ (${countdown}s)...`;
@@ -3182,11 +3181,16 @@
         const timer = setInterval(() => {
           countdown--;
           if (countdown > 0) {
-            btn.innerText = `⏳ กรุณารอสักครู่ (${countdown}s)...`;
+            if(document.getElementById('btnSubmitClock')) {
+              document.getElementById('btnSubmitClock').innerText = `⏳ กรุณารอสักครู่ (${countdown}s)...`;
+            }
           } else {
             clearInterval(timer);
-            btn.disabled = false;
-            btn.innerText = i18n[currentLang].btnSubmitClockIn;
+            const activeBtn = document.getElementById('btnSubmitClock');
+            if(activeBtn) {
+              activeBtn.disabled = false;
+              activeBtn.innerText = i18n[currentLang].btnSubmitClockIn;
+            }
           }
         }, 1000);
       }
