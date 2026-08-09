@@ -4,7 +4,7 @@
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
-  <link rel="manifest" href="manifest.json?v=20260809-7">
+  <link rel="manifest" href="manifest.json?v=20260809-8">
   <meta name="theme-color" content="#16a34a">
 
   <!-- สคริปต์บังคับอัปเดต Service Worker ทันทีเมื่อเข้าเว็บ -->
@@ -1537,7 +1537,6 @@
         deliveredTime: timeStr
       }, (err) => {
         if (!err) {
-          // ถ้าอยู่หน้า Command Center ให้รีเฟรชหน้าคอมมานด์ด้วย
           if (document.getElementById('pageTitle').innerText.includes('ศูนย์บัญชาการ')) {
             showAdminCommandCenter();
           } else {
@@ -3193,6 +3192,27 @@
       if (!navigator.geolocation) {
         alert("อุปกรณ์ไม่รองรับ GPS");
         return;
+      }
+
+      // 🕒 ฟังก์ชันเพิ่มใหม่: ระบบดีเลย์รอ 10 วินาที / ป้องกันการกดรัวๆ
+      const btn = document.getElementById('btnSubmitClock');
+      if (btn && btn.disabled) return; // ถ้าปุ่มถูกปิดอยู่ ให้กดซ้ำไม่ได้
+
+      if (btn) {
+        btn.disabled = true;
+        let countdown = 10;
+        btn.innerText = `⏳ กรุณารอสักครู่ (${countdown}s)...`;
+        
+        const timer = setInterval(() => {
+          countdown--;
+          if (countdown > 0) {
+            btn.innerText = `⏳ กรุณารอสักครู่ (${countdown}s)...`;
+          } else {
+            clearInterval(timer);
+            btn.disabled = false;
+            btn.innerText = i18n[currentLang].btnSubmitClockIn;
+          }
+        }, 1000);
       }
 
       const now = new Date();
