@@ -957,7 +957,7 @@
       loadCommandCenterData(todayStr);
     }
 
-    function loadCommandCenterData(todayStr) {
+function loadCommandCenterData(todayStr) {
       db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
         const globalLateTime = settingsSnap.val() || "08:00";
 
@@ -986,65 +986,95 @@
                 }
               });
 
-              let leaveList = [];
-              let presentList = [];
-              let lateList = [];
-              let absentList = [];
-
-              allEmployees.forEach(emp => {
-                const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
-                const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
-
-                if (leave) {
-                  leaveList.push({ emp, leave });
-                } else if (present) {
-                  if (present.time > globalLateTime) {
-                    lateList.push({ emp, present });
-                  } else {
-                    presentList.push({ emp, present });
-                  }
-                } else {
-                  absentList.push({ emp });
-                }
-              });
-
-              let totalPresent = presentList.length + lateList.length;
-
-              document.getElementById('ccSummaryStats').innerHTML = `
-                <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
-                  <div style="background:#e8f5e9; color:#2e7d32; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
-                    <span>🟢 มาทำงาน:</span> <b>${totalPresent} คน</b>
-                  </div>
-                  <div style="background:#fff3cd; color:#856404; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
-                    <span>⏰ มาสาย:</span> <b>${lateList.length} คน</b>
-                  </div>
-                  <div style="background:#fff3cd; color:#856404; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
-                    <span>🌴 ลางาน:</span> <b>${leaveList.length} คน</b>
-                  </div>
-                  <div style="background:#ffebee; color:#c62828; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
-                    <span>🔴 ยังไม่เช็กอิน:</span> <b>${absentList.length} คน</b>
-                  </div>
-                </div>
-              `;
-
-              let attHtml = '';
-              leaveList.forEach(item => {
-                attHtml += `<div class="emp-tag-leave" style="font-size:12px;"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
-              });
-              presentList.forEach(item => {
-                attHtml += `<div class="emp-tag-present" style="font-size:12px;"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
-              });
-              lateList.forEach(item => {
-                attHtml += `<div class="emp-tag-late" style="font-size:12px;"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time}</b></span></div>`;
-              });
-              absentList.forEach(item => {
-                attHtml += `<div class="emp-tag-absent" style="font-size:12px;"><span>🔴 ${item.emp.empName}</span><span>ยังไม่สแกน</span></div>`;
-              });
-              document.getElementById('ccAttendanceList').innerHTML = attHtml;
-
+              // ดึงข้อมูลจ๊อบส่งของวันนี้มาเช็กสถานะคนขับ
               db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
-                document.getElementById('status').innerHTML = "";
                 const jobsObj = jobSnap.val() || {};
+                let activeDeliveryMap = {}; // { driverId: [รายชื่อร้านที่กำลังไปส่ง] }
+                
+                Object.keys(jobsObj).forEach(jk => {
+                  let j = jobsObj[jk];
+                  let jStatus = String(j.status || '');
+                  // ถ้ายังส่งไม่เสร็จ (กำลังเดินทาง หรือ รอจัดส่ง)
+                  if (!jStatus.includes('สำเร็จ')) {
+                    if (!activeDeliveryMap[j.driverId]) {
+                      activeDeliveryMap[j.driverId] = [];
+                    }
+                    activeDeliveryMap[j.driverId].push(j.customerName);
+                  }
+                });
+
+                let leaveList = [];
+                let presentList = [];
+                let lateList = [];
+                let absentList = [];
+
+                allEmployees.forEach(emp => {
+                  const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
+                  const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
+
+                  // เช็กว่าพนักงานคนนี้กำลังออกไปส่งของอยู่หรือไม่
+                  let drivingInfo = activeDeliveryMap[emp.empId];
+
+                  if (leave) {
+                    leaveList.push({ emp, leave });
+                  } else if (present) {
+                    if (present.time > globalLateTime) {
+                      lateList.push({ emp, present, drivingInfo });
+                    } else {
+                      presentList.push({ emp, present, drivingInfo });
+                    }
+                  } else {
+                    absentList.push({ emp });
+                  }
+                });
+
+                let totalPresent = presentList.length + lateList.length;
+
+                document.getElementById('ccSummaryStats').innerHTML = `
+                  <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
+                    <div style="background:#e8f5e9; color:#2e7d32; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
+                      <span>🟢 มาทำงาน:</span> <b>${totalPresent} คน</b>
+                    </div>
+                    <div style="background:#fff3cd; color:#856404; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
+                      <span>⏰ มาสาย:</span> <b>${lateList.length} คน</b>
+                    </div>
+                    <div style="background:#fff3cd; color:#856404; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
+                      <span>🌴 ลางาน:</span> <b>${leaveList.length} คน</b>
+                    </div>
+                    <div style="background:#ffebee; color:#c62828; padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
+                      <span>🔴 ยังไม่เช็กอิน:</span> <b>${absentList.length} คน</b>
+                    </div>
+                  </div>
+                `;
+
+                let attHtml = '';
+                leaveList.forEach(item => {
+                  attHtml += `<div class="emp-tag-leave" style="font-size:12px;"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
+                });
+
+                presentList.forEach(item => {
+                  let statusBadge = `<b>${item.present.time} น.</b>`;
+                  if (item.drivingInfo && item.drivingInfo.length > 0) {
+                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px;">🚚 กำลังไปส่ง (${item.drivingInfo.join(', ')})</span>`;
+                  }
+                  attHtml += `<div class="emp-tag-present" style="font-size:12px; display:flex; justify-content:space-between; align-items:center;"><span>🟢 ${item.emp.empName}</span><span>${statusBadge}</span></div>`;
+                });
+
+                lateList.forEach(item => {
+                  let statusBadge = `<b style="color:#d9534f;">สาย ${item.present.time}</b>`;
+                  if (item.drivingInfo && item.drivingInfo.length > 0) {
+                    statusBadge = `<span style="background:#e67e22; color:white; padding:2px 6px; border-radius:4px; font-size:11px;">🚚 กำลังไปส่ง (${item.drivingInfo.join(', ')})</span>`;
+                  }
+                  attHtml += `<div class="emp-tag-late" style="font-size:12px; display:flex; justify-content:space-between; align-items:center;"><span>⏰ ${item.emp.empName}</span><span>${statusBadge}</span></div>`;
+                });
+
+                absentList.forEach(item => {
+                  attHtml += `<div class="emp-tag-absent" style="font-size:12px;"><span>🔴 ${item.emp.empName}</span><span>ยังไม่สแกน</span></div>`;
+                });
+
+                document.getElementById('ccAttendanceList').innerHTML = attHtml;
+
+                // โหลดฝั่งรายการส่งของ (Live Tracking) ต่อเนื่อง
                 let jobList = [];
                 Object.keys(jobsObj).forEach(k => jobList.push({ key: k, ...jobsObj[k] }));
 
@@ -1074,8 +1104,8 @@
                   });
                 }
                 document.getElementById('ccDeliveryList').innerHTML = delivHtml;
+                document.getElementById('status').innerHTML = "";
               });
-
             });
           });
         });
