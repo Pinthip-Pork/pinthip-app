@@ -1222,6 +1222,10 @@
                 }
               });
 
+              // เรียงลำดับพนักงานที่มาตรงเวลา (Present) และมาสาย (Late) ตามเวลาที่สแกนเข้างาน (มาไวสุดขึ้นก่อน)
+              presentList.sort((a, b) => (a.present.time || "").localeCompare(b.present.time || ""));
+              lateList.sort((a, b) => (a.present.time || "").localeCompare(b.present.time || ""));
+
               let totalPresent = presentList.length + lateList.length;
 
               const statsHtml = `
