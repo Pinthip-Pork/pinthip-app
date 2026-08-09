@@ -1,9 +1,9 @@
 {
-  "name": "บริษัท ปิ่นทิพย์ จำกัด",
+  "name": "ปิ่นทิพย์ เช็กอิน",
   "short_name": "ปิ่นทิพย์",
-  "start_url": "/",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#0f2027",
   "theme_color": "#16a34a",
   "icons": [
     {
