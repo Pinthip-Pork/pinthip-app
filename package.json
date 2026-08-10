@@ -1,0 +1,32 @@
+{
+  "name": "pinthip-checkin-app",
+  "version": "1.0.0-refactor",
+  "description": "Employee check-in, leave request, and expense management system for Pinthip Company",
+  "type": "module",
+  "main": "src/js/app.js",
+  "scripts": {
+    "dev": "python -m http.server 8000",
+    "build": "echo 'Build script - integrate with Vite/Webpack in Phase 3'",
+    "test": "echo 'Test script - add jest/vitest in Phase 4'",
+    "lint": "echo 'Lint script - add ESLint in Phase 3'",
+    "format": "echo 'Format script - add Prettier in Phase 3'"
+  },
+  "keywords": [
+    "check-in",
+    "attendance",
+    "pwa",
+    "firebase",
+    "employee-management"
+  ],
+  "author": "Pinthip-Pork",
+  "license": "PRIVATE",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "comment": "Add linting, testing, and build tools in Phase 3-4"
+  },
+  "dependencies": {
+    "comment": "Firebase is loaded via CDN in index.html"
+  }
+}
