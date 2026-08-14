@@ -1,0 +1,1739 @@
+(function () {
+  function showAdminAttendanceSummaryReport() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '👥 สรุปสถิติ ขาด ลา มาสาย (รายบุคคล)';
+    if (listBox) listBox.style.display = 'none';
+
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+
+    const html = `
+      <h2>👥 สรุปสถิติ ขาด ลา มาสาย (แยกตามรายบุคคล)</h2>
+      <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
+        <b>📅 เลือกช่วงเวลาตรวจสอบสถิติ:</b>
+        <div style="display:flex; gap:10px; margin-top:5px;">
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">จากวันที่:</span>
+            <input type="date" id="attStartDate" value="${todayStr}" onchange="renderAttendanceSummaryList()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
+            <input type="date" id="attEndDate" value="${todayStr}" onchange="renderAttendanceSummaryList()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn-blue" onclick="setAttendanceDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
+          <button class="btn-excel" onclick="exportAttendanceSummaryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+        </div>
+      </div>
+      <div id="attendanceSummaryResultContainer"></div>
+      <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
+    `;
+
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+    window.renderAttendanceSummaryList();
+  }
+
+  function setAttendanceDateToday() {
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+    const startDate = document.getElementById('attStartDate');
+    const endDate = document.getElementById('attEndDate');
+    if (startDate) startDate.value = todayStr;
+    if (endDate) endDate.value = todayStr;
+    window.renderAttendanceSummaryList();
+  }
+
+  let currentAttendanceSummaryCache = [];
+
+  function renderAttendanceSummaryList() {
+    const startDate = document.getElementById('attStartDate')?.value;
+    const endDate = document.getElementById('attEndDate')?.value;
+    const container = document.getElementById('attendanceSummaryResultContainer');
+    if (!container || !startDate || !endDate) return;
+
+    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+      const globalLateTime = settingsSnap.val() || '08:00';
+
+      window.db.ref('employees').once('value', (empSnap) => {
+        const employees = empSnap.val() || {};
+        window.db.ref('logs').once('value', (logSnap) => {
+          const logs = logSnap.val() || {};
+          window.db.ref('leaves').once('value', (leaveSnap) => {
+            const leaves = leaveSnap.val() || {};
+
+            const summaryList = [];
+            const empKeys = Object.keys(employees);
+
+            if (empKeys.length === 0) {
+              container.innerHTML = '<div style="color:#888; margin:20px 0;">ไม่มีข้อมูลพนักงานในระบบ</div>';
+              return;
+            }
+
+            empKeys.forEach((ek) => {
+              const emp = employees[ek];
+              let presentCount = 0;
+              let lateCount = 0;
+              let leaveCount = 0;
+
+              Object.keys(logs).forEach((lk) => {
+                const log = logs[lk];
+                if (String(log.empId) === String(emp.empId) && log.date && log.date >= startDate && log.date <= endDate && log.type === 'เข้างาน') {
+                  presentCount++;
+                  if (log.time > globalLateTime) {
+                    lateCount++;
+                  }
+                }
+              });
+
+              Object.keys(leaves).forEach((fk) => {
+                const leave = leaves[fk];
+                const statusStr = String(leave.status || '');
+                if (String(leave.empId) === String(emp.empId) && leave.startDate && leave.endDate && leave.startDate <= endDate && leave.endDate >= startDate && statusStr.includes('อนุมัติแล้ว')) {
+                  leaveCount++;
+                }
+              });
+
+              summaryList.push({
+                empId: emp.empId,
+                empName: emp.empName,
+                presentCount,
+                lateCount,
+                leaveCount
+              });
+            });
+
+            currentAttendanceSummaryCache = summaryList;
+
+            let html = `
+              <div style="background: linear-gradient(135deg, #0dcaf0, #0d6efd); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
+                <b>📊 สรุปสถิติพนักงานช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
+                👥 จำนวนพนักงานทั้งหมด: <b>${summaryList.length} คน</b> (เกณฑ์มาสาย: หลัง ${globalLateTime} น.)
+              </div>
+            `;
+
+            summaryList.forEach((item) => {
+              html += `
+                <div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <b>👤 ${item.empName}</b> (${item.empId})<br>
+                    <span style="color: #6c757d; font-size: 12px;">มาทำงาน: <b style="color: #28a745;">${item.presentCount}</b> วัน</span>
+                  </div>
+                  <div style="display: flex; gap: 8px; text-align: right;">
+                    <span style="background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 13px;">⏰ มาสาย: <b>${item.lateCount}</b> ครั้ง</span>
+                    <span style="background: #e2e3e5; color: #383d41; padding: 4px 10px; border-radius: 6px; font-size: 13px;">🌴 ลา: <b>${item.leaveCount}</b> วัน</span>
+                  </div>
+                </div>
+              `;
+            });
+
+            container.innerHTML = html;
+          });
+        });
+      });
+    });
+  }
+
+  function exportAttendanceSummaryExcel() {
+    if (!currentAttendanceSummaryCache || currentAttendanceSummaryCache.length === 0) {
+      window.alert('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
+      return;
+    }
+
+    const startDate = document.getElementById('attStartDate')?.value;
+    const endDate = document.getElementById('attEndDate')?.value;
+
+    const rows = [
+      ['รหัสพนักงาน', 'ชื่อพนักงาน', 'มาทำงาน (วัน)', 'มาสาย (ครั้ง)', 'ลา (วัน)', 'ช่วงวันที่ตรวจสอบ', `${startDate} ถึง ${endDate}`]
+    ];
+
+    currentAttendanceSummaryCache.forEach((item) => {
+      rows.push([
+        item.empId,
+        item.empName,
+        item.presentCount,
+        item.lateCount,
+        item.leaveCount
+      ]);
+    });
+
+    window.downloadCSV(`Attendance_Summary_${startDate}_to_${endDate}.csv`, rows);
+  }
+
+  function showLocationManagement() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+    const status = document.getElementById('status');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '📍 จัดการพิกัด GPS และรัศมีเช็กอิน';
+    if (listBox) listBox.style.display = 'none';
+    if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('locations').once('value', (snapshot) => {
+      if (status) status.innerHTML = '';
+      const locObj = snapshot.val() || {};
+      const locList = Object.keys(locObj).map((k) => ({ key: k, ...locObj[k] }));
+
+      let html = `
+        <h2>📍 กำหนดจุดพิกัดร้าน/โรงงาน สำหรับเช็กอิน</h2>
+        <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
+          <b>➕ เพิ่มจุดเช็กอินใหม่:</b>
+          <input type="text" id="locName" placeholder="ชื่อสถานที่ (เช่น หน้าร้านปิ่นทิพย์, คลังสินค้า)">
+          <input type="text" id="locLat" placeholder="ละติจูด (Lat) เช่น 13.813105">
+          <input type="text" id="locLng" placeholder="ลองจิจูด (Lng) เช่น 100.067600">
+          <input type="number" id="locRadius" placeholder="รัศมีที่อนุญาต (เมตร) เช่น 100" value="100">
+          <button class="btn-blue" onclick="addNewLocation()" style="margin-top:8px;">💾 บันทึกจุดเช็กอินใหม่</button>
+        </div>
+
+        <h3>📋 รายการจุดเช็กอินที่มีอยู่ทั้งหมด:</h3>
+      `;
+
+      if (locList.length === 0) {
+        html += '<div style="color:#888; margin-bottom:15px;">ยังไม่มีการตั้งค่าพิกัดในระบบ</div>';
+      } else {
+        locList.forEach((loc) => {
+          html += `
+            <div class="history-item">
+              <b>📍 ${loc.name}</b><br>
+              ละติจูด: ${loc.lat} | ลองจิจูด: ${loc.lng}<br>
+              📏 รัศมีอนุญาต: <b style="color:#28a745; font-size:15px;">${loc.radius || 100} เมตร</b><br>
+              <div style="margin-top:8px; display:flex; gap:6px;">
+                <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditLocationModal('${loc.key}', '${loc.name}', ${loc.lat}, ${loc.lng}, ${loc.radius || 100})">✏️ แก้ไข</button>
+                <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="deleteLocation('${loc.key}')">🗑️ ลบ</button>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      html += '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>';
+      const mainContent = document.getElementById('mainContent');
+      if (mainContent) mainContent.innerHTML = html;
+    });
+  }
+
+  function addNewLocation() {
+    const name = document.getElementById('locName')?.value.trim();
+    const lat = document.getElementById('locLat')?.value.trim();
+    const lng = document.getElementById('locLng')?.value.trim();
+    const radius = document.getElementById('locRadius')?.value.trim();
+
+    if (!name || !lat || !lng || !radius) {
+      window.alert('กรุณากรอกข้อมูลสถานที่ให้ครบถ้วน');
+      return;
+    }
+
+    window.db.ref('locations').push().set({
+      name,
+      lat: Number(lat),
+      lng: Number(lng),
+      radius: Number(radius)
+    }, (err) => {
+      if (!err) {
+        window.showModal('🎉 สำเร็จ', 'เพิ่มพิกัดจุดเช็กอินเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showLocationManagement();">ตกลง</button>');
+      }
+    });
+  }
+
+  function showEditLocationModal(key, name, lat, lng, radius) {
+    const html = `
+      <div class="user-banner">✏️ แก้ไขจุดเช็กอิน: ${name}</div>
+      <input type="hidden" id="editLocKey" value="${key}">
+      <div style="text-align:left; font-size:13px; color:#555;">ชื่อสถานที่:</div>
+      <input type="text" id="editLocName" value="${name}">
+      <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">ละติจูด (Lat):</div>
+      <input type="text" id="editLocLat" value="${lat}">
+      <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">ลองจิจูด (Lng):</div>
+      <input type="text" id="editLocLng" value="${lng}">
+      <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">รัศมี (เมตร):</div>
+      <input type="number" id="editLocRadius" value="${radius}">
+      <button class="btn-blue" onclick="submitEditLocation()">💾 บันทึกการแก้ไข</button>
+      <button class="btn-back" onclick="showLocationManagement()">⬅️ ย้อนกลับ</button>
+    `;
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+  }
+
+  function submitEditLocation() {
+    const key = document.getElementById('editLocKey')?.value;
+    const name = document.getElementById('editLocName')?.value.trim();
+    const lat = document.getElementById('editLocLat')?.value.trim();
+    const lng = document.getElementById('editLocLng')?.value.trim();
+    const radius = document.getElementById('editLocRadius')?.value.trim();
+
+    if (!key || !name || !lat || !lng || !radius) {
+      window.alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
+
+    window.db.ref('locations/' + key).update({
+      name,
+      lat: Number(lat),
+      lng: Number(lng),
+      radius: Number(radius)
+    }, (err) => {
+      if (!err) {
+        window.showModal('🎉 สำเร็จ', 'แก้ไขพิกัดจุดเช็กอินเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showLocationManagement();">ตกลง</button>');
+      }
+    });
+  }
+
+  function deleteLocation(key) {
+    window.showModal('❓ ยืนยันการลบ', 'ต้องการลบจุดเช็กอินนี้ใช่หรือไม่?',
+      `<button class="btn-yes" onclick="executeDeleteLocation('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
+    );
+  }
+
+  function executeDeleteLocation(key) {
+    window.db.ref('locations/' + key).remove((_err) => {
+      window.closeModal();
+      window.showLocationManagement();
+    });
+  }
+
+  function showFuelRequestForm() {
+    const t = (window.i18n && window.i18n[window.currentLang]) || { pageTitleFuel: 'Fuel', btnBack: 'Back' };
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+    const status = document.getElementById('status');
+
+    if (pageTitle) pageTitle.innerText = t.pageTitleFuel || 'แบบฟอร์มขอเบิก';
+    if (listBox) listBox.style.display = 'none';
+    if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('car_plates').once('value', (snapshot) => {
+      if (status) status.innerHTML = '';
+      const platesObj = snapshot.val() || {};
+      const platesList = Object.keys(platesObj).map((k) => platesObj[k].plate);
+
+      let optionsHtml = '<option value="">-- เลือกทะเบียนรถ --</option>';
+      if (platesList.length === 0) {
+        optionsHtml += '<option value="รถส่วนกลาง">รถส่วนกลาง</option>';
+      } else {
+        platesList.forEach((p) => {
+          optionsHtml += `<option value="${p}">${p}</option>`;
+        });
+      }
+
+      const html = `
+        <div class="user-banner">${window.currentUser.empName} (${window.currentUser.empId})</div>
+        <div style="text-align:left; font-size:13px; color:#555; margin-bottom:5px;"><b>📌 ประเภทการเบิก:</b></div>
+        <select id="requestType" style="margin-bottom:8px;">
+          <option value="⛽ เบิกค่าน้ำมัน">⛽ เบิกค่าน้ำมันรถส่งของ</option>
+          <option value="🔧 เบิกค่าซ่อมรถ">🔧 เบิกค่าซ่อมรถ / ค่าอะไหล่</option>
+        </select>
+
+        <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>🚗 เลือกทะเบียนรถ:</b></div>
+        <select id="carPlateSelect" style="margin-bottom:8px;">
+          ${optionsHtml}
+        </select>
+
+        <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>📍 รายละเอียด / เส้นทาง / รายการซ่อม:</b></div>
+        <textarea id="fuelRoute" rows="3" placeholder="เช่น ไปส่งหมูตลาดสุพรรณ หรือ เปลี่ยนยางนอกล้อหลัง"></textarea>
+        
+        <button class="btn-fuel" onclick="handleFuelSubmit()">💾 ส่งคำขอเบิกจ่าย</button>
+        <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
+      `;
+      const mainContent = document.getElementById('mainContent');
+      if (mainContent) mainContent.innerHTML = html;
+    });
+  }
+
+  function handleFuelSubmit() {
+    const reqType = document.getElementById('requestType')?.value;
+    const carPlate = document.getElementById('carPlateSelect')?.value;
+    const route = document.getElementById('fuelRoute')?.value.trim();
+
+    if (!carPlate) {
+      window.alert('กรุณาเลือกทะเบียนรถ');
+      return;
+    }
+
+    const newRef = window.db.ref('fuel_requests').push();
+    newRef.set({
+      empId: window.currentUser.empId,
+      empName: window.currentUser.empName,
+      requestType: reqType,
+      carPlate,
+      route: route || '-',
+      amount: 0,
+      date: window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10),
+      status: 'รออนุมัติ ⏳',
+      applyDate: new Date().toLocaleDateString()
+    }, (err) => {
+      if (!err) {
+        window.showModal('🎉 สำเร็จ', 'ส่งคำขอเบิกค่าใช้จ่ายเรียบร้อย (รอแอดมินพิจารณายอดเงิน)', '<button class="btn-ok" onclick="closeModal(); showDashboard();">ตกลง</button>');
+      }
+    });
+  }
+
+  function showAdminFuelRequests() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+    const status = document.getElementById('status');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '⛽/🔧 อนุมัติเบิกค่าน้ำมัน / ค่าซ่อมรถ';
+    if (listBox) listBox.style.display = 'none';
+    if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('fuel_requests').once('value', (snapshot) => {
+      if (status) status.innerHTML = '';
+      const fuelObj = snapshot.val() || {};
+      const list = Object.keys(fuelObj).map((k) => ({ key: k, ...fuelObj[k] }));
+
+      let html = '<h2>⛽/🔧 รายการคำขอเบิกจ่าย (รออนุมัติ & กำหนดเงิน)</h2>';
+      const pendingList = list.filter((item) => String(item.status || '').includes('รออนุมัติ'));
+
+      if (pendingList.length === 0) {
+        html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายที่รออนุมัติในขณะนี้</div>';
+      } else {
+        pendingList.reverse().forEach((item) => {
+          const badgeType = item.requestType || '⛽ เบิกค่าน้ำมัน';
+          const plateText = item.carPlate ? `🚗 ทะเบียน: <b>${item.carPlate}</b>` : '';
+          html += `
+            <div class="history-item">
+              <b>👤 ${item.empName} (${item.empId})</b> [${badgeType}] ⏳<br>
+              ${plateText}<br>
+              📍 รายละเอียด: <b>${item.route || '-'}</b><br>
+              📅 วันที่ขอ: ${item.date} <br><br>
+              <div style="text-align:left; font-size:13px; font-weight:bold; margin-bottom:3px;">💵 กำหนดจำนวนเงินอนุมัติ (บาท):</div>
+              <input type="number" id="fuelAmount_${item.key}" value="${item.amount || ''}" placeholder="ระบุยอดเงินที่ให้เบิก" style="margin-bottom:8px;">
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select id="fuelStatus_${item.key}" style="margin:0; padding:8px; font-size:13px; font-weight:bold;">
+                  <option value="อนุมัติแล้ว 🟢">🟢 อนุมัติ</option>
+                  <option value="ไม่อนุมัติ 🔴">🔴 ไม่อนุมัติ</option>
+                </select>
+                <button onclick="updateFuelStatusWithAmount('${item.key}')" style="width:auto; margin:0; padding:8px 12px; font-size:13px; background:#0d6efd;">บันทึกยอด & สถานะ</button>
+              </div>
+            </div>
+          `;
+        });
+      }
+      html += '<button class="btn-back" onclick="showAdminDashboard()">⬅️ กลับหน้าแดสบอร์ด</button>';
+      const mainContent = document.getElementById('mainContent');
+      if (mainContent) mainContent.innerHTML = html;
+    });
+  }
+
+  function updateFuelStatusWithAmount(key) {
+    const newStatus = document.getElementById(`fuelStatus_${key}`)?.value;
+    const amountVal = document.getElementById(`fuelAmount_${key}`)?.value.trim();
+
+    if (newStatus && newStatus.includes('อนุมัติแล้ว') && (!amountVal || Number(amountVal) <= 0)) {
+      window.alert('กรุณากรอกจำนวนเงินอนุมัติให้ถูกต้อง');
+      return;
+    }
+
+    window.db.ref('fuel_requests/' + key).update({
+      status: newStatus,
+      amount: Number(amountVal || 0)
+    }, (err) => {
+      if (!err) {
+        window.showModal('🎉 สำเร็จ', 'บันทึกข้อมูลการอนุมัติและจำนวนเงินเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showAdminFuelRequests();">ตกลง</button>');
+      }
+    });
+  }
+
+  function showAdminFuelHistory() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '📜 ประวัติ & จัดการเบิกจ่ายทั้งหมด (แยกน้ำมัน/ค่าซ่อม)';
+    if (listBox) listBox.style.display = 'none';
+
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+
+    const html = `
+      <h2>📜 ประวัติรายการเบิกจ่ายค่าน้ำมัน & ค่าซ่อมรถ</h2>
+      <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 2px dashed #e67e22; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
+        <b>🚗 จัดการทะเบียนรถในระบบ:</b>
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <input type="text" id="newCarPlateInput" placeholder="เพิ่มทะเบียนรถใหม่ (เช่น 3กฐ 1234)" style="margin:0; font-weight:bold;">
+          <button class="btn-fuel" onclick="addCarPlate()" style="width: auto; margin: 0; padding: 10px 15px;">➕ เพิ่มทะเบียน</button>
+        </div>
+        <div id="carPlatesListContainer" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
+      </div>
+      <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
+        <b>📅 เลือกช่วงเวลาตรวจสอบประวัติการเบิก:</b>
+        <div style="display:flex; gap:10px; margin-top:5px;">
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">จากวันที่:</span>
+            <input type="date" id="fuelStartDate" value="${todayStr}" onchange="renderFuelHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
+            <input type="date" id="fuelEndDate" value="${todayStr}" onchange="renderFuelHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn-blue" onclick="setFuelDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
+          <button class="btn-excel" onclick="exportFuelHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+        </div>
+      </div>
+      <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: left;">
+        <div style="font-size: 14px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; padding-bottom: 6px;">
+          📊 สรุปยอดแยกตามทะเบียนรถ (ค่าน้ำมัน vs ค่าซ่อมรถ)
+        </div>
+        <div id="carExpenseChartContainer"></div>
+      </div>
+      <div id="fuelHistoryContainer"></div>
+      <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
+    `;
+
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+    window.loadCarPlatesManagementList();
+    window.renderFuelHistoryList();
+  }
+
+  function loadCarPlatesManagementList() {
+    const container = document.getElementById('carPlatesListContainer');
+    if (!container) return;
+
+    window.db.ref('car_plates').once('value', (snapshot) => {
+      const obj = snapshot.val() || {};
+      const list = Object.keys(obj).map((k) => ({ key: k, ...obj[k] }));
+
+      if (list.length === 0) {
+        container.innerHTML = '<span style="color:#888; font-size:13px; font-style:italic;">ยังไม่มีทะเบียนรถในระบบ</span>';
+        return;
+      }
+
+      let html = '';
+      list.forEach((item) => {
+        html += `
+          <span style="background: white; border: 1px solid #ced4da; padding: 4px 10px; border-radius: 6px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
+            🚗 ${item.plate}
+            <span onclick="deleteCarPlate('${item.key}')" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 15px;" title="ลบ">&times;</span>
+          </span>
+        `;
+      });
+      container.innerHTML = html;
+    });
+  }
+
+  function addCarPlate() {
+    const val = document.getElementById('newCarPlateInput')?.value.trim();
+    if (!val) {
+      window.alert('กรุณากรอกเลขทะเบียนรถ');
+      return;
+    }
+
+    window.db.ref('car_plates').push().set({ plate: val }, (err) => {
+      if (!err) {
+        const input = document.getElementById('newCarPlateInput');
+        if (input) input.value = '';
+        window.loadCarPlatesManagementList();
+      }
+    });
+  }
+
+  function deleteCarPlate(key) {
+    window.db.ref('car_plates/' + key).remove((err) => {
+      if (!err) {
+        window.loadCarPlatesManagementList();
+      }
+    });
+  }
+
+  function setFuelDateToday() {
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+    const startDate = document.getElementById('fuelStartDate');
+    const endDate = document.getElementById('fuelEndDate');
+    if (startDate) startDate.value = todayStr;
+    if (endDate) endDate.value = todayStr;
+    window.renderFuelHistoryList();
+  }
+
+  let currentFuelFilteredList = [];
+
+  function renderFuelHistoryList() {
+    const startDate = document.getElementById('fuelStartDate')?.value;
+    const endDate = document.getElementById('fuelEndDate')?.value;
+    const container = document.getElementById('fuelHistoryContainer');
+    if (!container || !startDate || !endDate) return;
+
+    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('fuel_requests').once('value', (snapshot) => {
+      const fuelObj = snapshot.val() || {};
+      const list = Object.keys(fuelObj).map((k) => ({ key: k, ...fuelObj[k] }));
+
+      currentFuelFilteredList = list.filter((item) => item.date && item.date >= startDate && item.date <= endDate);
+
+      let totalFuelOnly = 0;
+      let totalRepairOnly = 0;
+
+      currentFuelFilteredList.forEach((item) => {
+        const statusStr = String(item.status || '');
+        const reqType = item.requestType || 'เบิกค่าน้ำมัน';
+        if (statusStr.includes('อนุมัติแล้ว')) {
+          const amt = Number(item.amount || 0);
+          if (reqType.includes('ซ่อม')) {
+            totalRepairOnly += amt;
+          } else {
+            totalFuelOnly += amt;
+          }
+        }
+      });
+
+      const grandTotalApproved = totalFuelOnly + totalRepairOnly;
+
+      let html = `
+        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #e67e22; color: #333; padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
+          <b>📊 สรุปยอดเบิกจ่ายช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
+          • ⛽ ค่าน้ำมันรวม: <b style="color: #e67e22;">${totalFuelOnly.toLocaleString()} บาท</b><br>
+          • 🔧 ค่าซ่อมรถรวม: <b style="color: #d9534f;">${totalRepairOnly.toLocaleString()} บาท</b><br>
+          💰 รวมยอดอนุมัติจ่ายทั้งหมด: <b style="color: #2c3e50; font-size: 16px;">${grandTotalApproved.toLocaleString()} บาท</b> (${currentFuelFilteredList.length} รายการ)
+        </div>
+      `;
+
+      if (currentFuelFilteredList.length === 0) {
+        html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายในช่วงเวลาดังกล่าว</div>';
+      } else {
+        currentFuelFilteredList.slice().reverse().forEach((item) => {
+          const statusBadge = String(item.status || '').includes('อนุมัติแล้ว') ? '🟢 อนุมัติแล้ว' : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รออนุมัติ');
+          const badgeType = item.requestType || '⛽ เบิกค่าน้ำมัน';
+          const plateText = item.carPlate ? `🚗 ทะเบียน: ${item.carPlate} | ` : '';
+          const typeColor = badgeType.includes('ซ่อม') ? '#d9534f' : '#e67e22';
+
+          html += `
+            <div class="history-item">
+              <b>👤 ${item.empName} (${item.empId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b><br>
+              ${plateText}📍 รายละเอียด: ${item.route || '-'} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
+              📅 วันที่: ${item.date}<br>
+              <div style="margin-top:8px; display:flex; gap:6px;">
+                <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${item.key}', '${item.carPlate || ''}', '${item.route || ''}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
+                <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${item.key}', '${item.empName}')">🗑️ ลบ</button>
+              </div>
+            </div>
+          `;
+        });
+      }
+      container.innerHTML = html;
+      window.renderCarExpenseChart();
+    });
+  }
+
+  function renderCarExpenseChart() {
+    const chartContainer = document.getElementById('carExpenseChartContainer');
+    if (!chartContainer) return;
+
+    const carData = {};
+    let maxAmount = 1;
+
+    currentFuelFilteredList.forEach((item) => {
+      const plate = item.carPlate || 'ไม่ระบุทะเบียน';
+      const statusStr = String(item.status || '');
+      const reqType = item.requestType || 'เบิกค่าน้ำมัน';
+      if (statusStr.includes('อนุมัติแล้ว')) {
+        const amt = Number(item.amount || 0);
+        if (!carData[plate]) carData[plate] = { fuel: 0, repair: 0 };
+
+        if (reqType.includes('ซ่อม')) {
+          carData[plate].repair += amt;
+        } else {
+          carData[plate].fuel += amt;
+        }
+
+        const totalForPlate = carData[plate].fuel + carData[plate].repair;
+        if (totalForPlate > maxAmount) maxAmount = totalForPlate;
+      }
+    });
+
+    const plates = Object.keys(carData);
+    if (plates.length === 0) {
+      chartContainer.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 10px;">ไม่มีข้อมูลยอดเงินที่อนุมัติในช่วงเวลานี้</div>';
+      return;
+    }
+
+    let chartHtml = '';
+    plates.forEach((plate) => {
+      const fAmt = carData[plate].fuel;
+      const rAmt = carData[plate].repair;
+      const total = fAmt + rAmt;
+
+      chartHtml += `
+        <div style="margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; color: #495057;">
+            <span>🚗 <b>${plate}</b> (⛽ ค่าน้ำมัน: <b style="color:#e67e22;">${fAmt.toLocaleString()} ฿</b> | 🔧 ค่าซ่อม: <b style="color:#d9534f;">${rAmt.toLocaleString()} ฿</b>)</span>
+            <span style="font-weight: bold; color: #2c3e50;">รวม ${total.toLocaleString()} บาท</span>
+          </div>
+          <div style="background: #e9ecef; border-radius: 6px; height: 10px; width: 100%; overflow: hidden; display: flex;">
+            <div style="background: #e67e22; width: ${Math.round((fAmt / total) * 100 || 0)}%; height: 100%;" title="ค่าน้ำมัน"></div>
+            <div style="background: #d9534f; width: ${Math.round((rAmt / total) * 100 || 0)}%; height: 100%;" title="ค่าซ่อม"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    chartContainer.innerHTML = chartHtml;
+  }
+
+  function exportFuelHistoryExcel() {
+    if (!currentFuelFilteredList || currentFuelFilteredList.length === 0) {
+      window.alert('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
+      return;
+    }
+    const startDate = document.getElementById('fuelStartDate')?.value;
+    const endDate = document.getElementById('fuelEndDate')?.value;
+
+    const rows = [
+      ['รหัสพนักงาน', 'ชื่อพนักงาน', 'ประเภทการเบิก', 'ทะเบียนรถ', 'รายละเอียดเส้นทาง/การซ่อม', 'จำนวนเงินที่อนุมัติ (บาท)', 'สถานะ', 'วันที่ขอ']
+    ];
+
+    currentFuelFilteredList.forEach((item) => {
+      rows.push([
+        item.empId,
+        item.empName,
+        item.requestType || 'เบิกค่าน้ำมัน',
+        item.carPlate || '-',
+        item.route || '-',
+        item.amount || 0,
+        item.status || '',
+        item.date || ''
+      ]);
+    });
+
+    window.downloadCSV(`Fuel_Repair_Requests_${startDate}_to_${endDate}.csv`, rows);
+  }
+
+  function showEditFuelModal(key, carPlate, route, amount, reqType) {
+    window.db.ref('car_plates').once('value', (snapshot) => {
+      const platesObj = snapshot.val() || {};
+      const platesList = Object.keys(platesObj).map((k) => platesObj[k].plate);
+
+      let optionsHtml = '<option value="">-- เลือกทะเบียนรถ --</option>';
+      if (platesList.length === 0) {
+        optionsHtml += `<option value="${carPlate || 'รถส่วนกลาง'}">${carPlate || 'รถส่วนกลาง'}</option>`;
+      } else {
+        platesList.forEach((p) => {
+          const selected = (p === carPlate) ? 'selected' : '';
+          optionsHtml += `<option value="${p}" ${selected}>${p}</option>`;
+        });
+      }
+
+      const html = `
+        <div class="user-banner">✏️ แก้ไขข้อมูลการเบิกจ่าย</div>
+        <input type="hidden" id="editFuelKey" value="${key}">
+        <div style="text-align:left; font-size:13px; color:#555;">ประเภทการเบิก:</div>
+        <select id="editFuelType" style="margin-bottom:8px;">
+          <option value="⛽ เบิกค่าน้ำมัน" ${reqType.includes('น้ำมัน') ? 'selected' : ''}>⛽ เบิกค่าน้ำมันรถส่งของ</option>
+          <option value="🔧 เบิกค่าซ่อมรถ" ${reqType.includes('ซ่อม') ? 'selected' : ''}>🔧 เบิกค่าซ่อมรถ / ค่าอะไหล่</option>
+        </select>
+        <div style="text-align:left; font-size:13px; color:#555;">ทะเบียนรถ:</div>
+        <select id="editCarPlateSelect" style="margin-bottom:8px;">
+          ${optionsHtml}
+        </select>
+        <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">รายละเอียด / เส้นทาง:</div>
+        <input type="text" id="editFuelRoute" value="${route}">
+        <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">จำนวนเงินอนุมัติ (บาท):</div>
+        <input type="number" id="editFuelAmount" value="${amount}">
+        <button class="btn-blue" onclick="submitEditFuel()">💾 บันทึกการแก้ไข</button>
+        <button class="btn-back" onclick="showAdminFuelHistory()">⬅️ ย้อนกลับ</button>
+      `;
+      const mainContent = document.getElementById('mainContent');
+      if (mainContent) mainContent.innerHTML = html;
+    });
+  }
+
+  function submitEditFuel() {
+    const key = document.getElementById('editFuelKey')?.value;
+    const reqType = document.getElementById('editFuelType')?.value;
+    const carPlate = document.getElementById('editCarPlateSelect')?.value;
+    const route = document.getElementById('editFuelRoute')?.value.trim();
+    const amount = document.getElementById('editFuelAmount')?.value.trim();
+
+    if (!carPlate || !amount) {
+      window.alert('กรุณาเลือกทะเบียนรถและกรอกจำนวนเงินให้ครบถ้วน');
+      return;
+    }
+
+    window.db.ref('fuel_requests/' + key).update({
+      requestType: reqType,
+      carPlate,
+      route: route || '-',
+      amount: Number(amount)
+    }, (err) => {
+      if (!err) {
+        window.showModal('🎉 สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showAdminFuelHistory();">ตกลง</button>');
+      }
+    });
+  }
+
+  function confirmDeleteFuel(key, empName) {
+    window.showModal('❓ ยืนยันการลบ', `ต้องการลบรายการเบิกจ่ายของ (${empName}) ใช่หรือไม่?`,
+      `<button class="btn-yes" onclick="executeDeleteFuel('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
+    );
+  }
+
+  function executeDeleteFuel(key) {
+    window.db.ref('fuel_requests/' + key).remove((_err) => {
+      window.closeModal();
+      window.showAdminFuelHistory();
+    });
+  }
+
+  function showAdminLeaves() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '🌴 อนุมัติคำขอลา (รออนุมัติ)';
+    if (listBox) listBox.style.display = 'none';
+
+    window.db.ref('leaves').once('value', (snapshot) => {
+      const leavesObj = snapshot.val() || {};
+      const pendingList = [];
+
+      Object.keys(leavesObj).forEach((k) => {
+        const item = leavesObj[k];
+        const statusStr = String(item.status || '');
+        if (statusStr.includes('รออนุมัติ') || statusStr === '') {
+          pendingList.push({ key: k, ...item });
+        }
+      });
+
+      let html = '<h2>🌴 รายการขอลางานที่รอการพิจารณา</h2>';
+      if (pendingList.length === 0) {
+        html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการใบลาที่รออนุมัติในขณะนี้</div>';
+      } else {
+        pendingList.reverse().forEach((item) => {
+          html += `
+            <div class="history-item" style="background:#fff3cd;">
+              <b>👤 ${item.empName}</b> (${item.leaveType}) ⏳<br>
+              📅 ${item.startDate} ถึง ${item.endDate}<br>
+              💬 เหตุผล: ${item.reason}<br><br>
+              <div style="display:flex; gap:8px;">
+                <select id="leaveStatus_${item.key}" style="margin:0; padding:8px; font-weight:bold;">
+                  <option value="อนุมัติแล้ว 🟢">🟢 อนุมัติ</option>
+                  <option value="ไม่อนุมัติ 🔴">🔴 ไม่อนุมัติ</option>
+                </select>
+                <button onclick="updateLeaveStatusAndHide('${item.key}')" style="width:auto; margin:0; padding:8px 12px; background:#0d6efd;">บันทึกผลการพิจารณา</button>
+              </div>
+            </div>`;
+        });
+      }
+      html += '<button class="btn-back" onclick="showAdminDashboard()">⬅️ กลับหน้าแดสบอร์ด</button>';
+      const mainContent = document.getElementById('mainContent');
+      if (mainContent) mainContent.innerHTML = html;
+    });
+  }
+
+  function updateLeaveStatusAndHide(key) {
+    const status = document.getElementById(`leaveStatus_${key}`)?.value;
+    window.db.ref('leaves/' + key).update({ status }, () => {
+      window.showModal('🎉 สำเร็จ', 'บันทึกผลการพิจารณาและย้ายไปหน้าประวัติเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showAdminLeaves();">ตกลง</button>');
+    });
+  }
+
+  function showAdminLeaveHistory() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '📜 ประวัติการขอลางานทั้งหมด';
+    if (listBox) listBox.style.display = 'none';
+
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+
+    const html = `
+      <h2>📜 ประวัติการขอลางาน & จัดการย้อนหลัง</h2>
+      <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
+        <b>📅 เลือกช่วงเวลาตรวจสอบ (อิงตามวันเริ่มลา):</b>
+        <div style="display:flex; gap:10px; margin-top:5px;">
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">จากวันที่:</span>
+            <input type="date" id="leaveStartDate" value="${todayStr}" onchange="renderLeaveHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
+            <input type="date" id="leaveEndDate" value="${todayStr}" onchange="renderLeaveHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn-blue" onclick="setLeaveDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
+          <button class="btn-excel" onclick="exportLeaveHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+        </div>
+      </div>
+      <div id="leaveHistoryContainer"></div>
+      <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
+    `;
+
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+    window.renderLeaveHistoryList();
+  }
+
+  function setLeaveDateToday() {
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+    const startDate = document.getElementById('leaveStartDate');
+    const endDate = document.getElementById('leaveEndDate');
+    if (startDate) startDate.value = todayStr;
+    if (endDate) endDate.value = todayStr;
+    window.renderLeaveHistoryList();
+  }
+
+  let currentLeaveFilteredList = [];
+
+  function renderLeaveHistoryList() {
+    const startDate = document.getElementById('leaveStartDate')?.value;
+    const endDate = document.getElementById('leaveEndDate')?.value;
+    const container = document.getElementById('leaveHistoryContainer');
+    if (!container || !startDate || !endDate) return;
+
+    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('leaves').once('value', (snapshot) => {
+      const leavesObj = snapshot.val() || {};
+      const list = Object.keys(leavesObj).map((k) => ({ key: k, ...leavesObj[k] }));
+
+      currentLeaveFilteredList = list.filter((item) => item.startDate && item.startDate >= startDate && item.startDate <= endDate);
+
+      let html = `
+        <div style="background: linear-gradient(135deg, #fd7e14, #ffc107); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
+          <b>📊 สรุปประวัติการลาช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
+          📋 พบทั้งหมด: <b>${currentLeaveFilteredList.length} รายการ</b>
+        </div>
+      `;
+
+      if (currentLeaveFilteredList.length === 0) {
+        html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการลาในช่วงเวลาดังกล่าว</div>';
+      } else {
+        currentLeaveFilteredList.slice().reverse().forEach((item) => {
+          const statusStr = item.status || 'รออนุมัติ ⏳';
+          html += `
+            <div class="history-item">
+              <b>👤 ${item.empName} (${item.empId})</b> | ประเภท: <b>${item.leaveType}</b><br>
+              📅 วันที่ลา: ${item.startDate} ถึง ${item.endDate}<br>
+              💬 เหตุผล: ${item.reason}<br><br>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <select id="editLeaveStatus_${item.key}" style="margin:0; padding:6px; font-size:13px; font-weight:bold;">
+                  <option value="อนุมัติแล้ว 🟢" ${statusStr.includes('อนุมัติแล้ว') ? 'selected' : ''}>🟢 อนุมัติแล้ว</option>
+                  <option value="ไม่อนุมัติ 🔴" ${statusStr.includes('ไม่อนุมัติ') ? 'selected' : ''}>🔴 ไม่อนุมัติ</option>
+                  <option value="รออนุมัติ ⏳" ${statusStr.includes('รออนุมัติ') ? 'selected' : ''}>⏳ รออนุมัติ</option>
+                </select>
+                <button onclick="adminUpdateLeaveStatus('${item.key}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#0d6efd;">อัปเดต</button>
+                <button onclick="adminDeleteLeave('${item.key}', '${item.empName}')" style="width:auto; margin:0; padding:6px 10px; font-size:12px; background:#dc3545;">ลบ</button>
+              </div>
+            </div>
+          `;
+        });
+      }
+      container.innerHTML = html;
+    });
+  }
+
+  function exportLeaveHistoryExcel() {
+    if (!currentLeaveFilteredList || currentLeaveFilteredList.length === 0) {
+      window.alert('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
+      return;
+    }
+    const startDate = document.getElementById('leaveStartDate')?.value;
+    const endDate = document.getElementById('leaveEndDate')?.value;
+
+    const rows = [
+      ['รหัสพนักงาน', 'ชื่อพนักงาน', 'ประเภทการลา', 'วันเริ่มต้น', 'วันสิ้นสุด', 'เหตุผล', 'สถานะการลา', 'วันที่ยื่นใบลา']
+    ];
+
+    currentLeaveFilteredList.forEach((item) => {
+      rows.push([
+        item.empId,
+        item.empName,
+        item.leaveType,
+        item.startDate,
+        item.endDate,
+        item.reason,
+        item.status || 'รออนุมัติ',
+        item.applyDate || ''
+      ]);
+    });
+
+    window.downloadCSV(`Leave_History_${startDate}_to_${endDate}.csv`, rows);
+  }
+
+  function adminUpdateLeaveStatus(key) {
+    const newStatus = document.getElementById(`editLeaveStatus_${key}`)?.value;
+    window.db.ref('leaves/' + key).update({ status: newStatus }, (err) => {
+      if (!err) {
+        window.showModal('🎉 สำเร็จ', 'อัปเดตสถานะใบลาเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); renderLeaveHistoryList();">ตกลง</button>');
+      }
+    });
+  }
+
+  function adminDeleteLeave(key, empName) {
+    window.showModal('❓ ยืนยันการลบ', `ต้องการลบใบลาของ (${empName}) ใช่หรือไม่?`,
+      `<button class="btn-yes" onclick="executeAdminDeleteLeave('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
+    );
+  }
+
+  function executeAdminDeleteLeave(key) {
+    window.db.ref('leaves/' + key).remove((_err) => {
+      window.closeModal();
+      window.renderLeaveHistoryList();
+    });
+  }
+
+  function showAdminLogsHistory() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '📜 ดูการลงเวลาทำงานย้อนหลัง';
+    if (listBox) listBox.style.display = 'none';
+
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+
+    const html = `
+      <h2>📜 รายการลงเวลางานย้อนหลัง</h2>
+      <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
+        <b>📅 เลือกช่วงเวลาตรวจสอบ:</b>
+        <div style="display:flex; gap:10px; margin-top:5px;">
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">จากวันที่:</span>
+            <input type="date" id="logStartDate" value="${todayStr}" onchange="renderLogHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
+            <input type="date" id="logEndDate" value="${todayStr}" onchange="renderLogHistoryList()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn-blue" onclick="setLogDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
+          <button class="btn-excel" onclick="exportLogHistoryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+        </div>
+      </div>
+      <div id="logHistoryContainer"></div>
+      <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
+    `;
+
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+    window.renderLogHistoryList();
+  }
+
+  function setLogDateToday() {
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+    const startDate = document.getElementById('logStartDate');
+    const endDate = document.getElementById('logEndDate');
+    if (startDate) startDate.value = todayStr;
+    if (endDate) endDate.value = todayStr;
+    window.renderLogHistoryList();
+  }
+
+  let currentLogFilteredList = [];
+
+  function renderLogHistoryList() {
+    const startDate = document.getElementById('logStartDate')?.value;
+    const endDate = document.getElementById('logEndDate')?.value;
+    const container = document.getElementById('logHistoryContainer');
+    if (!container || !startDate || !endDate) return;
+
+    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('logs').once('value', (snapshot) => {
+      const logsObj = snapshot.val() || {};
+      const list = Object.keys(logsObj).map((k) => logsObj[k]);
+
+      currentLogFilteredList = list.filter((item) => item.date && item.date >= startDate && item.date <= endDate);
+
+      let html = `
+        <div style="background: linear-gradient(135deg, #0dcaf0, #0d6efd); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
+          <b>📊 สรุปประวัติการลงเวลาช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
+          📋 พบทั้งหมด: <b>${currentLogFilteredList.length} รายการ</b>
+        </div>
+      `;
+
+      if (currentLogFilteredList.length === 0) {
+        html += '<div style="color:#888; margin:20px 0;">ไม่มีประวัติการลงเวลาในช่วงเวลาดังกล่าว</div>';
+      } else {
+        currentLogFilteredList.slice().reverse().forEach((item) => {
+          html += `
+            <div class="history-item">
+              📅 วันที่: ${item.date} | ⏰ เวลา: ${item.time} น.<br>
+              <b>👤 ${item.empName} (${item.empId})</b> (${item.type})<br>
+              📍 สถานที่: ${item.nearestLocation || '-'}
+            </div>
+          `;
+        });
+      }
+      container.innerHTML = html;
+    });
+  }
+
+  function exportLogHistoryExcel() {
+    if (!currentLogFilteredList || currentLogFilteredList.length === 0) {
+      window.alert('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
+      return;
+    }
+    const startDate = document.getElementById('logStartDate')?.value;
+    const endDate = document.getElementById('logEndDate')?.value;
+
+    const rows = [
+      ['รหัสพนักงาน', 'ชื่อพนักงาน', 'ประเภท', 'วันที่', 'เวลา', 'สถานที่เช็กอิน', 'ระยะทาง (ม.)']
+    ];
+
+    currentLogFilteredList.forEach((item) => {
+      rows.push([
+        item.empId,
+        item.empName,
+        item.type,
+        item.date,
+        item.time,
+        item.nearestLocation || '-',
+        item.distance || 0
+      ]);
+    });
+
+    window.downloadCSV(`Checkin_History_${startDate}_to_${endDate}.csv`, rows);
+  }
+
+  function showDailyPayroll() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '💵 สรุปค่าแรง & ค่าใช้จ่ายรายวัน (ช่วงเวลา)';
+    if (listBox) listBox.style.display = 'none';
+
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+
+    const html = `
+      <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
+        <b>📅 เลือกช่วงเวลาตรวจสอบ:</b>
+        <div style="display:flex; gap:10px; margin-top:5px;">
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">จากวันที่:</span>
+            <input type="date" id="payrollStartDate" value="${todayStr}" onchange="renderDailyPayrollData()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+          <div style="flex:1;">
+            <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
+            <input type="date" id="payrollEndDate" value="${todayStr}" onchange="renderDailyPayrollData()" style="font-weight:bold; margin:2px 0 0 0;">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn-blue" onclick="setPayrollDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
+          <button class="btn-excel" onclick="exportPayrollExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
+        </div>
+      </div>
+      <div id="dailyPayrollResultContainer"></div>
+      <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
+    `;
+
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+    window.renderDailyPayrollData();
+  }
+
+  function setPayrollDateToday() {
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+    const startDate = document.getElementById('payrollStartDate');
+    const endDate = document.getElementById('payrollEndDate');
+    if (startDate) startDate.value = todayStr;
+    if (endDate) endDate.value = todayStr;
+    window.renderDailyPayrollData();
+  }
+
+  let currentPayrollDataCache = { salaryList: [], fuelList: [], repairList: [], salaryTotal: 0, fuelTotal: 0, repairTotal: 0 };
+
+  function renderDailyPayrollData() {
+    const startDate = document.getElementById('payrollStartDate')?.value;
+    const endDate = document.getElementById('payrollEndDate')?.value;
+    const container = document.getElementById('dailyPayrollResultContainer');
+    if (!container || !startDate || !endDate) return;
+
+    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('employees').once('value', (empSnap) => {
+      const employeesObj = empSnap.val() || {};
+
+      window.db.ref('logs').once('value', (logSnap) => {
+        const logsObj = logSnap.val() || {};
+        let salaryTotal = 0;
+        const presentList = [];
+
+        Object.keys(logsObj).forEach((k) => {
+          const log = logsObj[k];
+          if (log.date >= startDate && log.date <= endDate && log.type === 'เข้างาน') {
+            let rate = 0;
+            Object.keys(employeesObj).forEach((ek) => {
+              const emp = employeesObj[ek];
+              if (String(emp.empId) === String(log.empId)) rate = Number(emp.dailyRate || 0);
+            });
+            salaryTotal += rate;
+            presentList.push({ name: log.empName, id: log.empId, date: log.date, time: log.time, rate });
+          }
+        });
+
+        window.db.ref('fuel_requests').once('value', (fuelSnap) => {
+          const fuelObj = fuelSnap.val() || {};
+          let fuelOnlyTotal = 0;
+          let repairOnlyTotal = 0;
+          const fuelList = [];
+          const repairList = [];
+
+          Object.keys(fuelObj).forEach((k) => {
+            const f = fuelObj[k];
+            const statusStr = String(f.status || '');
+            const reqType = f.requestType || 'เบิกค่าน้ำมัน';
+            if (f.date >= startDate && f.date <= endDate && statusStr.includes('อนุมัติแล้ว')) {
+              const amt = Number(f.amount || 0);
+              if (reqType.includes('ซ่อม')) {
+                repairOnlyTotal += amt;
+                repairList.push({ name: f.empName, type: reqType, date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
+              } else {
+                fuelOnlyTotal += amt;
+                fuelList.push({ name: f.empName, type: reqType, date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
+              }
+            }
+          });
+
+          currentPayrollDataCache = { salaryList: presentList, fuelList, repairList, salaryTotal, fuelTotal: fuelOnlyTotal, repairTotal: repairOnlyTotal };
+
+          const grandTotal = salaryTotal + fuelOnlyTotal + repairOnlyTotal;
+
+          let html = `
+            <div style="background: linear-gradient(135deg, #2b5876, #4e4376); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left;">
+              <b>📊 สรุปยอดช่วงวันที่: ${startDate} ถึง ${endDate}</b><br><br>
+              • ค่าแรงพนักงานรวม: <b>${salaryTotal.toLocaleString()} บาท</b><br>
+              • ⛽ ค่าน้ำมันรถรวม (อนุมัติแล้ว): <b style="color:#f39c12;">${fuelOnlyTotal.toLocaleString()} บาท</b><br>
+              • 🔧 ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#e74c3c;">${repairOnlyTotal.toLocaleString()} บาท</b><br>
+              <hr style="border:0; border-top:1px solid rgba(255,255,255,0.4); margin:8px 0;">
+              <span style="font-size: 17px; font-weight: bold;">💰 รวมจ่ายออกทั้งหมด: ${grandTotal.toLocaleString()} บาท</span>
+            </div>
+            <div style="text-align:left; font-weight:bold; margin-bottom:5px;">👤 รายชื่อพนักงานที่มาทำงาน (${presentList.length} รายการสแกน):</div>
+          `;
+
+          if (presentList.length === 0) {
+            html += '<div style="color:#888; margin-bottom:15px;">ไม่มีพนักงานสแกนเข้างานในช่วงเวลานี้</div>';
+          } else {
+            presentList.slice().reverse().forEach((p) => {
+              html += `<div class="history-item">📅 ${p.date} | <b>${p.name} (${p.id})</b> - เวลา ${p.time} น. | ค่าแรง: <b style="color:#28a745;">${p.rate} บาท</b></div>`;
+            });
+          }
+
+          html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">⛽ รายการเบิกค่าน้ำมันที่อนุมัติแล้ว (${fuelList.length} รายการ):</div>`;
+          if (fuelList.length === 0) {
+            html += '<div style="color:#888; margin-bottom:10px;">ไม่มีการเบิกค่าน้ำมันในช่วงเวลานี้</div>';
+          } else {
+            fuelList.slice().reverse().forEach((f) => {
+              html += `<div class="history-item">📅 ${f.date} | <b>${f.name}</b> [${f.type}] (ทะเบียน: ${f.plate})<br>รายละเอียด: ${f.route} | อนุมัติจ่าย: <b style="color:#e67e22;">${f.amount} บาท</b></div>`;
+            });
+          }
+
+          html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">🔧 รายการเบิกค่าซ่อมรถที่อนุมัติแล้ว (${repairList.length} รายการ):</div>`;
+          if (repairList.length === 0) {
+            html += '<div style="color:#888;">ไม่มีการเบิกค่าซ่อมรถในช่วงเวลานี้</div>';
+          } else {
+            repairList.slice().reverse().forEach((r) => {
+              html += `<div class="history-item">📅 ${r.date} | <b>${r.name}</b> [${r.type}] (ทะเบียน: ${r.plate})<br>รายละเอียด: ${r.route} | อนุมัติจ่าย: <b style="color:#d9534f;">${r.amount} บาท</b></div>`;
+            });
+          }
+
+          container.innerHTML = html;
+        });
+      });
+    });
+  }
+
+  function exportPayrollExcel() {
+    const startDate = document.getElementById('payrollStartDate')?.value;
+    const endDate = document.getElementById('payrollEndDate')?.value;
+
+    const rows = [
+      ['=== สรุปค่าแรงพนักงานมาทำงาน ==='],
+      ['วันที่', 'รหัสพนักงาน', 'ชื่อพนักงาน', 'เวลาเข้างาน', 'ค่าแรง (บาท)']
+    ];
+
+    currentPayrollDataCache.salaryList.forEach((p) => {
+      rows.push([p.date, p.id, p.name, p.time, p.rate]);
+    });
+
+    rows.push([]);
+    rows.push(['=== สรุปรายการเบิกค่าน้ำมัน (อนุมัติแล้ว) ==='], ['วันที่', 'ชื่อพนักงาน', 'ประเภทการเบิก', 'ทะเบียนรถ', 'รายละเอียด', 'ยอดเงินอนุมัติ (บาท)']);
+    currentPayrollDataCache.fuelList.forEach((f) => {
+      rows.push([f.date, f.name, f.type, f.plate, f.route, f.amount]);
+    });
+
+    rows.push([]);
+    rows.push(['=== สรุปรายการเบิกค่าซ่อมรถ (อนุมัติแล้ว) ==='], ['วันที่', 'ชื่อพนักงาน', 'ประเภทการเบิก', 'ทะเบียนรถ', 'รายละเอียด', 'ยอดเงินอนุมัติ (บาท)']);
+    currentPayrollDataCache.repairList.forEach((r) => {
+      rows.push([r.date, r.name, r.type, r.plate, r.route, r.amount]);
+    });
+
+    rows.push([]);
+    rows.push(['รวมค่าแรงทั้งหมด', '', '', '', '', currentPayrollDataCache.salaryTotal]);
+    rows.push(['รวมค่าน้ำมันทั้งหมด', '', '', '', '', currentPayrollDataCache.fuelTotal]);
+    rows.push(['รวมค่าซ่อมรถทั้งหมด', '', '', '', '', currentPayrollDataCache.repairTotal]);
+    rows.push(['รวมจ่ายออกทั้งหมดสุทธิ', '', '', '', '', currentPayrollDataCache.salaryTotal + currentPayrollDataCache.fuelTotal + currentPayrollDataCache.repairTotal]);
+
+    window.downloadCSV(`Daily_Payroll_Summary_${startDate}_to_${endDate}.csv`, rows);
+  }
+
+  function showAnalyticsReport() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const pageTitle = document.getElementById('pageTitle');
+    const listBox = document.getElementById('listBox');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (pageTitle) pageTitle.innerText = '📈 สรุปค่าใช้จ่ายประจำเดือน';
+    if (listBox) listBox.style.display = 'none';
+
+    const nowYM = new Date().toISOString().substring(0, 7);
+    const html = `
+      <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
+        <b>📅 เลือกเดือนที่ต้องการสรุป:</b> <input type="month" id="repMonth" value="${nowYM}" onchange="renderMonthlySummary()" style="margin-top:5px; font-weight:bold;">
+        <div style="margin-top:10px;">
+          <button class="btn-excel" onclick="exportMonthlyExcel()" style="padding:10px; font-size:14px;">📥 ส่งออกข้อมูลสรุปประจำเดือนเป็น Excel</button>
+        </div>
+      </div>
+      <div id="repResult"></div>
+      <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
+    `;
+
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+    window.renderMonthlySummary();
+  }
+
+  let currentMonthlyCache = { ym: '', totalSalary: 0, totalFuel: 0, totalRepair: 0 };
+
+  function renderMonthlySummary() {
+    const ym = document.getElementById('repMonth')?.value;
+    currentMonthlyCache.ym = ym;
+
+    window.db.ref('employees').once('value', (empSnap) => {
+      const empObj = empSnap.val() || {};
+      window.db.ref('logs').once('value', (logSnap) => {
+        const logObj = logSnap.val() || {};
+        window.db.ref('fuel_requests').once('value', (fuelSnap) => {
+          const fuelObj = fuelSnap.val() || {};
+
+          let totalSalary = 0;
+          let totalFuel = 0;
+          let totalRepair = 0;
+
+          Object.keys(empObj).forEach((ek) => {
+            const emp = empObj[ek];
+            let days = 0;
+            Object.keys(logObj).forEach((lk) => {
+              const l = logObj[lk];
+              if (String(l.empId) === String(emp.empId) && l.date && l.date.startsWith(ym) && l.type === 'เข้างาน') days++;
+            });
+            totalSalary += days * Number(emp.dailyRate || 0);
+          });
+
+          Object.keys(fuelObj).forEach((fk) => {
+            const f = fuelObj[fk];
+            const statusStr = String(f.status || '');
+            const reqType = f.requestType || 'เบิกค่าน้ำมัน';
+              if (f.date && f.date.startsWith(ym) && statusStr.includes('อนุมัติแล้ว')) {
+              const amt = Number(f.amount || 0);
+              if (reqType.includes('ซ่อม')) {
+                totalRepair += amt;
+              } else {
+                totalFuel += amt;
+              }
+            }
+          });
+
+          currentMonthlyCache.totalSalary = totalSalary;
+          currentMonthlyCache.totalFuel = totalFuel;
+          currentMonthlyCache.totalRepair = totalRepair;
+
+          const repResult = document.getElementById('repResult');
+          if (repResult) {
+            repResult.innerHTML = `
+              <div class="history-item">
+                📅 ประจำเดือน: <b>${ym}</b><br><br>
+                💵 ค่าแรงพนักงานรวม: <b style="color:#28a745; font-size:15px;">${totalSalary.toLocaleString()} บาท</b><br>
+                ⛽ ค่าน้ำมันรถรวม (อนุมัติแล้ว): <b style="color:#e67e22; font-size:15px;">${totalFuel.toLocaleString()} บาท</b><br>
+                🔧 ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#d9534f; font-size:15px;">${totalRepair.toLocaleString()} บาท</b><br>
+                <hr style="border:0; border-top:1px solid #ddd; margin:10px 0;">
+                💰 <b>ค่าใช้จ่ายบริษัทรวมทั้งหมด: <span style="font-size:18px; color:#d9534f;">${(totalSalary + totalFuel + totalRepair).toLocaleString()} บาท</span></b>
+              </div>
+            `;
+          }
+        });
+      });
+    });
+  }
+
+  function exportMonthlyExcel() {
+    const ym = currentMonthlyCache.ym;
+    const rows = [
+      ['รายงานสรุปค่าใช้จ่ายประจำเดือน', ym],
+      [],
+      ['รายการค่าใช้จ่าย', 'จำนวนเงินรวม (บาท)'],
+      ['ค่าแรงพนักงานรวม', currentMonthlyCache.totalSalary],
+      ['ค่าน้ำมันรถ (อนุมัติแล้ว)', currentMonthlyCache.totalFuel],
+      ['ค่าซ่อมรถ / ค่าอะไหล่ (อนุมัติแล้ว)', currentMonthlyCache.totalRepair],
+      ['ค่าใช้จ่ายบริษัทรวมทั้งหมดสุทธิ', currentMonthlyCache.totalSalary + currentMonthlyCache.totalFuel + currentMonthlyCache.totalRepair]
+    ];
+
+    window.downloadCSV(`Monthly_Expense_Summary_${ym}.csv`, rows);
+  }
+
+  function showEmpManagement() {
+    window.isAdmin = true;
+    const mainCard = document.getElementById('mainCard');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const bellBtn = document.getElementById('bellBtn');
+    const listBox = document.getElementById('listBox');
+    const status = document.getElementById('status');
+
+    if (mainCard) mainCard.classList.add('admin-wide');
+    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
+    if (bellBtn) bellBtn.style.display = 'block';
+    if (listBox) listBox.style.display = 'none';
+    if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+
+    window.db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+      const globalLateTime = settingsSnap.val() || '08:00';
+
+      window.db.ref('employees').once('value', (empSnap) => {
+        if (status) status.innerHTML = '';
+        const employeesObj = empSnap.val() || {};
+        const empList = Object.keys(employeesObj).map((k) => ({ key: k, ...employeesObj[k] }));
+
+        let html = `
+          <h2>⚙️ จัดการพนักงาน & กำหนดเวลาเข้างาน</h2>
+          <div style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border: 2px dashed #0d6efd; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
+            <b>⏰ ตั้งค่าเวลาเข้างานกลาง (สำหรับพนักงานทุกคน):</b>
+            <div style="display: flex; gap: 10px; margin-top: 8px; align-items: center;">
+              <input type="time" id="globalLateInput" value="${globalLateTime}" style="margin:0; font-weight:bold; font-size:16px;">
+              <button class="btn-blue" onclick="saveGlobalLateTime()" style="width: auto; margin: 0; padding: 12px 20px;">💾 บันทึกเวลาส่วนกลาง</button>
+            </div>
+          </div>
+          <button class="btn-blue" onclick="showAddEmpModal()">➕ เพิ่มพนักงานใหม่</button>
+        `;
+
+        if (empList.length === 0) {
+          html += '<div style="color:#888; margin-top:15px;">ยังไม่มีข้อมูลพนักงาน</div>';
+        } else {
+          html += '<h3>📋 รายชื่อพนักงานทั้งหมด:</h3>';
+          empList.forEach((emp) => {
+            const driverBadge = emp.isDriver ? '🚚 <b style="color:#e67e22;">พนักงานขับรถ</b>' : '👤 พนักงานทั่วไป';
+            html += `
+              <div class="history-item" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <b>👤 ${emp.empName}</b> (${emp.empId})<br>
+                  🔑 PIN: ${emp.pin} | ค่าแรง: ${emp.dailyRate || 0} บาท | ${driverBadge}
+                </div>
+                <div style="display:flex; gap:5px;">
+                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditEmpModal('${emp.key}', '${emp.empId}', '${emp.empName}', '${emp.pin}', '${emp.dailyRate || 0}', ${emp.isDriver || false})">✏️</button>
+                  <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteEmp('${emp.key}', '${emp.empName}')">🗑️</button>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        html += '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>';
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) mainContent.innerHTML = html;
+      });
+    });
+  }
+
+  function saveGlobalLateTime() {
+    const val = document.getElementById('globalLateInput')?.value.trim();
+    if (!val) {
+      window.alert('กรุณาระบุเวลาให้ถูกต้อง');
+      return;
+    }
+
+    window.db.ref('settings/globalLateTime').set(val, (err) => {
+      if (!err) {
+        window.showModal('🎉 สำเร็จ', `บันทึกเวลาเข้างานกลาง (${val} น.) เรียบร้อย\nมีผลกับพนักงานทุกคนในระบบ`, '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
+      }
+    });
+  }
+
+  function showAddEmpModal() {
+    const html = `
+      <div class="user-banner">➕ เพิ่มพนักงานใหม่ในระบบ</div>
+      <input type="text" id="newEmpId" placeholder="รหัสพนักงาน (4 หลัก)" maxlength="5">
+      <input type="text" id="newEmpName" placeholder="ชื่อ-นามสกุล">
+      <input type="password" id="newEmpPin" placeholder="รหัส PIN (4 หลัก)" maxlength="4">
+      <input type="number" id="newEmpRate" placeholder="ค่าแรงต่อวัน (บาท)">
+      <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
+        <input type="checkbox" id="newEmpDriver" style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
+      </label>
+      <button class="btn-blue" onclick="submitAddEmp()">💾 บันทึกพนักงาน</button>
+      <button class="btn-back" onclick="showEmpManagement()">⬅️ ย้อนกลับ</button>
+    `;
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+  }
+
+  function submitAddEmp() {
+    const id = document.getElementById('newEmpId')?.value.trim();
+    const name = document.getElementById('newEmpName')?.value.trim();
+    const pin = document.getElementById('newEmpPin')?.value.trim();
+    const rate = document.getElementById('newEmpRate')?.value.trim();
+    const isDriver = document.getElementById('newEmpDriver')?.checked;
+
+    if (!id || !name || !pin || !rate) {
+      window.alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
+    }
+
+    window.db.ref('employees').once('value', (snapshot) => {
+      const employeesObj = snapshot.val() || {};
+      let isIdDuplicate = false;
+      Object.keys(employeesObj).forEach((k) => {
+        if (String(employeesObj[k].empId) === String(id)) isIdDuplicate = true;
+      });
+
+      if (isIdDuplicate) {
+        window.showModal('🚫 แจ้งเตือน', `⚠️ รหัสพนักงาน "${id}" นี้มีในระบบแล้ว!`, null, '<button class="btn-ok" onclick="closeModal()">ตกลง</button>');
+        return;
+      }
+
+      const newRef = window.db.ref('employees').push();
+      newRef.set({
+        empId: id,
+        empName: name,
+        pin,
+        dailyRate: Number(rate),
+        isDriver
+      }, (err) => {
+        if (!err) {
+          window.showModal('🎉 สำเร็จ', 'เพิ่มพนักงานเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
+        }
+      });
+    });
+  }
+
+  function showEditEmpModal(key, id, name, pin, rate, isDriver) {
+    const html = `
+      <div class="user-banner">✏️ แก้ไขพนักงาน: ${name}</div>
+      <input type="hidden" id="editKey" value="${key}">
+      <input type="text" id="editEmpIdInput" value="${id}" placeholder="รหัสพนักงาน">
+      <input type="text" id="editEmpName" value="${name}" placeholder="ชื่อพนักงาน">
+      <input type="password" id="editEmpPin" value="${pin}" placeholder="รหัส PIN" maxlength="4">
+      <input type="number" id="editEmpRate" value="${rate}" placeholder="ค่าแรงต่อวัน">
+      <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
+        <input type="checkbox" id="editEmpDriver" ${isDriver ? 'checked' : ''} style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
+      </label>
+      <button class="btn-blue" onclick="submitEditEmp()">💾 บันทึกการแก้ไข</button>
+      <button class="btn-back" onclick="showEmpManagement()">⬅️ ย้อนกลับ</button>
+    `;
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+  }
+
+  function submitEditEmp() {
+    const key = document.getElementById('editKey')?.value;
+    const newId = document.getElementById('editEmpIdInput')?.value.trim();
+    const name = document.getElementById('editEmpName')?.value.trim();
+    const pin = document.getElementById('editEmpPin')?.value.trim();
+    const rate = document.getElementById('editEmpRate')?.value.trim();
+    const isDriver = document.getElementById('editEmpDriver')?.checked;
+
+    window.db.ref('employees/' + key).update({
+      empId: newId,
+      empName: name,
+      pin,
+      dailyRate: Number(rate),
+      isDriver
+    }, (err) => {
+      if (!err) {
+        window.showModal('🎉 สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
+      }
+    });
+  }
+
+  function confirmDeleteEmp(key, name) {
+    window.showModal('❓ ยืนยันการลบ', `ต้องการลบพนักงาน (${name}) ใช่หรือไม่?`,
+      `<button class="btn-yes" onclick="executeDeleteEmp('${key}')">ใช่, ลบ</button><button class="btn-no" onclick="closeModal()">ยกเลิก</button>`
+    );
+  }
+
+  function executeDeleteEmp(key) {
+    window.db.ref('employees/' + key).remove((_err) => {
+      window.closeModal();
+      window.showEmpManagement();
+    });
+  }
+
+  window.PinThipSafe = window.PinThipSafe || {};
+  window.PinThipSafe.adminOperations = {
+    showAdminAttendanceSummaryReport,
+    setAttendanceDateToday,
+    renderAttendanceSummaryList,
+    showLocationManagement,
+    addNewLocation,
+    showEditLocationModal,
+    submitEditLocation,
+    deleteLocation,
+    executeDeleteLocation,
+    showFuelRequestForm,
+    handleFuelSubmit,
+    showAdminFuelRequests,
+    updateFuelStatusWithAmount,
+    showAdminFuelHistory,
+    loadCarPlatesManagementList,
+    addCarPlate,
+    deleteCarPlate,
+    setFuelDateToday,
+    renderFuelHistoryList,
+    renderCarExpenseChart,
+    exportFuelHistoryExcel,
+    showEditFuelModal,
+    submitEditFuel,
+    confirmDeleteFuel,
+    executeDeleteFuel,
+    showAdminLeaves,
+    updateLeaveStatusAndHide,
+    showAdminLeaveHistory,
+    setLeaveDateToday,
+    renderLeaveHistoryList,
+    exportLeaveHistoryExcel,
+    adminUpdateLeaveStatus,
+    adminDeleteLeave,
+    executeAdminDeleteLeave,
+    showAdminLogsHistory,
+    setLogDateToday,
+    renderLogHistoryList,
+    exportLogHistoryExcel,
+    showDailyPayroll,
+    setPayrollDateToday,
+    renderDailyPayrollData,
+    exportPayrollExcel,
+    showAnalyticsReport,
+    renderMonthlySummary,
+    exportMonthlyExcel,
+    showEmpManagement,
+    saveGlobalLateTime,
+    showAddEmpModal,
+    submitAddEmp,
+    showEditEmpModal,
+    submitEditEmp,
+    confirmDeleteEmp,
+    executeDeleteEmp,
+  };
+
+  window.showAdminAttendanceSummaryReport = showAdminAttendanceSummaryReport;
+  window.setAttendanceDateToday = setAttendanceDateToday;
+  window.renderAttendanceSummaryList = renderAttendanceSummaryList;
+  window.exportAttendanceSummaryExcel = exportAttendanceSummaryExcel;
+
+  window.showLocationManagement = showLocationManagement;
+  window.addNewLocation = addNewLocation;
+  window.showEditLocationModal = showEditLocationModal;
+  window.submitEditLocation = submitEditLocation;
+  window.deleteLocation = deleteLocation;
+  window.executeDeleteLocation = executeDeleteLocation;
+
+  window.showFuelRequestForm = showFuelRequestForm;
+  window.handleFuelSubmit = handleFuelSubmit;
+  window.showAdminFuelRequests = showAdminFuelRequests;
+  window.updateFuelStatusWithAmount = updateFuelStatusWithAmount;
+  window.showAdminFuelHistory = showAdminFuelHistory;
+  window.loadCarPlatesManagementList = loadCarPlatesManagementList;
+  window.addCarPlate = addCarPlate;
+  window.deleteCarPlate = deleteCarPlate;
+  window.setFuelDateToday = setFuelDateToday;
+  window.renderFuelHistoryList = renderFuelHistoryList;
+  window.renderCarExpenseChart = renderCarExpenseChart;
+  window.exportFuelHistoryExcel = exportFuelHistoryExcel;
+  window.showEditFuelModal = showEditFuelModal;
+  window.submitEditFuel = submitEditFuel;
+  window.confirmDeleteFuel = confirmDeleteFuel;
+  window.executeDeleteFuel = executeDeleteFuel;
+
+  window.showAdminLeaves = showAdminLeaves;
+  window.updateLeaveStatusAndHide = updateLeaveStatusAndHide;
+  window.showAdminLeaveHistory = showAdminLeaveHistory;
+  window.setLeaveDateToday = setLeaveDateToday;
+  window.renderLeaveHistoryList = renderLeaveHistoryList;
+  window.exportLeaveHistoryExcel = exportLeaveHistoryExcel;
+  window.adminUpdateLeaveStatus = adminUpdateLeaveStatus;
+  window.adminDeleteLeave = adminDeleteLeave;
+  window.executeAdminDeleteLeave = executeAdminDeleteLeave;
+
+  window.showAdminLogsHistory = showAdminLogsHistory;
+  window.setLogDateToday = setLogDateToday;
+  window.renderLogHistoryList = renderLogHistoryList;
+  window.exportLogHistoryExcel = exportLogHistoryExcel;
+
+  window.showDailyPayroll = showDailyPayroll;
+  window.setPayrollDateToday = setPayrollDateToday;
+  window.renderDailyPayrollData = renderDailyPayrollData;
+  window.exportPayrollExcel = exportPayrollExcel;
+
+  window.showAnalyticsReport = showAnalyticsReport;
+  window.renderMonthlySummary = renderMonthlySummary;
+  window.exportMonthlyExcel = exportMonthlyExcel;
+
+  window.showEmpManagement = showEmpManagement;
+  window.saveGlobalLateTime = saveGlobalLateTime;
+  window.showAddEmpModal = showAddEmpModal;
+  window.submitAddEmp = submitAddEmp;
+  window.showEditEmpModal = showEditEmpModal;
+  window.submitEditEmp = submitEditEmp;
+  window.confirmDeleteEmp = confirmDeleteEmp;
+  window.executeDeleteEmp = executeDeleteEmp;
+})();

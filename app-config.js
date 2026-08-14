@@ -25,9 +25,14 @@
     pin: String(runtimeAdminCredentials.pin || defaultAdminCredentials.pin)
   };
 
+  const sessionSettings = {
+    adminSessionTtlMinutes: 60 * 24 * 30
+  };
+
   window.PinThipSafe = window.PinThipSafe || {};
   window.PinThipSafe.config = {
     firebaseConfig,
-    adminCredentials
+    adminCredentials,
+    sessionSettings
   };
 })();
