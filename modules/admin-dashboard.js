@@ -24,23 +24,31 @@
 
       window.db.ref('logs').once('value', (logSnap) => {
         const logsObj = logSnap.val() || {};
-        let presentToday = 0;
-        let todaySalaryTotal = 0;
+        window.db.ref('leaves').once('value', (leaveSnap) => {
+          const leavesObj = leaveSnap.val() || {};
+          const approvedLeaveEmployeeIds = new Set(
+            Object.values(leavesObj)
+              .filter((leave) => String(leave.status || '').includes('อนุมัติแล้ว') && leave.startDate <= todayStr && leave.endDate >= todayStr)
+              .map((leave) => String(leave.empId))
+          );
+          let presentToday = 0;
+          let todaySalaryTotal = 0;
+          const countedEmployeeIds = new Set();
 
-        Object.keys(logsObj).forEach((k) => {
-          const log = logsObj[k];
-          if (log.date === todayStr && log.type === 'เข้างาน') {
+          Object.keys(logsObj).forEach((k) => {
+            const log = logsObj[k];
+            const employeeId = String(log.empId);
+            if (log.date !== todayStr || log.type !== 'เข้างาน' || approvedLeaveEmployeeIds.has(employeeId) || countedEmployeeIds.has(employeeId)) return;
+
+            const employee = Object.values(employeesObj).find((emp) => String(emp.empId) === employeeId);
+            if (!employee) return;
+
+            countedEmployeeIds.add(employeeId);
             presentToday++;
-            Object.keys(employeesObj).forEach((ek) => {
-              const emp = employeesObj[ek];
-              if (String(emp.empId) === String(log.empId)) {
-                todaySalaryTotal += Number(emp.dailyRate || 0);
-              }
-            });
-          }
-        });
+            todaySalaryTotal += Number(employee.dailyRate || 0);
+          });
 
-        window.db.ref('fuel_requests').once('value', (fuelSnap) => {
+          window.db.ref('fuel_requests').once('value', (fuelSnap) => {
           const fuelObj = fuelSnap.val() || {};
           let pendingFuel = 0;
           let todayFuelOnlyTotal = 0;
@@ -120,7 +128,7 @@
                   <p>จัดการคำขอลาและตรวจสอบสถานะ</p>
                 </div>
                 <div>
-                  <button class="btn-orange" onclick="showAdminLeaves()">🌴 ตรวจสอบ/อนุมัติใบลา</button>
+                  <button class="btn-orange" id="dashboardLeavesButton" onclick="showAdminLeaves()">🌴 ตรวจสอบ/อนุมัติใบลา <span class="drawer-badge" id="dashboardLeavesBadge">0</span></button>
                   <button class="btn-history" onclick="showAdminLeaveHistory()" style="margin-top:5px;">📜 ประวัติการลาทั้งหมด</button>
                 </div>
               </div>
@@ -131,7 +139,7 @@
                   <p>รออนุมัติ: <b style="color:#d9534f;">${pendingFuel}</b> รายการ</p>
                 </div>
                 <div>
-                  <button class="btn-fuel" onclick="showAdminFuelRequests()">⛽/🔧 ตรวจสอบ/อนุมัติเบิกจ่าย</button>
+                  <button class="btn-fuel" id="dashboardFuelsButton" onclick="showAdminFuelRequests()">⛽/🔧 ตรวจสอบ/อนุมัติเบิกจ่าย <span class="drawer-badge" id="dashboardFuelsBadge">0</span></button>
                   <button class="btn-history" onclick="showAdminFuelHistory()" style="margin-top:5px;">📜 ประวัติ & จัดการเบิกจ่าย</button>
                 </div>
               </div>
@@ -145,9 +153,11 @@
           `;
           const mainContent = document.getElementById('mainContent');
           if (mainContent) mainContent.innerHTML = html;
+          if (typeof window.updateAdminBellBadgeCount === 'function') window.updateAdminBellBadgeCount();
           if (typeof window.loadTodayListRealtime === 'function') {
             window.loadTodayListRealtime();
           }
+          });
         });
       });
     });
@@ -184,8 +194,8 @@
 
           <h3 style="margin-top:20px;">⚡ เมนูด่วนแอดมิน</h3>
           <button class="btn-fuel" onclick="openAdminQuickModal('job')" style="font-size:13px; padding:10px;">📦 จัดการจ๊อบส่งของ</button>
-          <button class="btn-blue" onclick="openAdminQuickModal('fuel')" style="font-size:13px; padding:10px; margin-top:5px;">⛽/🔧 อนุมัติเบิกค่าน้ำมัน/ค่าซ่อม</button>
-          <button class="btn-orange" onclick="openAdminQuickModal('leave')" style="font-size:13px; padding:10px; margin-top:5px;">🌴 อนุมัติใบลา</button>
+          <button class="btn-blue" onclick="openAdminQuickModal('fuel')" style="font-size:13px; padding:10px; margin-top:5px;">⛽/🔧 อนุมัติเบิกค่าน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="quickFuelsBadge">0</span></button>
+          <button class="btn-orange" onclick="openAdminQuickModal('leave')" style="font-size:13px; padding:10px; margin-top:5px;">🌴 อนุมัติใบลา <span class="drawer-badge" id="quickLeavesBadge">0</span></button>
         </div>
 
         <div class="command-column">
@@ -204,6 +214,7 @@
 
     const mainContent = document.getElementById('mainContent');
     if (mainContent) mainContent.innerHTML = html;
+    if (typeof window.updateAdminBellBadgeCount === 'function') window.updateAdminBellBadgeCount();
     loadCommandCenterData(todayStr);
   }
 
@@ -306,6 +317,7 @@
                     🏬 ร้าน: <b>${j.customerName}</b><br>
                     สถานะ: <span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span>
                     ${viewPhotoBtn}
+                    <button class="btn-danger" style="width:auto; margin:8px 0 0; padding:6px 10px; font-size:12px;" onclick="adminDeleteDeliveryStatus('${j.key}')">🗑️ ลบรายการส่งของ</button>
                   </div>
                 `;
               });
@@ -314,6 +326,19 @@
           });
         });
       });
+    });
+  }
+
+  function adminDeleteDeliveryStatus(jobKey) {
+    if (!window.confirm('ต้องการลบรายการส่งของนี้ใช่หรือไม่?')) return;
+
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
+    window.db.ref(`delivery_jobs/${todayStr}/${jobKey}`).remove((error) => {
+      if (error) {
+        window.alert('ลบรายการส่งของไม่สำเร็จ กรุณาลองใหม่');
+        return;
+      }
+      showAdminCommandCenter();
     });
   }
 
@@ -326,4 +351,5 @@
   window.showAdminDashboard = showAdminDashboard;
   window.showAdminCommandCenter = showAdminCommandCenter;
   window.loadCommandCenterData = loadCommandCenterData;
+  window.adminDeleteDeliveryStatus = adminDeleteDeliveryStatus;
 })();

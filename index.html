@@ -25,8 +25,8 @@
   <script src="./app-i18n.js"></script>
   <script src="./modules/ui-helpers.js"></script>
   <script src="./modules/employee-dashboard.js"></script>
-  <script src="./modules/admin-dashboard.js"></script>
-  <script src="./modules/admin-operations.js"></script>
+  <script src="./modules/admin-dashboard.js?v=attendance-fix-5"></script>
+  <script src="./modules/admin-operations.js?v=report-fix-2"></script>
   <script src="./modules/admin-job-operations.js"></script>
 
   <style>
@@ -114,6 +114,7 @@
     }
 
     .lang-switcher { display: flex; gap: 5px; }
+    .home-btn { width: auto !important; margin: 0 !important; padding: 5px 9px !important; font-size: 18px !important; line-height: 1 !important; border-radius: 6px !important; background: #e0e0e0 !important; color: #333 !important; border: 1px solid #ccc !important; box-shadow: none !important; }
     .lang-btn { width: auto !important; padding: 4px 8px !important; font-size: 12px !important; margin: 0 !important; border-radius: 6px !important; background-color: #e0e0e0; color: #333; border: 1px solid #ccc !important; cursor: pointer; }
     .lang-btn.active { background-color: #0d6efd; color: white; border-color: #0d6efd !important; }
     
@@ -228,8 +229,10 @@
     .drawer-menu { position: fixed; top: 0; left: -280px; width: 280px; height: 100%; background: white; z-index: 1000; box-shadow: 5px 0 15px rgba(0,0,0,0.2); transition: left 0.3s ease; display: flex; flex-direction: column; box-sizing: border-box; padding: 20px; text-align: left; overflow-y: auto; }
     .drawer-menu.open { left: 0; }
     .drawer-header { font-weight: bold; font-size: 18px; color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .drawer-section-label { margin: 14px 0 4px; color: #6c757d; font-size: 11px; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; }
     .drawer-item { padding: 12px 10px; margin: 5px 0; border-radius: 8px; cursor: pointer; font-size: 15px; color: #333; background: #f8f9fa; border: 1px solid #e9ecef; font-weight: bold; transition: background 0.2s; }
     .drawer-item:hover { background: #e2e6ea; }
+    .drawer-badge { float: right; min-width: 22px; padding: 2px 6px; border-radius: 12px; background: #dc3545; color: white; font-size: 12px; line-height: 18px; text-align: center; box-sizing: border-box; }
 
     .list-box { margin-top: 20px; padding-top: 15px; border-top: 2px dashed #eee; text-align: left; display: none; }
     .list-title { font-size: 14px; font-weight: bold; color: #555; margin-bottom: 8px; }
@@ -292,6 +295,7 @@
       </div>
       <h1 id="companyTitle">บริษัท ปิ่นทิพย์ จำกัด</h1>
       <div class="lang-switcher">
+        <button class="home-btn" id="homeBtn" onclick="goHome()" title="กลับหน้าหลัก" aria-label="กลับหน้าหลัก">←</button>
         <button class="lang-btn active" id="btnTH" onclick="setLanguage('TH')">🇹🇭</button>
         <button class="lang-btn" id="btnMM" onclick="setLanguage('MM')">🇲🇲</button>
       </div>
@@ -315,21 +319,30 @@
       <span>👑 เมนูผู้ดูแลระบบ</span>
       <span onclick="toggleDrawer(false)" style="cursor:pointer; font-size:22px;">&times;</span>
     </div>
+    <div class="drawer-section-label">ภาพรวม</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()">🏠 แดสบอร์ดภาพรวม</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()">⚡ ศูนย์บัญชาการเบ็ดเสร็จ (Live Center)</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()">📦 จัดการ & มอบหมายจ๊อบส่งของ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()">📜 ประวัติการส่งของย้อนหลัง</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">👥 สรุปสถิติ ขาด ลา มาสาย</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">📜 ดูการลงเวลาทำงานย้อนหลัง</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">🌴 อนุมัติคำขอลา</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaveHistory()">📜 ประวัติการขอลางานทั้งหมด</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">⛽ อนุมัติเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelHistory()">📜 ประวัติ & จัดการเบิกค่าน้ำมัน/ค่าซ่อมรถ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showDailyPayroll()">💵 สรุปค่าแรงรายวัน (เจาะลึกย้อนหลัง)</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAnalyticsReport()">📈 สรุปค่าใช้จ่ายประจำเดือน</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showLocationManagement()">📍 จัดการพิกัด GPS & รัศมี</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showHolidayManagement()">🗓️ จัดการวันหยุดร้าน</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showEmpManagement()">⚙️ จัดการพนักงาน & สิทธิ์ขับรถ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()">⚡ ศูนย์บัญชาการ Live</div>
+
+    <div class="drawer-section-label">งานส่งของ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()">📦 มอบหมายจ๊อบส่งของ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()">📜 ประวัติการส่งของ</div>
+
+    <div class="drawer-section-label">รออนุมัติ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">🌴 อนุมัติคำขอลา <span class="drawer-badge" id="pendingLeavesBadge">0</span></div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">⛽ อนุมัติน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="pendingFuelsBadge">0</span></div>
+
+    <div class="drawer-section-label">พนักงาน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">👥 สรุปขาด ลา สาย</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">📜 ประวัติลงเวลา</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showEmpManagement()">⚙️ จัดการพนักงาน</div>
+
+    <div class="drawer-section-label">รายงานและตั้งค่า</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaveHistory()">📜 ประวัติการลา</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelHistory()">📜 ประวัติเบิกจ่าย</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showDailyPayroll()">💵 ค่าแรงรายวัน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAnalyticsReport()">📈 ค่าใช้จ่ายรายเดือน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showLocationManagement()">📍 พิกัด GPS</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showHolidayManagement()">🗓️ วันหยุดร้าน</div>
     <div class="drawer-item" onclick="toggleDrawer(false); handleLogout()" style="color:#dc3545; margin-top:auto;">🚪 ออกจากระบบ</div>
   </div>
 
@@ -479,6 +492,12 @@
       else showLoginForm();
     }
 
+    function goHome() {
+      if (isAdmin) showAdminDashboard();
+      else if (currentUser) showDashboard();
+      else showLoginForm();
+    }
+
     function toggleDrawer(open) {
       const drawer = document.getElementById('drawerMenu');
       const overlay = document.getElementById('drawerOverlay');
@@ -551,6 +570,32 @@
           badge.style.display = 'none';
         }
       }
+
+      const leavesBadge = document.getElementById('pendingLeavesBadge');
+      const fuelsBadge = document.getElementById('pendingFuelsBadge');
+      if (leavesBadge) {
+        leavesBadge.innerText = pendingLeavesCache.length;
+        leavesBadge.style.display = pendingLeavesCache.length > 0 ? 'inline-block' : 'none';
+      }
+      if (fuelsBadge) {
+        fuelsBadge.innerText = pendingFuelsCache.length;
+        fuelsBadge.style.display = pendingFuelsCache.length > 0 ? 'inline-block' : 'none';
+      }
+
+      ['dashboardLeavesBadge', 'quickLeavesBadge'].forEach((id) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.innerText = pendingLeavesCache.length;
+          element.style.display = pendingLeavesCache.length > 0 ? 'inline-block' : 'none';
+        }
+      });
+      ['dashboardFuelsBadge', 'quickFuelsBadge'].forEach((id) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.innerText = pendingFuelsCache.length;
+          element.style.display = pendingFuelsCache.length > 0 ? 'inline-block' : 'none';
+        }
+      });
     }
 
     let myPendingJobsCache = [];
@@ -757,6 +802,28 @@
       document.getElementById('customModal').style.display = 'flex';
     }
 
+    function openAdminQuickModal(type) {
+      const quickTitles = {
+        job: '📦 จัดการจ๊อบส่งของด่วน',
+        fuel: '⛽/🔧 อนุมัติเบิกจ่ายด่วน',
+        leave: '🌴 อนุมัติใบลาด่วน'
+      };
+      const loaders = {
+        job: loadQuickJobContent,
+        fuel: loadQuickFuelContent,
+        leave: loadQuickLeaveContent
+      };
+      const loader = loaders[type];
+      if (!loader) return;
+
+      openWideModal(
+        quickTitles[type],
+        '<div id="quickModalContent">กำลังโหลด...</div>',
+        '<button class="btn-back" onclick="closeModal()">ปิด</button>'
+      );
+      loader();
+    }
+
     function loadQuickJobContent() {
       const todayStr = getLocalDateTimeString();
       db.ref('employees').once('value', (empSnap) => {
@@ -835,6 +902,20 @@
       showAdminCommandCenter();
     }
 
+      function adminDeleteQuickJob(jobKey) {
+        if (!confirm('ต้องการลบรายการส่งของนี้ใช่หรือไม่?')) return;
+
+        const todayStr = getLocalDateTimeString();
+        db.ref(`delivery_jobs/${todayStr}/${jobKey}`).remove((err) => {
+          if (err) {
+            alert('ลบรายการส่งของไม่สำเร็จ กรุณาลองใหม่');
+            return;
+          }
+          loadQuickJobContent();
+          showAdminCommandCenter();
+        });
+      }
+
     function renderQuickJobsOverview(jobsObj, driversList) {
       const container = document.getElementById('quickTodayJobsOverview');
       if (!container) return;
@@ -859,7 +940,7 @@
         g.jobs.forEach(j => {
           let isCompleted = String(j.status).includes('สำเร็จ');
           let badgeColor = isCompleted ? '#28a745' : '#e67e22';
-          html += `<div style="background:white; padding:6px 10px; border-radius:6px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; font-size:13px;"><div>🏬 <b>${j.customerName}</b><br><span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span></div><button class="btn-blue" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}'); loadQuickJobContent(); showAdminCommandCenter();">🔄 สลับสถานะ</button></div>`;
+          html += `<div style="background:white; padding:6px 10px; border-radius:6px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items:center; font-size:13px;"><div>🏬 <b>${j.customerName}</b><br><span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span></div><div style="display:flex; gap:4px;"><button class="btn-blue" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminToggleJobStatus('${j.key}', '${j.status}'); loadQuickJobContent(); showAdminCommandCenter();">🔄 สลับสถานะ</button><button class="btn-danger" style="width:auto; margin:0; padding:4px 8px; font-size:11px;" onclick="adminDeleteQuickJob('${j.key}')">🗑️ ลบ</button></div></div>`;
         });
         html += `</div></div>`;
       });

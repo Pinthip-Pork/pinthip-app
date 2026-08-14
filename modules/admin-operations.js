@@ -1204,21 +1204,24 @@
 
       window.db.ref('logs').once('value', (logSnap) => {
         const logsObj = logSnap.val() || {};
-        let salaryTotal = 0;
-        const presentList = [];
+        const attendanceByEmployeeDate = new Map();
 
         Object.keys(logsObj).forEach((k) => {
           const log = logsObj[k];
           if (log.date >= startDate && log.date <= endDate && log.type === 'เข้างาน') {
-            let rate = 0;
-            Object.keys(employeesObj).forEach((ek) => {
-              const emp = employeesObj[ek];
-              if (String(emp.empId) === String(log.empId)) rate = Number(emp.dailyRate || 0);
-            });
-            salaryTotal += rate;
-            presentList.push({ name: log.empName, id: log.empId, date: log.date, time: log.time, rate });
+            const employee = Object.values(employeesObj).find((emp) => String(emp.empId) === String(log.empId));
+            if (!employee) return;
+
+            const attendanceKey = `${employee.empId}|${log.date}`;
+            const existing = attendanceByEmployeeDate.get(attendanceKey);
+            if (!existing || String(log.time || '') < String(existing.time || '')) {
+              attendanceByEmployeeDate.set(attendanceKey, { name: log.empName, id: log.empId, date: log.date, time: log.time, rate: Number(employee.dailyRate || 0) });
+            }
           }
         });
+
+        const presentList = Array.from(attendanceByEmployeeDate.values());
+        const salaryTotal = presentList.reduce((total, item) => total + item.rate, 0);
 
         window.db.ref('fuel_requests').once('value', (fuelSnap) => {
           const fuelObj = fuelSnap.val() || {};
@@ -1369,19 +1372,21 @@
         window.db.ref('fuel_requests').once('value', (fuelSnap) => {
           const fuelObj = fuelSnap.val() || {};
 
-          let totalSalary = 0;
+            const attendanceDaysByEmployee = new Map();
           let totalFuel = 0;
           let totalRepair = 0;
 
           Object.keys(empObj).forEach((ek) => {
             const emp = empObj[ek];
-            let days = 0;
+              const employeeDates = new Set();
             Object.keys(logObj).forEach((lk) => {
               const l = logObj[lk];
-              if (String(l.empId) === String(emp.empId) && l.date && l.date.startsWith(ym) && l.type === 'เข้างาน') days++;
+                if (String(l.empId) === String(emp.empId) && l.date && l.date.startsWith(ym) && l.type === 'เข้างาน') employeeDates.add(l.date);
             });
-            totalSalary += days * Number(emp.dailyRate || 0);
+              attendanceDaysByEmployee.set(String(emp.empId), { dates: employeeDates, rate: Number(emp.dailyRate || 0) });
           });
+
+            const totalSalary = Array.from(attendanceDaysByEmployee.values()).reduce((total, item) => total + item.dates.size * item.rate, 0);
 
           Object.keys(fuelObj).forEach((fk) => {
             const f = fuelObj[fk];
