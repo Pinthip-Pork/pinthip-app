@@ -28,16 +28,14 @@ exports.loginWithPin = onCall(async (request) => {
 
   const database = getDatabase();
   const [employeesSnapshot, autoApproveSnapshot, deviceSnapshot] = await Promise.all([
-    database.ref('employees').once('value'),
+    database.ref('employees').orderByChild('empId').equalTo(empId).once('value'),
     database.ref('settings/deviceAccessAutoApprove').once('value'),
     database.ref(`device_access/${deviceId}`).once('value')
   ]);
 
   const employees = employeesSnapshot.val() || {};
   const foundEmployee = Object.values(employees).find((employee) => (
-    employee &&
-    String(employee.empId || '').trim() === empId &&
-    String(employee.pin || '').trim() === pin
+    employee && String(employee.pin || '').trim() === pin
   ));
 
   if (!foundEmployee) {

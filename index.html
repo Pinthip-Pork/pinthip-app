@@ -380,6 +380,8 @@
     let devicePresenceKey = null;
     let devicePresenceInterval = null;
     let deviceAccessGuardInterval = null;
+    let deviceAccessEntriesCache = [];
+    let deviceAccessAutoApproveCache = true;
     let notificationAudioContext = null;
     let notificationMode = localStorage.getItem('pinthip_notification_mode') || (localStorage.getItem('pinthip_notification_sound') === 'off' ? 'off' : 'beep');
 
@@ -1069,41 +1071,69 @@
         db.ref('settings/deviceAccessAutoApprove').once('value')
       ]).then(([snapshot, autoApproveSnapshot]) => {
         const devices = snapshot.val() || {};
-        const entries = Object.entries(devices);
-        const autoApproveEnabled = autoApproveSnapshot.val() !== false;
-        const modeLabel = autoApproveEnabled ? 'ออโต้: อุปกรณ์ใหม่ใช้งานได้ทันที' : 'อนุมัติเอง: อุปกรณ์ใหม่ต้องรอ Admin';
-        let html = `<div class="user-banner">โหมดทดลอง: ${modeLabel}<br>
-          <button class="btn-blue" style="width:auto; margin-top:8px; padding:7px 12px;" onclick="setDeviceAutoApprove(${!autoApproveEnabled})">
-            ${autoApproveEnabled ? 'ปิดออโต้ ใช้การอนุมัติเอง' : 'เปิดออโต้ อนุมัติอุปกรณ์ใหม่ทันที'}
-          </button>
-        </div>`;
-        if (entries.length === 0) {
-          html += '<div class="no-data">ยังไม่มีอุปกรณ์ที่ลงทะเบียน</div>';
-        } else {
-          entries.forEach(([deviceId, device]) => {
-            const status = String(device.status || 'active');
-            const statusLabel = status === 'blocked' ? 'ถูกระงับ' : (status === 'pending' ? 'รออนุมัติ' : 'ใช้งานได้');
-            const nextStatus = status === 'blocked' || status === 'pending' ? 'active' : 'blocked';
-            const nextLabel = status === 'blocked' || status === 'pending' ? 'อนุมัติ/เปิดใช้งาน' : 'ระงับ';
-            const onlineLabel = device.online ? '🟢 ออนไลน์' : '⚪ ออฟไลน์';
-            const lastSeenLabel = device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString('th-TH') : 'ยังไม่มีข้อมูล';
-            const personLabel = device.role === 'admin' ? 'ผู้ดูแลระบบ' : `${device.empName || '-'} (${device.empId || '-'})`;
-            html += `<div class="history-item" style="margin-bottom:10px; text-align:left;">
-              <b>👤 ${safeText(personLabel)}</b><br>
-              อุปกรณ์: ${safeText(device.deviceInfo || '-')}<br>
-              Device ID: <small>${safeText(deviceId)}</small><br>
-              การเชื่อมต่อ: <b>${onlineLabel}</b><br>
-              Login ล่าสุด: <b>${safeText(lastSeenLabel)}</b><br>
-              สิทธิ์อุปกรณ์: <b>${statusLabel}</b>
-              <button class="btn-blue" style="width:auto; margin:8px 0 0; padding:6px 10px;" onclick="setDeviceAccessStatus('${safeText(deviceId)}', '${nextStatus}')">${nextLabel}</button>
-            </div>`;
-          });
-        }
-        html += '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>';
-        mainContent.innerHTML = html;
+        deviceAccessEntriesCache = Object.entries(devices).map(([deviceId, device]) => ({ deviceId, ...device }));
+        deviceAccessAutoApproveCache = autoApproveSnapshot.val() !== false;
+        renderDeviceAccessManagement();
       }).catch(() => {
         mainContent.innerHTML = '<div class="no-data">โหลดรายการอุปกรณ์ไม่สำเร็จ</div><button class="btn-back" onclick="showAdminDashboard()">⬅️ กลับหน้าแดสบอร์ด</button>';
       });
+    }
+
+    function renderDeviceAccessManagement() {
+      const mainContent = document.getElementById('mainContent');
+      if (!mainContent) return;
+      const search = String(document.getElementById('deviceAccessSearch')?.value || '').trim().toLowerCase();
+      const filter = document.getElementById('deviceAccessFilter')?.value || 'all';
+      const filtered = deviceAccessEntriesCache.filter((device) => {
+        const haystack = `${device.empId || ''} ${device.empName || ''} ${device.deviceInfo || ''} ${device.deviceId}`.toLowerCase();
+        const isDuplicate = deviceAccessEntriesCache.filter((item) => String(item.empId || item.uid || item.deviceId) === String(device.empId || device.uid || device.deviceId)).length > 1;
+        return (!search || haystack.includes(search)) && (filter === 'all' || (filter === 'online' && device.online) || (filter === 'blocked' && device.status === 'blocked') || (filter === 'duplicate' && isDuplicate));
+      });
+      const groups = {};
+      filtered.forEach((device) => {
+        const key = device.role === 'admin' ? 'admin' : `${device.empId || 'unknown'}|${device.uid || ''}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(device);
+      });
+      const modeLabel = deviceAccessAutoApproveCache ? 'ออโต้: อุปกรณ์ใหม่ใช้งานได้ทันที' : 'อนุมัติเอง: อุปกรณ์ใหม่ต้องรอ Admin';
+      let html = `<div class="user-banner">โหมดทดลอง: ${modeLabel}<br>
+        <button class="btn-blue" style="width:auto; margin-top:8px; padding:7px 12px;" onclick="setDeviceAutoApprove(${!deviceAccessAutoApproveCache})">${deviceAccessAutoApproveCache ? 'ปิดออโต้ ใช้การอนุมัติเอง' : 'เปิดออโต้ อนุมัติอุปกรณ์ใหม่ทันที'}</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input id="deviceAccessSearch" value="${safeText(search)}" oninput="renderDeviceAccessManagement()" placeholder="ค้นหาชื่อหรือรหัสพนักงาน" style="margin:0;">
+        <select id="deviceAccessFilter" onchange="renderDeviceAccessManagement()" style="width:auto; margin:0;">
+          <option value="all" ${filter === 'all' ? 'selected' : ''}>ทั้งหมด</option>
+          <option value="online" ${filter === 'online' ? 'selected' : ''}>ออนไลน์</option>
+          <option value="duplicate" ${filter === 'duplicate' ? 'selected' : ''}>มีหลายอุปกรณ์</option>
+          <option value="blocked" ${filter === 'blocked' ? 'selected' : ''}>ถูกระงับ</option>
+        </select>
+      </div>`;
+      if (filtered.length === 0) html += '<div class="no-data">ไม่พบอุปกรณ์ตามเงื่อนไข</div>';
+      Object.entries(groups).forEach(([groupKey, group]) => {
+        const first = group[0];
+        const title = first.role === 'admin' ? '👑 ผู้ดูแลระบบ' : `👤 ${first.empName || '-'} (${first.empId || '-'})`;
+        html += `<div class="user-banner" style="margin-top:10px; margin-bottom:6px;">${safeText(title)} <small>(${group.length} อุปกรณ์${group.length > 1 ? ' / ตรวจสอบรายการซ้ำ' : ''})</small></div>`;
+        group.forEach((device) => {
+          const status = String(device.status || 'active');
+          const statusLabel = status === 'blocked' ? 'ถูกระงับ' : (status === 'pending' ? 'รออนุมัติ' : 'ใช้งานได้');
+          const nextStatus = status === 'blocked' || status === 'pending' ? 'active' : 'blocked';
+          const nextLabel = status === 'blocked' || status === 'pending' ? 'อนุมัติ/เปิดใช้งาน' : 'ระงับ';
+          const onlineLabel = device.online ? '🟢 ออนไลน์' : '⚪ ออฟไลน์';
+          const lastSeenLabel = device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString('th-TH') : 'ยังไม่มีข้อมูล';
+          html += `<div class="history-item" style="margin-bottom:8px; text-align:left;">
+            <b>${safeText(device.deviceInfo || 'อุปกรณ์ไม่ทราบชนิด')}</b> ${device.online ? '🟢' : '⚪'}<br>
+            Device ID: <small>${safeText(device.deviceId)}</small><br>
+            การเชื่อมต่อ: <b>${onlineLabel}</b> | ล่าสุด: <b>${safeText(lastSeenLabel)}</b><br>
+            สิทธิ์: <b>${statusLabel}</b>
+            <div style="display:flex; gap:6px; margin-top:6px;">
+              <button class="btn-blue" style="width:auto; margin:0; padding:6px 10px;" onclick="setDeviceAccessStatus('${safeText(device.deviceId)}', '${nextStatus}')">${nextLabel}</button>
+              <button class="btn-danger" style="width:auto; margin:0; padding:6px 10px;" onclick="deleteDeviceAccess('${safeText(device.deviceId)}')">ลบ</button>
+            </div>
+          </div>`;
+        });
+      });
+      html += '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>';
+      mainContent.innerHTML = html;
     }
 
     function setDeviceAutoApprove(enabled) {
@@ -1122,6 +1152,11 @@
       db.ref(`device_access/${deviceId}`).update({ status, updatedAt: new Date().toISOString() }).then(() => {
         showDeviceAccessManagement();
       });
+    }
+
+    function deleteDeviceAccess(deviceId) {
+      if (!isAdmin || !window.confirm('ลบข้อมูลอุปกรณ์นี้ใช่หรือไม่? เครื่องนี้จะถูกลงทะเบียนใหม่ได้เมื่อ Login อีกครั้ง')) return;
+      db.ref(`device_access/${deviceId}`).remove().then(() => showDeviceAccessManagement());
     }
 
 
