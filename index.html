@@ -16,6 +16,14 @@
   
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="./security-helpers.js"></script>
+  <script src="./app-state.js"></script>
+  <script src="./app-config.js"></script>
+  <script src="./auth.js"></script>
+  <script src="./app-utils.js"></script>
+  <script src="./app-i18n.js"></script>
+  <script src="./modules/ui-helpers.js"></script>
+  <script src="./modules/employee-dashboard.js"></script>
 
   <style>
     body { 
@@ -333,18 +341,7 @@
   </div>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBeBOyADRqJPLfGGREE8vNWBW051hQJKCo",
-      authDomain: "pinthip-checkin.firebaseapp.com",
-      databaseURL: "https://pinthip-checkin-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "pinthip-checkin",
-      storageBucket: "pinthip-checkin.firebasestorage.app",
-      messagingSenderId: "281531263382",
-      appId: "1:281531263382:web:282eaac91c9d64249695b7",
-      measurementId: "G-FWKZ4L2LST"
-    };
-
-    firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(window.PinThipSafe.config.firebaseConfig);
     const db = firebase.database();
 
     let currentLang = 'TH';
@@ -411,128 +408,32 @@
       }
     }
 
-    function getLocalDateTimeString() {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
+    const i18n = window.PinThipSafe.i18n;
 
-    function downloadCSV(filename, rows) {
-      let csvContent = "\uFEFF"; 
-      rows.forEach(function(rowArray) {
-        let row = rowArray.map(item => `"${String(item || '').replace(/"/g, '""')}"`).join(",");
-        csvContent += row + "\r\n";
-      });
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    const i18n = {
-      TH: {
-        companyTitle: "บริษัท ปิ่นทิพย์ จำกัด",
-        pageTitleLogin: "🔑 เข้าสู่ระบบ",
-        pageTitleDashboard: "🏠 เมนูหลัก",
-        pageTitleAdminDashboard: "👑 แดสบอร์ดผู้ดูแลระบบ",
-        pageTitleClockIn: "📍 ลงเวลาเข้า-ออกงาน",
-        pageTitleLeave: "🌴 แบบฟอร์มขอลางาน",
-        pageTitleFuel: "⛽ แจ้งเบิกค่าน้ำมัน / ค่าซ่อมรถ",
-        pageTitleHistory: "📜 ประวัติการมาทำงานของฉัน",
-        listTitle: "📊 สถานะพนักงานวันนี้:",
-        loadingText: "กำลังโหลดข้อมูล...",
-        phEmpId: "รหัสเข้าใช้งาน (4 หลัก)",
-        phPin: "รหัส PIN (4 หลัก)",
-        btnLogin: "เข้าสู่ระบบ",
-        welcome: (name) => `👋 สวัสดีครับ: ${name}`,
-        btnClockInMenu: "⏰ ลงเวลาเข้า-ออกงาน",
-        btnLeaveMenu: "🌴 ขอลางาน",
-        btnFuelMenu: "⛽ เบิกค่าน้ำมัน / ค่าซ่อมรถ",
-        btnMyAttendance: "📜 ประวัติการทำงานของฉัน",
-        btnHistoryMenu: "📜 ประวัติการขอลางาน / เบิกค่าใช้จ่าย",
-        btnLogout: "🚪 ออกจากระบบ",
-        optIn: "☀️ เข้างาน",
-        btnSubmitClockIn: "กดลงเวลา",
-        optSick: "ลาป่วย",
-        optPersonal: "ลากิจ",
-        optVacation: "ลาพักร้อน / ลาหยุด",
-        startDate: "เริ่มลานวันที่",
-        endDate: "ถึงวันที่",
-        phReason: "เหตุผลการลา",
-        btnSubmitLeave: "ส่งใบลา",
-        btnBack: "⬅️ กลับหน้าหลัก",
-        checking: "⏳ กำลังตรวจสอบ...",
-        emptyInputErr: "⚠️ กรุณากรอกรหัสและ PIN",
-        successTitle: "🎉 สำเร็จ!",
-        errTitle: "🚫 แจ้งเตือน",
-        btnOk: "ตกลง"
-      },
-      MM: {
-        companyTitle: "ပင်းသစ် ကုမ္ပဏီ လီမိတက်",
-        pageTitleLogin: "🔑 အကောင့်ဝင်ရန်",
-        pageTitleDashboard: "🏠 ပင်မစာမျက်နှာ",
-        pageTitleAdminDashboard: "👑 အုပ်ချုပ်သူ မီနူး",
-        pageTitleClockIn: "📍 အလုပ်ဝင်/ထွက်ချိန် မှတ်တမ်း",
-        pageTitleLeave: "🌴 ခွင့်တောင်းလွှာ ဖောင်",
-        pageTitleFuel: "⛽ ဆီဘိုး / ကားပြင်စရိတ် တောင်းခံရန်",
-        pageTitleHistory: "📜 မှတ်တမ်း",
-        listTitle: "📊 ယနေ့ ဝန်ထမ်းများ၏ အခြေအနေ:",
-        loadingText: "ဒေတာရယူနေသည်...",
-        phEmpId: "ID အမှတ်",
-        phPin: "PIN နံပါတ်",
-        btnLogin: "အကောင့်ဝင်မည်",
-        welcome: (name) => `👋 မင်္ဂလာပါ: ${name}`,
-        btnClockInMenu: "⏰ အလုပ်ဝင်/ထွက်ချိန်",
-        btnLeaveMenu: "🌴 ခွင့်တောင်းရန်",
-        btnFuelMenu: "⛽ ဆီဘိုး / ကားပြင်စရိတ် တောင်းခံရန်",
-        btnMyAttendance: "📜 အလုပ်ချိန် မှတ်တမ်း",
-        btnHistoryMenu: "📜 ခွင့်/စရိတ် မှတ်တမ်း",
-        btnLogout: "🚪 အကောင့်ထွက်မည်",
-        optIn: "☀️ အလုပ်ဝင်",
-        btnSubmitClockIn: "အချိန်မှတ်တမ်းတင်ရန်",
-        optSick: "ဆေးခွင့်",
-        optPersonal: "အလုပ်ကိစ္စ ခွင့်",
-        optVacation: "အားလပ်ရက် ခွင့်",
-        startDate: "စတင်သည့် ရက်စွဲ",
-        endDate: "ပြီးဆုံးသည့် ရက်စွဲ",
-        phReason: "အကြောင်းအရင်း",
-        btnSubmitLeave: "ခွင့်တောင်းလွှာ ပို့မည်",
-        btnBack: "⬅️ ပြန်သွားရန်",
-        checking: "⏳ စစ်ဆေးနေသည်...",
-        emptyInputErr: "⚠️ ID နှင့် PIN ဖြည့်စွက်ပါ",
-        successTitle: "🎉 အောင်မြင်ပါသည်!",
-        errTitle: "🚫 သတိပေးချက်",
-        btnOk: "ကောင်းပြီ"
-      }
-    };
+    const getLocalDateTimeString = window.PinThipSafe.utils.getLocalDateTimeString;
+    const downloadCSV = window.PinThipSafe.utils.downloadCSV;
 
     function initApp() {
       try {
-        const savedAdmin = localStorage.getItem('app_is_admin');
-        const savedUser = localStorage.getItem('app_user_data');
+        const restored = PinThipSafe.session.restoreSession();
 
-        if (savedAdmin === 'true') {
+        if (restored.isAdmin) {
           isAdmin = true;
           currentUser = null;
           showAdminDashboard();
           startAdminNotificationListener();
-        } else if (savedUser) {
-          currentUser = JSON.parse(savedUser);
+        } else if (restored.currentUser && restored.currentUser.empId) {
+          currentUser = restored.currentUser;
           isAdmin = false;
           showDashboard();
           startEmployeeNotificationListener();
         } else {
+          PinThipSafe.session.clearAuthState();
           showLoginForm();
         }
       } catch (e) {
+        console.warn('Init app failed:', e);
+        PinThipSafe.session.clearAuthState();
         showLoginForm();
       }
     }
@@ -736,10 +637,7 @@
     }
 
     function getDeviceInfo() {
-      const ua = navigator.userAgent;
-      let os = ua.indexOf("iPhone") !== -1 ? "iPhone" : (ua.indexOf("Android") !== -1 ? "Android" : "PC/Web");
-      let browser = ua.indexOf("Line") !== -1 ? "Line App" : "Browser";
-      return `${os} (${browser})`;
+      return window.PinThipSafe.utils.getDeviceInfo();
     }
 
     function showLoginForm() {
@@ -751,15 +649,7 @@
       document.getElementById('pageTitle').innerText = t.pageTitleLogin;
       document.getElementById('status').innerText = "";
       document.getElementById('listBox').style.display = "none";
-
-      const html = `
-        <form onsubmit="event.preventDefault(); handleLogin();">
-          <input type="text" id="loginId" autocomplete="username" placeholder="${t.phEmpId}" oninput="validateUsernameLength(this)">
-          <input type="password" id="loginPin" autocomplete="current-password" placeholder="${t.phPin}" maxlength="4">
-          <button type="submit">${t.btnLogin}</button>
-        </form>
-      `;
-      document.getElementById('mainContent').innerHTML = html;
+      document.getElementById('mainContent').innerHTML = window.PinThipSafe.employeeDashboard.buildLoginHtml(t);
     }
 
     function validateUsernameLength(input) {
@@ -784,12 +674,12 @@
 
       statusDiv.innerHTML = t.checking;
 
-      if (inputId.toLowerCase() === "admin" && inputPin === "8888") {
+      const adminAttempt = window.PinThipSafe.auth.tryLoginAdmin(inputId, inputPin);
+      if (adminAttempt.allowed) {
         statusDiv.innerHTML = "";
-        isAdmin = true;
-        currentUser = null;
-        localStorage.setItem('app_is_admin', 'true');
-        localStorage.removeItem('app_user_data');
+        const sessionState = PinThipSafe.session.setAdminSession();
+        isAdmin = sessionState.isAdmin;
+        currentUser = sessionState.currentUser;
         showAdminDashboard();
         startAdminNotificationListener();
         return;
@@ -797,32 +687,26 @@
 
       db.ref('employees').once('value', (snapshot) => {
         const employees = snapshot.val();
-        let foundUser = null;
-
-        if (employees) {
-          Object.keys(employees).forEach(key => {
-            let emp = employees[key];
-            if (emp.empId === inputId && emp.pin === inputPin) {
-              foundUser = emp;
-            }
-          });
-        }
+        const foundUser = window.PinThipSafe.auth.findEmployeeByCredentials(employees, inputId, inputPin);
 
         if (foundUser) {
           statusDiv.innerHTML = "";
           isAdmin = false;
-          currentUser = { 
-            success: true, 
-            empId: foundUser.empId, 
-            empName: foundUser.empName, 
-            isDriver: foundUser.isDriver || false 
-          };
-          localStorage.setItem('app_user_data', JSON.stringify(currentUser));
-          localStorage.removeItem('app_is_admin');
+          currentUser = window.PinThipSafe.auth.normalizeSessionUser({
+            success: true,
+            empId: foundUser.empId,
+            empName: foundUser.empName,
+            isDriver: foundUser.isDriver || false,
+            pin: foundUser.pin,
+            role: foundUser.role || 'employee'
+          });
+          const sessionState = PinThipSafe.session.setUserSession(currentUser);
+          currentUser = sessionState.currentUser;
+          isAdmin = sessionState.isAdmin;
           showDashboard();
           startEmployeeNotificationListener();
         } else {
-          statusDiv.innerHTML = "❌ รหัสเข้าใช้งาน หรือ PIN ไม่ถูกต้อง!";
+          statusDiv.innerHTML = adminAttempt.allowed ? "" : "❌ รหัสเข้าใช้งาน หรือ PIN ไม่ถูกต้อง!";
         }
       });
     }
@@ -2041,25 +1925,7 @@
       document.getElementById('pageTitle').innerText = t.pageTitleDashboard;
       document.getElementById('status').innerText = "";
       document.getElementById('listBox').style.display = "block";
-
-      let driverExtrasHtml = '';
-      if (currentUser.isDriver) {
-        driverExtrasHtml = `
-          <button class="btn-fuel" onclick="showDriverMyJobsView()">📦 งานส่งของของฉันวันนี้</button>
-          <button class="btn-fuel" onclick="showFuelRequestForm()">${t.btnFuelMenu}</button>
-        `;
-      }
-
-      const html = `
-        <div class="user-banner">${t.welcome(currentUser.empName)} (${currentUser.empId})</div>
-        <button class="btn-clock" onclick="showClockInForm()">${t.btnClockInMenu}</button>
-        ${driverExtrasHtml}
-        <button class="btn-leave" onclick="showLeaveForm()">${t.btnLeaveMenu}</button>
-        <button class="btn-history" onclick="showMyAttendance()">${t.btnMyAttendance}</button>
-        <button class="btn-purple" onclick="showHistory()">${t.btnHistoryMenu}</button>
-        <button class="btn-logout" onclick="handleLogout()">${t.btnLogout}</button>
-      `;
-      document.getElementById('mainContent').innerHTML = html;
+      document.getElementById('mainContent').innerHTML = window.PinThipSafe.employeeDashboard.buildDashboardHtml(currentUser, t);
       loadTodayListRealtime();
     }
 
@@ -3639,13 +3505,7 @@
     }
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371e3;
-      const φ1 = lat1 * Math.PI/180;
-      const φ2 = lat2 * Math.PI/180;
-      const Δφ = (lat2-lat1) * Math.PI/180;
-      const Δλ = (lon2-lon1) * Math.PI/180;
-      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-      return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))));
+      return window.PinThipSafe.utils.calculateDistance(lat1, lon1, lat2, lon2);
     }
 
     function executeClockIn(lateReason) {
@@ -3935,8 +3795,7 @@
     function handleLogout() {
       currentUser = null;
       isAdmin = false;
-      localStorage.removeItem('app_user_data');
-      localStorage.removeItem('app_is_admin');
+      PinThipSafe.session.clearAuthState();
       showLoginForm();
     }
 
