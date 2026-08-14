@@ -30,7 +30,7 @@
   };
 
   const deviceAccessPilot = {
-    enabled: Boolean(runtimeAdminCredentials.deviceAccessPilotEnabled || false)
+    enabled: Boolean(window.__PINTHIP_DEVICE_ACCESS__?.enabled || runtimeAdminCredentials.deviceAccessPilotEnabled || false)
   };
 
   window.PinThipSafe = window.PinThipSafe || {};
