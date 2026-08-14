@@ -1,4 +1,8 @@
 {
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
   "database": {
     "rules": "firebase.rules.json"
   }

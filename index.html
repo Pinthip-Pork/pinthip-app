@@ -16,6 +16,8 @@
   
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
   <script src="./security-helpers-browser.js"></script>
   <script src="./app-state.js"></script>
   <script src="./device-access-config.js"></script>
@@ -852,6 +854,11 @@
         return;
       }
 
+      if (isCustomAuthEnabled()) {
+        await handleCustomAuthLogin(inputId, inputPin);
+        return;
+      }
+
       db.ref('employees').once('value', async (snapshot) => {
         const employees = snapshot.val();
         const foundUser = window.PinThipSafe.auth.findEmployeeByCredentials(employees, inputId, inputPin);
@@ -890,6 +897,55 @@
 
     function isDeviceAccessPilotEnabled() {
       return Boolean(window.PinThipSafe?.config?.deviceAccessPilot?.enabled);
+    }
+
+    function isCustomAuthEnabled() {
+      return Boolean(window.PinThipSafe?.config?.deviceAccessPilot?.customAuthEnabled);
+    }
+
+    async function handleCustomAuthLogin(inputId, inputPin) {
+      try {
+        const deviceId = window.PinThipSafe.utils.getDeviceId();
+        const callable = firebase.functions().httpsCallable('loginWithPin');
+        const result = await callable({
+          empId: inputId,
+          pin: inputPin,
+          deviceId,
+          deviceInfo: window.PinThipSafe.utils.getDeviceInfo()
+        });
+        await firebase.auth().signInWithCustomToken(result.data.token);
+
+        db.ref('employees').once('value', (snapshot) => {
+          const foundUser = window.PinThipSafe.auth.findEmployeeByCredentials(snapshot.val(), inputId, inputPin);
+          if (!foundUser) {
+            setStatusText('status', 'เข้าสู่ระบบสำเร็จ แต่ไม่พบข้อมูลพนักงาน');
+            return;
+          }
+
+          currentUser = window.PinThipSafe.auth.normalizeSessionUser({
+            empId: foundUser.empId,
+            empName: foundUser.empName,
+            isDriver: foundUser.isDriver || false,
+            role: foundUser.role || 'employee'
+          });
+          const sessionState = PinThipSafe.session.setUserSession(currentUser);
+          currentUser = sessionState.currentUser;
+          isAdmin = false;
+          setStatusText('status', '');
+          showNotificationSoundControl(true);
+          enableNotificationSound();
+          startDevicePresence(result.data.deviceId, currentUser.empName, 'employee');
+          showDashboard();
+          startDeviceAccessGuard();
+          startEmployeeNotificationListener();
+        });
+      } catch (error) {
+        console.warn('Custom auth login failed:', error);
+        const message = error?.details || error?.message || '';
+        setStatusText('status', message.includes('waiting for admin')
+          ? 'อุปกรณ์นี้กำลังรอ Admin อนุมัติ'
+          : (message.includes('blocked') ? 'อุปกรณ์นี้ถูกระงับการใช้งาน' : 'รหัสพนักงานหรือ PIN ไม่ถูกต้อง'));
+      }
     }
 
     function showNotificationSoundControl(visible) {
@@ -1892,6 +1948,7 @@
     function handleLogout() {
       stopDeviceAccessGuard();
       stopDevicePresence();
+      if (window.firebase?.auth) firebase.auth().signOut().catch(() => {});
       currentUser = null;
       isAdmin = false;
       showNotificationSoundControl(false);
