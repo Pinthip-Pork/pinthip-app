@@ -1,7 +1,7 @@
 {
   "rules": {
     "settings": {
-      ".read": "auth != null && auth.token.role === 'admin'",
+      ".read": "auth != null",
       ".write": "auth != null && auth.token.role === 'admin'",
       "admin": {
         ".read": "auth != null && auth.token.role === 'admin'",
@@ -11,6 +11,7 @@
     "employees": {
       ".read": "auth != null",
       ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'employee')",
+      ".indexOn": ["empId"],
       "$empId": {
         ".validate": "newData.hasChildren(['empId', 'empName'])"
       }

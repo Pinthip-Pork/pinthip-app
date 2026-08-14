@@ -34,15 +34,16 @@ exports.loginWithPin = onCall(async (request) => {
 
   const database = getDatabase();
   const [employeesSnapshot, autoApproveSnapshot, deviceSnapshot] = await Promise.all([
-    database.ref('employees').orderByChild('empId').equalTo(empId).once('value'),
+    database.ref('employees').once('value'),
     database.ref('settings/deviceAccessAutoApprove').once('value'),
     database.ref(`device_access/${deviceId}`).once('value')
   ]);
 
   const employees = employeesSnapshot.val() || {};
-  const foundEmployee = Object.values(employees).find((employee) => (
-    employee && String(employee.pin || '').trim() === pin
+  const foundEntry = Object.entries(employees).find(([, employee]) => (
+    employee && String(employee.empId || '').trim() === empId && String(employee.pin || '').trim() === pin
   ));
+  const foundEmployee = foundEntry ? foundEntry[1] : null;
 
   if (!foundEmployee) {
     throw new HttpsError('unauthenticated', 'Invalid employee ID or PIN.');
