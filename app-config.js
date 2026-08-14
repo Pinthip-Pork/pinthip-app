@@ -29,10 +29,15 @@
     adminSessionTtlMinutes: 60 * 24 * 30
   };
 
+  const deviceAccessPilot = {
+    enabled: Boolean(runtimeAdminCredentials.deviceAccessPilotEnabled || false)
+  };
+
   window.PinThipSafe = window.PinThipSafe || {};
   window.PinThipSafe.config = {
     firebaseConfig,
     adminCredentials,
-    sessionSettings
+    sessionSettings,
+    deviceAccessPilot
   };
 })();

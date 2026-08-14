@@ -32,6 +32,20 @@
     return `${os} (${browser})`;
   }
 
+  function getDeviceId() {
+    const storageKey = 'pinthip_device_id';
+    try {
+      const existingId = localStorage.getItem(storageKey);
+      if (existingId) return existingId;
+
+      const newId = window.crypto?.randomUUID?.() || `device-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(storageKey, newId);
+      return newId;
+    } catch {
+      return `temporary-${Date.now()}`;
+    }
+  }
+
   function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3;
     const φ1 = lat1 * Math.PI / 180;
@@ -47,6 +61,7 @@
     getLocalDateTimeString,
     downloadCSV,
     getDeviceInfo,
+    getDeviceId,
     calculateDistance
   };
 })();

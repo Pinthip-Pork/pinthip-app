@@ -292,6 +292,12 @@
         <button class="bell-btn" id="bellBtn" onclick="showNotificationModal()" style="display:none;">
           🔔<span class="bell-badge" id="bellBadge" style="display:none;">0</span>
         </button>
+        <button class="bell-btn" id="soundBtn" onclick="toggleNotificationSound()" style="display:none;" title="เปิด/ปิดเสียงแจ้งเตือน" aria-label="เปิด/ปิดเสียงแจ้งเตือน">🔊</button>
+        <select id="soundMode" onchange="changeNotificationMode(this.value)" style="display:none; width:auto; padding:5px; font-size:11px;" aria-label="รูปแบบเสียงแจ้งเตือน">
+          <option value="off">ปิดเสียง</option>
+          <option value="beep">เสียงธรรมดา</option>
+          <option value="voice">เสียงพูด</option>
+        </select>
       </div>
       <h1 id="companyTitle">บริษัท ปิ่นทิพย์ จำกัด</h1>
       <div class="lang-switcher">
@@ -332,6 +338,7 @@
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">⛽ อนุมัติน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="pendingFuelsBadge">0</span></div>
 
     <div class="drawer-section-label">พนักงาน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showDeviceAccessManagement()">🔐 จัดการอุปกรณ์ทดลอง</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">👥 สรุปขาด ลา สาย</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">📜 ประวัติลงเวลา</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showEmpManagement()">⚙️ จัดการพนักงาน</div>
@@ -365,6 +372,11 @@
     var currentLang = 'TH';
     var currentUser = null;
     var isAdmin = false;
+    let devicePresenceKey = null;
+    let devicePresenceInterval = null;
+    let deviceAccessGuardInterval = null;
+    let notificationAudioContext = null;
+    let notificationMode = localStorage.getItem('pinthip_notification_mode') || (localStorage.getItem('pinthip_notification_sound') === 'off' ? 'off' : 'beep');
 
     let touchStartY = 0;
     window.addEventListener('touchstart', (e) => {
@@ -399,13 +411,58 @@
 
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
+        checkCurrentDeviceAccess();
         console.log("App resumed, keeping current state.");
       }
     });
 
+    function updateNotificationSoundButton() {
+      const soundBtn = document.getElementById('soundBtn');
+      if (!soundBtn) return;
+      soundBtn.innerText = notificationMode === 'off' ? '🔇' : (notificationMode === 'voice' ? '🗣️' : '🔊');
+      soundBtn.title = notificationMode === 'off' ? 'เปิดเสียงแจ้งเตือน' : 'ทดสอบเสียงแจ้งเตือน';
+      soundBtn.setAttribute('aria-label', soundBtn.title);
+      const soundMode = document.getElementById('soundMode');
+      if (soundMode) soundMode.value = notificationMode;
+    }
+
+    function getNotificationAudioContext() {
+      if (!notificationAudioContext) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+        notificationAudioContext = new AudioContextClass();
+      }
+      return notificationAudioContext;
+    }
+
+    function enableNotificationSound() {
+      const audioContext = getNotificationAudioContext();
+      if (!audioContext) return;
+      if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+    }
+
+    function toggleNotificationSound() {
+      if (notificationMode === 'off') changeNotificationMode('beep');
+      else if (notificationMode === 'beep') changeNotificationMode('voice');
+      else changeNotificationMode('off');
+    }
+
+    function changeNotificationMode(mode) {
+      notificationMode = ['off', 'beep', 'voice'].includes(mode) ? mode : 'beep';
+      localStorage.setItem('pinthip_notification_mode', notificationMode);
+      updateNotificationSoundButton();
+      if (notificationMode !== 'off') {
+        enableNotificationSound();
+        playNotificationAlert('ทดสอบเสียงแจ้งเตือน');
+      }
+    }
+
     function playNotificationSound() {
+      if (notificationMode !== 'beep') return;
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const audioCtx = getNotificationAudioContext();
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
         
@@ -424,6 +481,21 @@
       } catch (e) {
         console.log("AudioContext blocked or not supported", e);
       }
+    }
+
+    function speakNotification(message) {
+      if (notificationMode !== 'voice' || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.lang = 'th-TH';
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function playNotificationAlert(message) {
+      if (notificationMode === 'beep') playNotificationSound();
+      if (notificationMode === 'voice') speakNotification(message);
     }
 
     var i18n = window.PinThipSafe.i18n;
@@ -462,12 +534,17 @@
         if (restored.isAdmin) {
           isAdmin = true;
           currentUser = null;
+          showNotificationSoundControl(true);
+          startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
           showAdminDashboard();
           startAdminNotificationListener();
         } else if (restored.currentUser && restored.currentUser.empId) {
           currentUser = restored.currentUser;
           isAdmin = false;
+          showNotificationSoundControl(true);
+          startDevicePresence(window.PinThipSafe.utils.getDeviceId(), currentUser.empName, 'employee');
           showDashboard();
+          startDeviceAccessGuard();
           startEmployeeNotificationListener();
         } else {
           PinThipSafe.session.clearAuthState();
@@ -531,7 +608,7 @@
         });
 
         if (!isInitialLoadLeaves && newPendingCount > 0) {
-          playNotificationSound();
+          playNotificationAlert('มีคำขอลาใหม่ กรุณาตรวจสอบ');
           showModal("🔔 แจ้งเตือนคำขอใหม่", "มีพนักงานส่งคำขอลามาใหม่ กรุณาตรวจสอบในเมนูอนุมัติใบลา", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
         }
         isInitialLoadLeaves = false;
@@ -551,7 +628,7 @@
         });
 
         if (!isInitialLoadFuels && newFuelPendingCount > 0) {
-          playNotificationSound();
+          playNotificationAlert('มีคำขอเบิกน้ำมันหรือค่าซ่อมใหม่ กรุณาตรวจสอบ');
           showModal("🔔 แจ้งเตือนเบิกจ่ายใหม่", "มีพนักงานส่งคำขอเบิกค่าน้ำมัน/ค่าซ่อมรถมาใหม่", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
         }
         isInitialLoadFuels = false;
@@ -622,7 +699,7 @@
         });
 
         if (!isInitialLoadEmpJobs && myNewJobsCount > 0) {
-          playNotificationSound();
+          playNotificationAlert('มีงานส่งของใหม่ กรุณาตรวจสอบงานของคุณ');
           showModal("📦 มีงานส่งของใหม่!", `คุณได้รับมอบหมายจ๊อบส่งของใหม่วันนี้ (${myNewJobsCount} ร้าน)\nกรุณาตรวจสอบที่กระดิ่งแจ้งเตือน`, `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ไปที่งานของฉัน</button>`);
         }
         isInitialLoadEmpJobs = false;
@@ -726,6 +803,7 @@
       document.getElementById('mainCard').classList.remove('admin-wide');
       document.getElementById('hamburgerBtn').style.display = 'none';
       document.getElementById('bellBtn').style.display = 'none';
+      showNotificationSoundControl(false);
       const t = i18n[currentLang];
       document.getElementById('pageTitle').innerText = t.pageTitleLogin;
       document.getElementById('status').innerText = "";
@@ -761,16 +839,25 @@
         const sessionState = PinThipSafe.session.setAdminSession();
         isAdmin = sessionState.isAdmin;
         currentUser = sessionState.currentUser;
+        showNotificationSoundControl(true);
+        enableNotificationSound();
+        startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
         showAdminDashboard();
         startAdminNotificationListener();
         return;
       }
 
-      db.ref('employees').once('value', (snapshot) => {
+      db.ref('employees').once('value', async (snapshot) => {
         const employees = snapshot.val();
         const foundUser = window.PinThipSafe.auth.findEmployeeByCredentials(employees, inputId, inputPin);
 
         if (foundUser) {
+          const deviceAccess = await checkDeviceAccess(foundUser);
+          if (!deviceAccess.allowed) {
+            setStatusText('status', deviceAccess.message);
+            return;
+          }
+
           setStatusText('status', '');
           isAdmin = false;
           currentUser = window.PinThipSafe.auth.normalizeSessionUser({
@@ -784,11 +871,197 @@
           const sessionState = PinThipSafe.session.setUserSession(currentUser);
           currentUser = sessionState.currentUser;
           isAdmin = sessionState.isAdmin;
+          showNotificationSoundControl(true);
+          enableNotificationSound();
+          startDevicePresence(deviceAccess.deviceId, currentUser.empName, 'employee');
           showDashboard();
+          startDeviceAccessGuard();
           startEmployeeNotificationListener();
         } else {
           setStatusText('status', adminAttempt.allowed ? '' : '❌ รหัสเข้าใช้งาน หรือ PIN ไม่ถูกต้อง!');
         }
+      });
+    }
+
+    function isDeviceAccessPilotEnabled() {
+      return Boolean(window.PinThipSafe?.config?.deviceAccessPilot?.enabled);
+    }
+
+    function showNotificationSoundControl(visible) {
+      const soundBtn = document.getElementById('soundBtn');
+      const soundMode = document.getElementById('soundMode');
+      if (soundBtn) soundBtn.style.display = visible ? 'block' : 'none';
+      if (soundMode) soundMode.style.display = visible ? 'block' : 'none';
+      updateNotificationSoundButton();
+    }
+
+    async function checkDeviceAccess(foundUser) {
+      if (!isDeviceAccessPilotEnabled()) return { allowed: true };
+
+      try {
+        const deviceId = window.PinThipSafe.utils.getDeviceId();
+        const deviceRef = db.ref(`device_access/${deviceId}`);
+        const snapshot = await deviceRef.once('value');
+        const existing = snapshot.val();
+        const autoApproveSnapshot = await db.ref('settings/deviceAccessAutoApprove').once('value');
+        const autoApproveEnabled = autoApproveSnapshot.val() !== false;
+        const now = new Date().toISOString();
+
+        if (!existing) {
+          await deviceRef.set({
+            empId: String(foundUser.empId),
+            empName: String(foundUser.empName || ''),
+            deviceInfo: window.PinThipSafe.utils.getDeviceInfo(),
+            status: autoApproveEnabled ? 'active' : 'pending',
+            createdAt: now,
+            lastSeenAt: now
+          });
+          return autoApproveEnabled
+            ? { allowed: true, deviceId }
+            : { allowed: false, message: 'ลงทะเบียนอุปกรณ์แล้ว กรุณารอ Admin อนุมัติก่อนใช้งาน' };
+        }
+
+        await deviceRef.update({
+          empId: String(foundUser.empId),
+          empName: String(foundUser.empName || ''),
+          lastSeenAt: now
+        });
+
+        if (existing.status === 'active' || existing.status === 'approved') return { allowed: true, deviceId };
+        if (existing.status === 'blocked') return { allowed: false, message: 'อุปกรณ์นี้ถูกระงับการใช้งาน กรุณาติดต่อ Admin' };
+        return { allowed: false, message: 'อุปกรณ์นี้กำลังรอ Admin อนุมัติก่อนใช้งาน' };
+      } catch (error) {
+        console.warn('Device access check failed:', error);
+        return { allowed: false, message: 'ตรวจสอบสิทธิ์อุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' };
+      }
+    }
+
+    function startDevicePresence(key, name, role) {
+      if (!isDeviceAccessPilotEnabled()) return;
+      stopDevicePresence();
+      devicePresenceKey = key;
+      const presenceRef = db.ref(`device_access/${key}`);
+      const updatePresence = () => {
+        presenceRef.update({
+          empName: String(name || (role === 'admin' ? 'Admin' : '-')),
+          role,
+          online: true,
+          lastSeenAt: new Date().toISOString()
+        });
+      };
+      presenceRef.onDisconnect().update({ online: false });
+      updatePresence();
+      devicePresenceInterval = window.setInterval(updatePresence, 30000);
+    }
+
+    function stopDevicePresence() {
+      if (devicePresenceInterval) {
+        window.clearInterval(devicePresenceInterval);
+        devicePresenceInterval = null;
+      }
+      if (devicePresenceKey) {
+        db.ref(`device_access/${devicePresenceKey}`).update({ online: false, lastSeenAt: new Date().toISOString() });
+        devicePresenceKey = null;
+      }
+    }
+
+    function startDeviceAccessGuard() {
+      stopDeviceAccessGuard();
+      if (!isDeviceAccessPilotEnabled() || !currentUser) return;
+      checkCurrentDeviceAccess();
+      deviceAccessGuardInterval = window.setInterval(checkCurrentDeviceAccess, 30000);
+    }
+
+    function stopDeviceAccessGuard() {
+      if (deviceAccessGuardInterval) {
+        window.clearInterval(deviceAccessGuardInterval);
+        deviceAccessGuardInterval = null;
+      }
+    }
+
+    async function checkCurrentDeviceAccess() {
+      if (!isDeviceAccessPilotEnabled() || !currentUser) return;
+      try {
+        const deviceId = window.PinThipSafe.utils.getDeviceId();
+        const snapshot = await db.ref(`device_access/${deviceId}/status`).once('value');
+        if (snapshot.val() !== 'blocked') return;
+
+        stopDeviceAccessGuard();
+        stopDevicePresence();
+        currentUser = null;
+        isAdmin = false;
+        PinThipSafe.session.clearAuthState();
+        showLoginForm();
+        setStatusText('status', 'อุปกรณ์นี้ถูกระงับการใช้งานโดย Admin');
+      } catch (error) {
+        console.warn('Device access refresh failed:', error);
+      }
+    }
+
+    function showDeviceAccessManagement() {
+      if (!isAdmin) return;
+      document.getElementById('pageTitle').innerText = 'สถานะผู้ใช้งานและอุปกรณ์';
+      document.getElementById('listBox').style.display = 'none';
+      const mainContent = document.getElementById('mainContent');
+      mainContent.innerHTML = '<div class="loading">กำลังโหลดรายการอุปกรณ์...</div>';
+
+      Promise.all([
+        db.ref('device_access').once('value'),
+        db.ref('settings/deviceAccessAutoApprove').once('value')
+      ]).then(([snapshot, autoApproveSnapshot]) => {
+        const devices = snapshot.val() || {};
+        const entries = Object.entries(devices);
+        const autoApproveEnabled = autoApproveSnapshot.val() !== false;
+        const modeLabel = autoApproveEnabled ? 'ออโต้: อุปกรณ์ใหม่ใช้งานได้ทันที' : 'อนุมัติเอง: อุปกรณ์ใหม่ต้องรอ Admin';
+        let html = `<div class="user-banner">โหมดทดลอง: ${modeLabel}<br>
+          <button class="btn-blue" style="width:auto; margin-top:8px; padding:7px 12px;" onclick="setDeviceAutoApprove(${!autoApproveEnabled})">
+            ${autoApproveEnabled ? 'ปิดออโต้ ใช้การอนุมัติเอง' : 'เปิดออโต้ อนุมัติอุปกรณ์ใหม่ทันที'}
+          </button>
+        </div>`;
+        if (entries.length === 0) {
+          html += '<div class="no-data">ยังไม่มีอุปกรณ์ที่ลงทะเบียน</div>';
+        } else {
+          entries.forEach(([deviceId, device]) => {
+            const status = String(device.status || 'active');
+            const statusLabel = status === 'blocked' ? 'ถูกระงับ' : (status === 'pending' ? 'รออนุมัติ' : 'ใช้งานได้');
+            const nextStatus = status === 'blocked' || status === 'pending' ? 'active' : 'blocked';
+            const nextLabel = status === 'blocked' || status === 'pending' ? 'อนุมัติ/เปิดใช้งาน' : 'ระงับ';
+            const onlineLabel = device.online ? '🟢 ออนไลน์' : '⚪ ออฟไลน์';
+            const lastSeenLabel = device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString('th-TH') : 'ยังไม่มีข้อมูล';
+            const personLabel = device.role === 'admin' ? 'ผู้ดูแลระบบ' : `${device.empName || '-'} (${device.empId || '-'})`;
+            html += `<div class="history-item" style="margin-bottom:10px; text-align:left;">
+              <b>👤 ${safeText(personLabel)}</b><br>
+              อุปกรณ์: ${safeText(device.deviceInfo || '-')}<br>
+              Device ID: <small>${safeText(deviceId)}</small><br>
+              การเชื่อมต่อ: <b>${onlineLabel}</b><br>
+              Login ล่าสุด: <b>${safeText(lastSeenLabel)}</b><br>
+              สิทธิ์อุปกรณ์: <b>${statusLabel}</b>
+              <button class="btn-blue" style="width:auto; margin:8px 0 0; padding:6px 10px;" onclick="setDeviceAccessStatus('${safeText(deviceId)}', '${nextStatus}')">${nextLabel}</button>
+            </div>`;
+          });
+        }
+        html += '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>';
+        mainContent.innerHTML = html;
+      }).catch(() => {
+        mainContent.innerHTML = '<div class="no-data">โหลดรายการอุปกรณ์ไม่สำเร็จ</div><button class="btn-back" onclick="showAdminDashboard()">⬅️ กลับหน้าแดสบอร์ด</button>';
+      });
+    }
+
+    function setDeviceAutoApprove(enabled) {
+      if (!isAdmin) return;
+      const message = enabled
+        ? 'เปิดออโต้ อุปกรณ์ใหม่จะใช้งานได้ทันทีใช่หรือไม่?'
+        : 'ปิดออโต้ อุปกรณ์ใหม่จะต้องรอ Admin อนุมัติใช่หรือไม่?';
+      if (!window.confirm(message)) return;
+      db.ref('settings/deviceAccessAutoApprove').set(Boolean(enabled)).then(() => {
+        showDeviceAccessManagement();
+      });
+    }
+
+    function setDeviceAccessStatus(deviceId, status) {
+      if (!isAdmin) return;
+      db.ref(`device_access/${deviceId}`).update({ status, updatedAt: new Date().toISOString() }).then(() => {
+        showDeviceAccessManagement();
       });
     }
 
@@ -1614,8 +1887,11 @@
     }
 
     function handleLogout() {
+      stopDeviceAccessGuard();
+      stopDevicePresence();
       currentUser = null;
       isAdmin = false;
+      showNotificationSoundControl(false);
       PinThipSafe.session.clearAuthState();
       showLoginForm();
     }
