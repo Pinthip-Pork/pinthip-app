@@ -582,35 +582,47 @@
     window.downloadCSV = downloadCSV;
 
     function initApp() {
-      try {
-        const restored = PinThipSafe.session.restoreSession();
+      // Check for existing Firebase Auth session that may have been restored
+      const unsubscribe = firebase.auth().onAuthStateChanged((firebaseUser) => {
+        unsubscribe(); // Only run once on initialization
+        try {
+          const restored = PinThipSafe.session.restoreSession();
 
-        if (restored.isAdmin) {
-          isAdmin = true;
-          currentUser = null;
-          showNotificationSoundControl(true);
-          showDesktopNotificationControl(true);
-          startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
-          showAdminDashboard();
-          startAdminNotificationListener();
-        } else if (restored.currentUser && restored.currentUser.empId) {
-          currentUser = restored.currentUser;
-          isAdmin = false;
-          showNotificationSoundControl(true);
-          showDesktopNotificationControl(true);
-          startDevicePresence(window.PinThipSafe.utils.getDeviceId(), currentUser.empName, 'employee');
-          showDashboard();
-          startDeviceAccessGuard();
-          startEmployeeNotificationListener();
-        } else {
+          if (restored.isAdmin) {
+            if (firebaseUser) {
+              // Admin has a valid Firebase Auth session
+              isAdmin = true;
+              currentUser = null;
+              showNotificationSoundControl(true);
+              showDesktopNotificationControl(true);
+              startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
+              showAdminDashboard();
+              startAdminNotificationListener();
+            } else {
+              // Admin session in localStorage but Firebase Auth expired
+              console.warn('Admin Firebase Auth session expired');
+              PinThipSafe.session.clearAuthState();
+              showLoginForm();
+            }
+          } else if (restored.currentUser && restored.currentUser.empId) {
+            currentUser = restored.currentUser;
+            isAdmin = false;
+            showNotificationSoundControl(true);
+            showDesktopNotificationControl(true);
+            startDevicePresence(window.PinThipSafe.utils.getDeviceId(), currentUser.empName, 'employee');
+            showDashboard();
+            startDeviceAccessGuard();
+            startEmployeeNotificationListener();
+          } else {
+            PinThipSafe.session.clearAuthState();
+            showLoginForm();
+          }
+        } catch (e) {
+          console.warn('Init app failed:', e);
           PinThipSafe.session.clearAuthState();
           showLoginForm();
         }
-      } catch (e) {
-        console.warn('Init app failed:', e);
-        PinThipSafe.session.clearAuthState();
-        showLoginForm();
-      }
+      });
     }
 
     function setLanguage(lang) {
@@ -893,8 +905,23 @@
 
       setStatusText('status', t.checking);
 
-      const adminAttempt = window.PinThipSafe.auth.tryLoginAdmin(inputId, inputPin);
-      if (adminAttempt.allowed) {
+      // Admin login attempt via Cloud Function + Firebase Auth
+      try {
+        const deviceId = window.PinThipSafe.utils.getDeviceId();
+        const adminCallable = firebase.functions().httpsCallable('adminLogin');
+        const adminResult = await adminCallable({
+          username: inputId,
+          pin: inputPin,
+          deviceId,
+          deviceInfo: window.PinThipSafe.utils.getDeviceInfo(),
+          // For first-time setup, use credentials from local config
+          setup: window.__PINTHIP_ADMIN__ ? {
+            username: String(window.__PINTHIP_ADMIN__.username || 'admin'),
+            pin: String(window.__PINTHIP_ADMIN__.pin || inputPin)
+          } : undefined
+        });
+        await firebase.auth().signInWithCustomToken(adminResult.data.token);
+
         setStatusText('status', '');
         const sessionState = PinThipSafe.session.setAdminSession();
         isAdmin = sessionState.isAdmin;
@@ -902,10 +929,18 @@
         showNotificationSoundControl(true);
         enableNotificationSound();
         showDesktopNotificationControl(true);
-        startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
+        startDevicePresence('admin-' + deviceId, 'Admin', 'admin');
         showAdminDashboard();
         startAdminNotificationListener();
         return;
+      } catch (adminError) {
+        // 'unauthenticated' / 'permission-denied' = not an admin, continue to employee login
+        // Other errors = real issues, show to user but still allow employee login
+        const errCode = adminError?.code || adminError?.details?.code || '';
+        const isNotAdmin = errCode === 'unauthenticated' || errCode === 'permission-denied';
+        if (!isNotAdmin && !adminError?.message?.includes('unauthenticated') && !adminError?.message?.includes('permission-denied')) {
+          console.warn('Admin login error:', adminError);
+        }
       }
 
       if (isCustomAuthEnabled()) {
@@ -913,6 +948,7 @@
         return;
       }
 
+      // Fallback: legacy employee login (only if custom auth is disabled)
       db.ref('employees').once('value', async (snapshot) => {
         const employees = snapshot.val();
         const foundUser = window.PinThipSafe.auth.findEmployeeByCredentials(employees, inputId, inputPin);
@@ -945,7 +981,7 @@
           startDeviceAccessGuard();
           startEmployeeNotificationListener();
         } else {
-          setStatusText('status', adminAttempt.allowed ? '' : '❌ รหัสเข้าใช้งาน หรือ PIN ไม่ถูกต้อง!');
+          setStatusText('status', '❌ รหัสเข้าใช้งาน หรือ PIN ไม่ถูกต้อง!');
         }
       });
     }
@@ -2037,7 +2073,14 @@
     function handleLogout() {
       stopDeviceAccessGuard();
       stopDevicePresence();
-      if (window.firebase?.auth) firebase.auth().signOut().catch(() => {});
+      // Sign out from Firebase Auth to invalidate the token
+      if (window.firebase?.auth) {
+        firebase.auth().signOut().then(() => {
+          console.log('Firebase Auth sign-out successful');
+        }).catch((err) => {
+          console.warn('Firebase Auth sign-out error:', err);
+        });
+      }
       currentUser = null;
       isAdmin = false;
       showNotificationSoundControl(false);

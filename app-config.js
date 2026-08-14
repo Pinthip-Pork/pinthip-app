@@ -11,27 +11,29 @@
   };
 
   const defaultAdminCredentials = {
-    enabled: true,
+    enabled: false,
     username: 'admin',
-    pin: '8888'
+    pin: ''
   };
 
   const runtimeAdminCredentials = window.__PINTHIP_ADMIN__ || {};
+
+  // If local-admin-config.js provides credentials, merge but still require Cloud Function validation
   const adminCredentials = {
     ...defaultAdminCredentials,
     ...runtimeAdminCredentials,
-    enabled: Boolean(runtimeAdminCredentials.enabled ?? defaultAdminCredentials.enabled),
+    enabled: Boolean(runtimeAdminCredentials.enabled ?? false),
     username: String(runtimeAdminCredentials.username || defaultAdminCredentials.username),
-    pin: String(runtimeAdminCredentials.pin || defaultAdminCredentials.pin)
+    pin: String(runtimeAdminCredentials.pin || '')
   };
 
   const sessionSettings = {
-    adminSessionTtlMinutes: 60 * 24 * 30
+    adminSessionTtlMinutes: 60 * 8
   };
 
   const deviceAccessPilot = {
-    enabled: Boolean(window.__PINTHIP_DEVICE_ACCESS__?.enabled || runtimeAdminCredentials.deviceAccessPilotEnabled || false),
-    customAuthEnabled: Boolean(window.__PINTHIP_DEVICE_ACCESS__?.customAuthEnabled || false)
+    enabled: Boolean(window.__PINTHIP_DEVICE_ACCESS__?.enabled || runtimeAdminCredentials.deviceAccessPilotEnabled || true),
+    customAuthEnabled: Boolean(window.__PINTHIP_DEVICE_ACCESS__?.customAuthEnabled !== false)
   };
 
   window.PinThipSafe = window.PinThipSafe || {};

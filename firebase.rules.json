@@ -1,6 +1,67 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true
+    "settings": {
+      ".read": "auth != null && auth.token.role === 'admin'",
+      ".write": "auth != null && auth.token.role === 'admin'",
+      "admin": {
+        ".read": "auth != null && auth.token.role === 'admin'",
+        ".write": "auth != null && auth.token.role === 'admin'"
+      }
+    },
+    "employees": {
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'employee')",
+      "$empId": {
+        ".validate": "newData.hasChildren(['empId', 'empName'])"
+      }
+    },
+    "logs": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "leaves": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "fuel_requests": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "device_access": {
+      ".read": "auth != null",
+      ".write": false,
+      "$deviceId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid || auth.token.role === 'admin')"
+      }
+    },
+    "delivery_jobs": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.role === 'admin'",
+      "$date": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.token.role === 'admin'"
+      }
+    },
+    "customers": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.role === 'admin'"
+    },
+    "routes_preset": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.role === 'admin'"
+    },
+    "locations": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "car_plates": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.role === 'admin'"
+    },
+    "holidays": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.role === 'admin'"
+    }
   }
 }

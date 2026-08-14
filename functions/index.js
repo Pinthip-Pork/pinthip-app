@@ -4,6 +4,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getDatabase } = require('firebase-admin/database');
+const crypto = require('crypto');
 
 initializeApp();
 
@@ -18,6 +19,11 @@ function requireText(value, fieldName) {
 function getEmployeeUid(empId) {
   const safeId = empId.replace(/[^a-zA-Z0-9_-]/g, '_');
   return `employee_${safeId}`.slice(0, 128);
+}
+
+function getAdminUid(username) {
+  const hash = crypto.createHash('sha256').update(String(username || 'admin')).digest('hex').slice(0, 16);
+  return `admin_${hash}`.slice(0, 128);
 }
 
 exports.loginWithPin = onCall(async (request) => {
@@ -84,4 +90,89 @@ exports.loginWithPin = onCall(async (request) => {
   });
 
   return { token, uid, empId, status };
+});
+
+exports.adminLogin = onCall(async (request) => {
+  const auth = getAuth();
+  const database = getDatabase();
+
+  const username = requireText(request.data?.username, 'username');
+  const pin = requireText(request.data?.pin, 'pin');
+  const deviceId = requireText(request.data?.deviceId, 'deviceId');
+  const deviceInfo = String(request.data?.deviceInfo || 'Unknown device').slice(0, 120);
+
+  // Read admin config from the database
+  const adminConfigSnapshot = await database.ref('settings/admin').once('value');
+  let adminConfig = adminConfigSnapshot.val();
+
+  // If no admin config exists in DB, allow one-time setup from request
+  if (!adminConfig) {
+    // Require setup data for first-time initialization
+    const setupUsername = requireText(request.data?.setup?.username, 'setup.username');
+    const setupPin = requireText(request.data?.setup?.pin, 'setup.pin');
+
+    if (String(setupPin).trim().length < 4) {
+      throw new HttpsError('invalid-argument', 'PIN must be at least 4 characters.');
+    }
+    if (String(setupUsername).trim().length < 3) {
+      throw new HttpsError('invalid-argument', 'Username must be at least 3 characters.');
+    }
+
+    adminConfig = {
+      enabled: true,
+      username: String(setupUsername).trim(),
+      pin: String(setupPin).trim()
+    };
+
+    await database.ref('settings/admin').set(adminConfig);
+  }
+
+  if (!adminConfig.enabled) {
+    throw new HttpsError('permission-denied', 'Admin login is disabled.');
+  }
+
+  const storedUsername = String(adminConfig.username || '').trim().toLowerCase();
+  const storedPin = String(adminConfig.pin || '').trim();
+
+  if (String(username).trim().toLowerCase() !== storedUsername) {
+    throw new HttpsError('unauthenticated', 'Invalid admin credentials.');
+  }
+
+  if (String(pin).trim() !== storedPin) {
+    throw new HttpsError('unauthenticated', 'Invalid admin credentials.');
+  }
+
+  // Ensure Firebase Auth user exists for admin
+  const uid = getAdminUid(username);
+  try {
+    await auth.getUser(uid);
+  } catch (error) {
+    if (error.code !== 'auth/user-not-found') throw error;
+    await auth.createUser({
+      uid,
+      displayName: 'Admin',
+      email: `admin-${uid}@pinthip-app.local`
+    });
+  }
+
+  // Record device access for admin presence tracking
+  const now = new Date().toISOString();
+  await database.ref(`device_access/${deviceId}`).update({
+    uid,
+    empId: `admin-${username}`,
+    empName: 'Admin',
+    role: 'admin',
+    deviceInfo,
+    status: 'active',
+    lastSeenAt: now
+  });
+
+  // Create custom token with admin role — short TTL (1 hour)
+  const token = await auth.createCustomToken(uid, {
+    role: 'admin',
+    username,
+    deviceId
+  });
+
+  return { token, uid, expiresIn: 3600 };
 });
