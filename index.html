@@ -293,11 +293,6 @@
           🔔<span class="bell-badge" id="bellBadge" style="display:none;">0</span>
         </button>
         <button class="bell-btn" id="soundBtn" onclick="toggleNotificationSound()" style="display:none;" title="เปิด/ปิดเสียงแจ้งเตือน" aria-label="เปิด/ปิดเสียงแจ้งเตือน">🔊</button>
-        <select id="soundMode" onchange="changeNotificationMode(this.value)" style="display:none; width:38px; min-width:38px; padding:4px 2px; font-size:16px;" aria-label="รูปแบบเสียงแจ้งเตือน" title="รูปแบบเสียงแจ้งเตือน">
-          <option value="off">🔇</option>
-          <option value="beep">🔔</option>
-          <option value="voice">🗣️</option>
-        </select>
       </div>
       <h1 id="companyTitle">บริษัท ปิ่นทิพย์ จำกัด</h1>
       <div class="lang-switcher">
@@ -420,10 +415,8 @@
       const soundBtn = document.getElementById('soundBtn');
       if (!soundBtn) return;
       soundBtn.innerText = notificationMode === 'off' ? '🔇' : (notificationMode === 'voice' ? '🗣️' : '🔊');
-      soundBtn.title = notificationMode === 'off' ? 'เปิดเสียงแจ้งเตือน' : 'ทดสอบเสียงแจ้งเตือน';
+      soundBtn.title = 'เลือกรูปแบบเสียงแจ้งเตือน';
       soundBtn.setAttribute('aria-label', soundBtn.title);
-      const soundMode = document.getElementById('soundMode');
-      if (soundMode) soundMode.value = notificationMode;
     }
 
     function getNotificationAudioContext() {
@@ -442,9 +435,13 @@
     }
 
     function toggleNotificationSound() {
-      if (notificationMode === 'off') changeNotificationMode('beep');
-      else if (notificationMode === 'beep') changeNotificationMode('voice');
-      else changeNotificationMode('off');
+      const options = `
+        <div style="display:grid; gap:8px;">
+          <button class="btn-blue" onclick="changeNotificationMode('off'); closeModal();">🔇 ปิดเสียง</button>
+          <button class="btn-blue" onclick="changeNotificationMode('beep'); closeModal();">🔔 เสียงธรรมดา</button>
+          <button class="btn-blue" onclick="changeNotificationMode('voice'); closeModal();">🗣️ เสียงพูด</button>
+        </div>`;
+      showModal('รูปแบบเสียงแจ้งเตือน', 'เลือกรูปแบบเสียงที่ต้องการ', options);
     }
 
     function changeNotificationMode(mode) {
@@ -889,9 +886,7 @@
 
     function showNotificationSoundControl(visible) {
       const soundBtn = document.getElementById('soundBtn');
-      const soundMode = document.getElementById('soundMode');
       if (soundBtn) soundBtn.style.display = visible ? 'block' : 'none';
-      if (soundMode) soundMode.style.display = visible ? 'block' : 'none';
       updateNotificationSoundButton();
     }
 
