@@ -19,55 +19,55 @@
 
     const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
 
-    window.db.ref('employees').once('value', (empSnap) => {
+    Promise.all([
+      window.db.ref('employees').once('value'),
+      window.db.ref('logs').once('value'),
+      window.db.ref('leaves').once('value'),
+      window.db.ref('fuel_requests').once('value')
+    ]).then(([empSnap, logSnap, leaveSnap, fuelSnap]) => {
       const employeesObj = empSnap.val() || {};
+      const logsObj = logSnap.val() || {};
+      const leavesObj = leaveSnap.val() || {};
+      const fuelObj = fuelSnap.val() || {};
 
-      window.db.ref('logs').once('value', (logSnap) => {
-        const logsObj = logSnap.val() || {};
-        window.db.ref('leaves').once('value', (leaveSnap) => {
-          const leavesObj = leaveSnap.val() || {};
-          const approvedLeaveEmployeeIds = new Set(
-            Object.values(leavesObj)
-              .filter((leave) => String(leave.status || '').includes('อนุมัติแล้ว') && leave.startDate <= todayStr && leave.endDate >= todayStr)
-              .map((leave) => String(leave.empId))
-          );
-          let presentToday = 0;
-          let todaySalaryTotal = 0;
-          const countedEmployeeIds = new Set();
+      const approvedLeaveEmployeeIds = new Set(
+        Object.values(leavesObj)
+          .filter((leave) => String(leave.status || '').includes('อนุมัติแล้ว') && leave.startDate <= todayStr && leave.endDate >= todayStr)
+          .map((leave) => String(leave.empId))
+      );
+      let presentToday = 0;
+      let todaySalaryTotal = 0;
+      const countedEmployeeIds = new Set();
 
-          Object.keys(logsObj).forEach((k) => {
-            const log = logsObj[k];
-            const employeeId = String(log.empId);
-            if (log.date !== todayStr || log.type !== 'เข้างาน' || approvedLeaveEmployeeIds.has(employeeId) || countedEmployeeIds.has(employeeId)) return;
+      Object.values(logsObj).forEach((log) => {
+        const employeeId = String(log.empId);
+        if (log.date !== todayStr || log.type !== 'เข้างาน' || approvedLeaveEmployeeIds.has(employeeId) || countedEmployeeIds.has(employeeId)) return;
 
-            const employee = Object.values(employeesObj).find((emp) => String(emp.empId) === employeeId);
-            if (!employee) return;
+        const employee = Object.values(employeesObj).find((emp) => String(emp.empId) === employeeId);
+        if (!employee) return;
 
-            countedEmployeeIds.add(employeeId);
-            presentToday++;
-            todaySalaryTotal += Number(employee.dailyRate || 0);
-          });
+        countedEmployeeIds.add(employeeId);
+        presentToday++;
+        todaySalaryTotal += Number(employee.dailyRate || 0);
+      });
 
-          window.db.ref('fuel_requests').once('value', (fuelSnap) => {
-          const fuelObj = fuelSnap.val() || {};
-          let pendingFuel = 0;
-          let todayFuelOnlyTotal = 0;
-          let todayRepairOnlyTotal = 0;
+      let pendingFuel = 0;
+      let todayFuelOnlyTotal = 0;
+      let todayRepairOnlyTotal = 0;
 
-          Object.keys(fuelObj).forEach((k) => {
-            const f = fuelObj[k];
-            const statusStr = String(f.status || '');
-            const reqType = f.requestType || 'เบิกค่าน้ำมัน';
-            if (statusStr.includes('รออนุมัติ')) pendingFuel++;
-            if (f.date === todayStr && statusStr.includes('อนุมัติแล้ว')) {
-              const amt = Number(f.amount || 0);
-              if (reqType.includes('ซ่อม')) {
-                todayRepairOnlyTotal += amt;
-              } else {
-                todayFuelOnlyTotal += amt;
-              }
-            }
-          });
+      Object.values(fuelObj).forEach((f) => {
+        const statusStr = String(f.status || '');
+        const reqType = f.requestType || 'เบิกค่าน้ำมัน';
+        if (statusStr.includes('รออนุมัติ')) pendingFuel++;
+        if (f.date === todayStr && statusStr.includes('อนุมัติแล้ว')) {
+          const amt = Number(f.amount || 0);
+          if (reqType.includes('ซ่อม')) {
+            todayRepairOnlyTotal += amt;
+          } else {
+            todayFuelOnlyTotal += amt;
+          }
+        }
+      });
 
           const todayFuelAndRepairTotal = todayFuelOnlyTotal + todayRepairOnlyTotal;
           const grandTotalToday = todaySalaryTotal + todayFuelAndRepairTotal;
@@ -157,10 +157,7 @@
           if (typeof window.loadTodayListRealtime === 'function') {
             window.loadTodayListRealtime();
           }
-          });
-        });
       });
-    });
   }
 
   function showAdminCommandCenter() {
@@ -219,113 +216,107 @@
   }
 
   function loadCommandCenterData(todayStr) {
-    window.db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+    Promise.all([
+      window.db.ref('settings/globalLateTime').once('value'),
+      window.db.ref('employees').once('value'),
+      window.db.ref('logs').once('value'),
+      window.db.ref('leaves').once('value'),
+      window.db.ref('delivery_jobs/' + todayStr).once('value')
+    ]).then(([settingsSnap, empSnap, logSnap, leaveSnap, jobSnap]) => {
       const globalLateTime = settingsSnap.val() || '08:00';
+      const employeesObj = empSnap.val() || {};
+      const logsObj = logSnap.val() || {};
+      const leavesObj = leaveSnap.val() || {};
+      const jobsObj = jobSnap.val() || {};
 
-      window.db.ref('employees').once('value', (empSnap) => {
-        const employeesObj = empSnap.val() || {};
-        const allEmployees = Object.keys(employeesObj).map((k) => employeesObj[k]);
+      const allEmployees = Object.values(employeesObj);
+      const checkedInList = Object.values(logsObj).filter((log) => log.date === todayStr && log.type === 'เข้างาน');
+      const approvedLeavesToday = Object.values(leavesObj).filter(
+        (leave) => String(leave.status || '').includes('อนุมัติแล้ว') && leave.startDate <= todayStr && leave.endDate >= todayStr
+      );
 
-        window.db.ref('logs').once('value', (logSnap) => {
-          const logsObj = logSnap.val() || {};
-          const checkedInList = Object.keys(logsObj)
-            .map((k) => logsObj[k])
-            .filter((log) => log.date === todayStr && log.type === 'เข้างาน');
+      const leaveList = [];
+      const presentList = [];
+      const lateList = [];
+      const absentList = [];
 
-          window.db.ref('leaves').once('value', (leaveSnap) => {
-            const leavesObj = leaveSnap.val() || {};
-            const approvedLeavesToday = Object.keys(leavesObj)
-              .map((k) => leavesObj[k])
-              .filter((leave) => String(leave.status || '').includes('อนุมัติแล้ว') && leave.startDate <= todayStr && leave.endDate >= todayStr);
+      allEmployees.forEach((emp) => {
+        const present = checkedInList.find((item) => String(item.empId) === String(emp.empId));
+        const leave = approvedLeavesToday.find((item) => String(item.empId) === String(emp.empId));
 
-            const leaveList = [];
-            const presentList = [];
-            const lateList = [];
-            const absentList = [];
-
-            allEmployees.forEach((emp) => {
-              const present = checkedInList.find((item) => String(item.empId) === String(emp.empId));
-              const leave = approvedLeavesToday.find((item) => String(item.empId) === String(emp.empId));
-
-              if (leave) {
-                leaveList.push({ emp, leave });
-              } else if (present) {
-                if (present.time > globalLateTime) {
-                  lateList.push({ emp, present });
-                } else {
-                  presentList.push({ emp, present });
-                }
-              } else {
-                absentList.push({ emp });
-              }
-            });
-
-            const totalPresentCount = presentList.length + lateList.length;
-
-            const summaryContainer = document.getElementById('ccSummaryStats');
-            if (summaryContainer) {
-              summaryContainer.innerHTML = `
-                <div class="stats-card-container">
-                  <div class="stat-box" style="background:#e8f5e9; color:#2e7d32;">มา<b>${totalPresentCount}</b></div>
-                  <div class="stat-box" style="background:#fff3cd; color:#856404;">ลา<b>${leaveList.length}</b></div>
-                  <div class="stat-box" style="background:#ffebee; color:#c62828;">ไม่มา<b>${absentList.length}</b></div>
-                </div>
-                <div style="font-size:12px; color:#555; margin-top:5px;">• พนักงานทั้งหมด: ${allEmployees.length} คน</div>
-                <div style="font-size:12px; color:#555;">• เกณฑ์เวลามาสาย: หลัง ${globalLateTime} น.</div>
-              `;
-            }
-
-            const attContainer = document.getElementById('ccAttendanceList');
-            if (attContainer) {
-              let htmlAtt = '';
-              leaveList.forEach((item) => {
-                htmlAtt += `<div class="emp-tag-leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
-              });
-              presentList.forEach((item) => {
-                htmlAtt += `<div class="emp-tag-present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
-              });
-              lateList.forEach((item) => {
-                htmlAtt += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b></span></div>`;
-              });
-              absentList.forEach((item) => {
-                htmlAtt += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
-              });
-              attContainer.innerHTML = htmlAtt || '<div class="no-data">ไม่มีข้อมูลพนักงาน</div>';
-            }
-
-            window.db.ref('delivery_jobs/' + todayStr).once('value', (jobSnap) => {
-              const jobsObj = jobSnap.val() || {};
-              const deliveryContainer = document.getElementById('ccDeliveryList');
-              if (!deliveryContainer) return;
-
-              const jobList = Object.keys(jobsObj).map((k) => ({ key: k, ...jobsObj[k] }));
-              if (jobList.length === 0) {
-                deliveryContainer.innerHTML = '<div class="no-data" style="text-align:center; padding:15px;">ยังไม่มีการมอบหมายจ๊อบส่งของในวันนี้</div>';
-                return;
-              }
-
-              let htmlJob = '';
-              jobList.forEach((j) => {
-                const isCompleted = String(j.status).includes('สำเร็จ');
-                const isOnTheWay = String(j.status).includes('กำลังเดินทาง');
-                const badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
-                const viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#0d6efd; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">🖼️ ดูรูปหลักฐาน</a>` : '';
-
-                htmlJob += `
-                  <div class="history-item" style="border-left: 4px solid ${badgeColor}; margin-bottom:8px;">
-                    <b>🚚 คนขับ: ${j.driverName}</b><br>
-                    🏬 ร้าน: <b>${j.customerName}</b><br>
-                    สถานะ: <span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span>
-                    ${viewPhotoBtn}
-                    <button class="btn-danger" style="width:auto; margin:8px 0 0; padding:6px 10px; font-size:12px;" onclick="adminDeleteDeliveryStatus('${j.key}')">🗑️ ลบรายการส่งของ</button>
-                  </div>
-                `;
-              });
-              deliveryContainer.innerHTML = htmlJob;
-            });
-          });
-        });
+        if (leave) {
+          leaveList.push({ emp, leave });
+        } else if (present) {
+          if (present.time > globalLateTime) {
+            lateList.push({ emp, present });
+          } else {
+            presentList.push({ emp, present });
+          }
+        } else {
+          absentList.push({ emp });
+        }
       });
+
+      const totalPresentCount = presentList.length + lateList.length;
+
+      const summaryContainer = document.getElementById('ccSummaryStats');
+      if (summaryContainer) {
+        summaryContainer.innerHTML = `
+          <div class="stats-card-container">
+            <div class="stat-box" style="background:#e8f5e9; color:#2e7d32;">มา<b>${totalPresentCount}</b></div>
+            <div class="stat-box" style="background:#fff3cd; color:#856404;">ลา<b>${leaveList.length}</b></div>
+            <div class="stat-box" style="background:#ffebee; color:#c62828;">ไม่มา<b>${absentList.length}</b></div>
+          </div>
+          <div style="font-size:12px; color:#555; margin-top:5px;">• พนักงานทั้งหมด: ${allEmployees.length} คน</div>
+          <div style="font-size:12px; color:#555;">• เกณฑ์เวลามาสาย: หลัง ${globalLateTime} น.</div>
+        `;
+      }
+
+      const attContainer = document.getElementById('ccAttendanceList');
+      if (attContainer) {
+        let htmlAtt = '';
+        leaveList.forEach((item) => {
+          htmlAtt += `<div class="emp-tag-leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
+        });
+        presentList.forEach((item) => {
+          htmlAtt += `<div class="emp-tag-present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
+        });
+        lateList.forEach((item) => {
+          htmlAtt += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b></span></div>`;
+        });
+        absentList.forEach((item) => {
+          htmlAtt += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
+        });
+        attContainer.innerHTML = htmlAtt || '<div class="no-data">ไม่มีข้อมูลพนักงาน</div>';
+      }
+
+      const deliveryContainer = document.getElementById('ccDeliveryList');
+      if (deliveryContainer) {
+        const jobList = Object.keys(jobsObj).map((k) => ({ key: k, ...jobsObj[k] }));
+        if (jobList.length === 0) {
+          deliveryContainer.innerHTML = '<div class="no-data" style="text-align:center; padding:15px;">ยังไม่มีการมอบหมายจ๊อบส่งของในวันนี้</div>';
+          return;
+        }
+
+        let htmlJob = '';
+        jobList.forEach((j) => {
+          const isCompleted = String(j.status).includes('สำเร็จ');
+          const isOnTheWay = String(j.status).includes('กำลังเดินทาง');
+          const badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
+          const viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#0d6efd; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">🖼️ ดูรูปหลักฐาน</a>` : '';
+
+          htmlJob += `
+            <div class="history-item" style="border-left: 4px solid ${badgeColor}; margin-bottom:8px;">
+              <b>🚚 คนขับ: ${j.driverName}</b><br>
+              🏬 ร้าน: <b>${j.customerName}</b><br>
+              สถานะ: <span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span>
+              ${viewPhotoBtn}
+              <button class="btn-danger" style="width:auto; margin:8px 0 0; padding:6px 10px; font-size:12px;" onclick="adminDeleteDeliveryStatus('${j.key}')">🗑️ ลบรายการส่งของ</button>
+            </div>
+          `;
+        });
+        deliveryContainer.innerHTML = htmlJob;
+      }
     });
   }
 

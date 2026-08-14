@@ -20,8 +20,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
   <script src="./security-helpers-browser.js"></script>
   <script src="./app-state.js"></script>
-  <script src="./device-access-config.js"></script>
-  <script src="./local-admin-config.js"></script>
   <script src="./app-config.js"></script>
   <script src="./auth.js"></script>
   <script src="./app-utils.js"></script>
@@ -555,19 +553,8 @@
     var i18n = window.PinThipSafe.i18n;
     window.i18n = i18n;
 
-    const escapeHtml = window.PinThipSafe?.escapeHtml || ((value) => String(value ?? '').replace(/[&<>"']/g, (char) => {
-      const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      };
-      return map[char] || char;
-    }));
-
     function safeText(value) {
-      return escapeHtml(value);
+      return window.PinThipSafe?.escapeHtml?.(value) ?? String(value ?? '');
     }
 
     function setStatusText(elementId, message) {
@@ -1516,256 +1503,6 @@
       loadTodayListRealtime();
     }
 
-    function showLocationManagement() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showLocationManagement?.();
-    }
-
-    function showFuelRequestForm() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showFuelRequestForm?.();
-    }
-
-    function showAdminFuelRequests() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showAdminFuelRequests?.();
-    }
-
-    function showAdminFuelHistory() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showAdminFuelHistory?.();
-    }
-
-    function showAdminLeaves() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showAdminLeaves?.();
-    }
-
-    function showAdminLeaveHistory() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showAdminLeaveHistory?.();
-    }
-
-    function showAdminLogsHistory() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showAdminLogsHistory?.();
-    }
-
-    function showDailyPayroll() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showDailyPayroll?.();
-    }
-
-    function showAnalyticsReport() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showAnalyticsReport?.();
-    }
-
-    function showEmpManagement() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showEmpManagement?.();
-    }
-
-    function handleFuelSubmit() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.handleFuelSubmit?.();
-    }
-
-    function addNewLocation() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.addNewLocation?.();
-    }
-
-    function showEditLocationModal(key, name, lat, lng, radius) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showEditLocationModal?.(key, name, lat, lng, radius);
-    }
-
-    function submitEditLocation() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.submitEditLocation?.();
-    }
-
-    function deleteLocation(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.deleteLocation?.(key);
-    }
-
-    function executeDeleteLocation(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.executeDeleteLocation?.(key);
-    }
-
-    function updateFuelStatusWithAmount(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.updateFuelStatusWithAmount?.(key);
-    }
-
-    function loadCarPlatesManagementList() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.loadCarPlatesManagementList?.();
-    }
-
-    function addCarPlate() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.addCarPlate?.();
-    }
-
-    function deleteCarPlate(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.deleteCarPlate?.(key);
-    }
-
-    function setFuelDateToday() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.setFuelDateToday?.();
-    }
-
-    function renderFuelHistoryList() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.renderFuelHistoryList?.();
-    }
-
-    function renderCarExpenseChart() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.renderCarExpenseChart?.();
-    }
-
-    function exportFuelHistoryExcel() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.exportFuelHistoryExcel?.();
-    }
-
-    function showEditFuelModal(key, carPlate, route, amount, reqType) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showEditFuelModal?.(key, carPlate, route, amount, reqType);
-    }
-
-    function submitEditFuel() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.submitEditFuel?.();
-    }
-
-    function confirmDeleteFuel(key, empName) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.confirmDeleteFuel?.(key, empName);
-    }
-
-    function executeDeleteFuel(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.executeDeleteFuel?.(key);
-    }
-
-    function updateLeaveStatusAndHide(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.updateLeaveStatusAndHide?.(key);
-    }
-
-    function setLeaveDateToday() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.setLeaveDateToday?.();
-    }
-
-    function renderLeaveHistoryList() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.renderLeaveHistoryList?.();
-    }
-
-    function exportLeaveHistoryExcel() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.exportLeaveHistoryExcel?.();
-    }
-
-    function adminUpdateLeaveStatus(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.adminUpdateLeaveStatus?.(key);
-    }
-
-    function adminDeleteLeave(key, empName) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.adminDeleteLeave?.(key, empName);
-    }
-
-    function executeAdminDeleteLeave(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.executeAdminDeleteLeave?.(key);
-    }
-
-    function setLogDateToday() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.setLogDateToday?.();
-    }
-
-    function renderLogHistoryList() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.renderLogHistoryList?.();
-    }
-
-    function exportLogHistoryExcel() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.exportLogHistoryExcel?.();
-    }
-
-    function setPayrollDateToday() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.setPayrollDateToday?.();
-    }
-
-    function renderDailyPayrollData() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.renderDailyPayrollData?.();
-    }
-
-    function exportPayrollExcel() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.exportPayrollExcel?.();
-    }
-
-    function renderMonthlySummary() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.renderMonthlySummary?.();
-    }
-
-    function exportMonthlyExcel() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.exportMonthlyExcel?.();
-    }
-
-    function saveGlobalLateTime() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.saveGlobalLateTime?.();
-    }
-
-    function showAddEmpModal() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showAddEmpModal?.();
-    }
-
-    function submitAddEmp() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.submitAddEmp?.();
-    }
-
-    function showEditEmpModal(key, id, name, pin, rate, isDriver) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.showEditEmpModal?.(key, id, name, pin, rate, isDriver);
-    }
-
-    function submitEditEmp() {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.submitEditEmp?.();
-    }
-
-    function confirmDeleteEmp(key, name) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.confirmDeleteEmp?.(key, name);
-    }
-
-    function executeDeleteEmp(key) {
-      // Delegated to admin-operations.js module
-      window.PinThipSafe?.adminOperations?.executeDeleteEmp?.(key);
-    }
-
     function showClockInForm() {
       const t = i18n[currentLang];
       document.getElementById('pageTitle').innerText = t.pageTitleClockIn;
@@ -1944,85 +1681,83 @@
       document.getElementById('listBox').style.display = "none";
       document.getElementById('status').innerHTML = i18n[currentLang].checking;
 
-      db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+      Promise.all([
+        db.ref('settings/globalLateTime').once('value'),
+        db.ref('logs').once('value'),
+        db.ref('leaves').once('value')
+      ]).then(([settingsSnap, logSnap, leaveSnap]) => {
         const globalLateTime = settingsSnap.val() || "08:00";
+        const logsObj = logSnap.val() || {};
+        const leavesObj = leaveSnap.val() || {};
 
-        db.ref('logs').once('value', (logSnap) => {
-          const logsObj = logSnap.val() || {};
-          let presentDays = 0;
-          let lateRecords = [];
+        let presentDays = 0;
+        let lateRecords = [];
 
-          Object.keys(logsObj).forEach(k => {
-            let item = logsObj[k];
-            if (String(item.empId) === String(currentUser.empId) && item.type === "เข้างาน") {
-              presentDays++;
-              if (item.time > globalLateTime) {
-                lateRecords.push(item);
-              }
+        Object.values(logsObj).forEach(item => {
+          if (String(item.empId) === String(currentUser.empId) && item.type === "เข้างาน") {
+            presentDays++;
+            if (item.time > globalLateTime) {
+              lateRecords.push(item);
             }
-          });
+          }
+        });
 
-          db.ref('leaves').once('value', (leaveSnap) => {
-            const leavesObj = leaveSnap.val() || {};
-            let leaveCount = 0;
-            let leaveRecords = [];
+        let leaveCount = 0;
+        let leaveRecords = [];
 
-            Object.keys(leavesObj).forEach(k => {
-              let item = leavesObj[k];
-              let statusStr = String(item.status || '');
-              if (String(item.empId) === String(currentUser.empId) && statusStr.includes('อนุมัติ')) {
-                leaveCount++;
-                leaveRecords.push(item);
-              }
-            });
+        Object.values(leavesObj).forEach(item => {
+          let statusStr = String(item.status || '');
+          if (String(item.empId) === String(currentUser.empId) && statusStr.includes('อนุมัติ')) {
+            leaveCount++;
+            leaveRecords.push(item);
+          }
+        });
 
-            document.getElementById('status').innerHTML = "";
+        document.getElementById('status').innerHTML = "";
 
-            let html = `
-              <div class="user-banner">👤 ${currentUser.empName} (${currentUser.empId})</div>
-              
-              <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                <div class="stat-box" style="background:#e8f5e9; color:#2e7d32; padding: 12px; border-radius: 10px; flex:1;">
-                  มาทำงานรวม<br><b style="font-size:20px;">${presentDays}</b> วัน
-                </div>
-                <div class="stat-box" style="background:#fff3cd; color:#856404; padding: 12px; border-radius: 10px; flex:1;">
-                  มาสาย<br><b style="font-size:20px;">${lateRecords.length}</b> ครั้ง
-                </div>
-                <div class="stat-box" style="background:#e2e3e5; color:#383d41; padding: 12px; border-radius: 10px; flex:1;">
-                  ลางาน<br><b style="font-size:20px;">${leaveCount}</b> วัน
-                </div>
+        let html = `
+          <div class="user-banner">👤 ${currentUser.empName} (${currentUser.empId})</div>
+          
+          <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+            <div class="stat-box" style="background:#e8f5e9; color:#2e7d32; padding: 12px; border-radius: 10px; flex:1;">
+              มาทำงานรวม<br><b style="font-size:20px;">${presentDays}</b> วัน
+            </div>
+            <div class="stat-box" style="background:#fff3cd; color:#856404; padding: 12px; border-radius: 10px; flex:1;">
+              มาสาย<br><b style="font-size:20px;">${lateRecords.length}</b> ครั้ง
+            </div>
+            <div class="stat-box" style="background:#e2e3e5; color:#383d41; padding: 12px; border-radius: 10px; flex:1;">
+              ลางาน<br><b style="font-size:20px;">${leaveCount}</b> วัน
+            </div>
+          </div>
+        `;
+
+        if (lateRecords.length > 0 || leaveRecords.length > 0) {
+          html += `<div style="text-align:left; font-weight:bold; margin: 15px 0 5px 0; color:#495057;">📌 รายละเอียดวันมาสาย หรือ วันลา:</div>`;
+
+          lateRecords.slice().reverse().forEach(item => {
+            html += `
+              <div class="history-item" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                ⏰ <b>มาสาย</b> วันที่: ${item.date} (เวลาสแกน: <b style="color:#d9534f;">${item.time} น.</b>)<br>
+                <span style="font-size:12px; color:#555;">เกณฑ์เวลาเข้างาน: ${globalLateTime} น.</span>
               </div>
             `;
-
-            if (lateRecords.length > 0 || leaveRecords.length > 0) {
-              html += `<div style="text-align:left; font-weight:bold; margin: 15px 0 5px 0; color:#495057;">📌 รายละเอียดวันมาสาย หรือ วันลา:</div>`;
-
-              lateRecords.slice().reverse().forEach(item => {
-                html += `
-                  <div class="history-item" style="background: #fff3cd; border-left: 4px solid #ffc107;">
-                    ⏰ <b>มาสาย</b> วันที่: ${item.date} (เวลาสแกน: <b style="color:#d9534f;">${item.time} น.</b>)<br>
-                    <span style="font-size:12px; color:#555;">เกณฑ์เวลาเข้างาน: ${globalLateTime} น.</span>
-                  </div>
-                `;
-              });
-
-              leaveRecords.slice().reverse().forEach(item => {
-                html += `
-                  <div class="history-item" style="background: #e2e3e5; border-left: 4px solid #6c757d;">
-                    🌴 <b>${item.leaveType}</b> (${item.status})<br>
-                    📅 วันที่: ${item.startDate} ถึง ${item.endDate}<br>
-                    💬 เหตุผล: ${item.reason}
-                  </div>
-                `;
-              });
-            } else {
-              html += `<div style="color: #28a745; background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 15px; font-weight: bold;">🎉 ยอดเยี่ยม! คุณไม่เคยมาสายและไม่มีประวัติการลาเลย</div>`;
-            }
-
-            html += `<button class="btn-back" onclick="showDashboard()" style="margin-top:15px;">${t.btnBack}</button>`;
-            document.getElementById('mainContent').innerHTML = html;
           });
-        });
+
+          leaveRecords.slice().reverse().forEach(item => {
+            html += `
+              <div class="history-item" style="background: #e2e3e5; border-left: 4px solid #6c757d;">
+                🌴 <b>${item.leaveType}</b> (${item.status})<br>
+                📅 วันที่: ${item.startDate} ถึง ${item.endDate}<br>
+                💬 เหตุผล: ${item.reason}
+              </div>
+            `;
+          });
+        } else {
+          html += `<div style="color: #28a745; background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 15px; font-weight: bold;">🎉 ยอดเยี่ยม! คุณไม่เคยมาสายและไม่มีประวัติการลาเลย</div>`;
+        }
+
+        html += `<button class="btn-back" onclick="showDashboard()" style="margin-top:15px;">${t.btnBack}</button>`;
+        document.getElementById('mainContent').innerHTML = html;
       });
     }
 
@@ -2031,26 +1766,26 @@
       document.getElementById('pageTitle').innerText = "📜 ประวัติการลา & เบิกจ่าย";
       document.getElementById('listBox').style.display = "none";
 
-      db.ref('leaves').once('value', (leaveSnap) => {
+      Promise.all([
+        db.ref('leaves').once('value'),
+        db.ref('fuel_requests').once('value')
+      ]).then(([leaveSnap, fuelSnap]) => {
         const leavesObj = leaveSnap.val() || {};
-        let myLeaves = [];
-        Object.keys(leavesObj).forEach(k => {
-          if (String(leavesObj[k].empId) === String(currentUser.empId)) myLeaves.push(leavesObj[k]);
+        const fuelObj = fuelSnap.val() || {};
+
+        let myLeaves = Object.values(leavesObj).filter(
+          item => String(item.empId) === String(currentUser.empId)
+        );
+        let myFuels = Object.values(fuelObj).filter(
+          item => String(item.empId) === String(currentUser.empId)
+        );
+
+        let html = `<div class="user-banner">${currentUser.empName}</div>`;
+        html += `<b>🌴 ประวัติการลา:</b>`;
+        if (myLeaves.length === 0) html += `<div style="color:#888; font-size:12px;">ไม่มีประวัติการลา</div>`;
+        myLeaves.forEach(item => {
+          html += `<div class="history-item"><b>${item.leaveType}</b> (${item.status})<br>📅 ${item.startDate} ถึง ${item.endDate}</div>`;
         });
-
-        db.ref('fuel_requests').once('value', (fuelSnap) => {
-          const fuelObj = fuelSnap.val() || {};
-          let myFuels = [];
-          Object.keys(fuelObj).forEach(k => {
-            if (String(fuelObj[k].empId) === String(currentUser.empId)) myFuels.push(fuelObj[k]);
-          });
-
-          let html = `<div class="user-banner">${currentUser.empName}</div>`;
-          html += `<b>🌴 ประวัติการลา:</b>`;
-          if (myLeaves.length === 0) html += `<div style="color:#888; font-size:12px;">ไม่มีประวัติการลา</div>`;
-          myLeaves.forEach(item => {
-            html += `<div class="history-item"><b>${item.leaveType}</b> (${item.status})<br>📅 ${item.startDate} ถึง ${item.endDate}</div>`;
-          });
 
           if (currentUser.isDriver) {
             html += `<br><b>⛽/🔧 ประวัติเบิกค่าน้ำมัน / ค่าซ่อม:</b>`;
@@ -2066,7 +1801,6 @@
 
           html += `<button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>`;
           document.getElementById('mainContent').innerHTML = html;
-        });
       });
     }
 
@@ -2089,6 +1823,8 @@
       showLoginForm();
     }
 
+    let todayListRefreshTimer = null;
+
     function loadTodayListRealtime() {
       const container = document.getElementById('checkinContainer');
       const statsContainer = document.getElementById('quickStatsContainer');
@@ -2096,92 +1832,74 @@
 
       const todayStr = getLocalDateTimeString();
 
-      db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+      Promise.all([
+        db.ref('settings/globalLateTime').once('value'),
+        db.ref('employees').once('value'),
+        db.ref('logs').once('value'),
+        db.ref('leaves').once('value')
+      ]).then(([settingsSnap, empSnap, logSnap, leaveSnap]) => {
         const globalLateTime = settingsSnap.val() || "08:00";
+        const employeesObj = empSnap.val() || {};
+        const logsObj = logSnap.val() || {};
+        const leavesObj = leaveSnap.val() || {};
 
-        db.ref('employees').once('value', (empSnap) => {
-          const employeesObj = empSnap.val() || {};
-          let allEmployees = [];
-          Object.keys(employeesObj).forEach(k => allEmployees.push(employeesObj[k]));
+        const allEmployees = Object.values(employeesObj);
+        const checkedInList = Object.values(logsObj).filter(
+          l => l.date === todayStr && l.type === "เข้างาน"
+        );
+        const approvedLeavesToday = Object.values(leavesObj).filter(
+          l => String(l.status || '').includes('อนุมัติแล้ว') && l.startDate <= todayStr && l.endDate >= todayStr
+        );
 
-          db.ref('logs').on('value', (logSnap) => {
-            const logsObj = logSnap.val() || {};
-            let checkedInList = [];
-            Object.keys(logsObj).forEach(k => {
-              if (logsObj[k].date === todayStr && logsObj[k].type === "เข้างาน") {
-                checkedInList.push(logsObj[k]);
-              }
-            });
+        let leaveList = [];
+        let presentList = [];
+        let lateList = [];
+        let absentList = [];
 
-            db.ref('leaves').on('value', (leaveSnap) => {
-              const leavesObj = leaveSnap.val() || {};
-              let approvedLeavesToday = [];
-              Object.keys(leavesObj).forEach(k => {
-                let l = leavesObj[k];
-                let statusStr = String(l.status || '');
-                if (statusStr.includes('อนุมัติแล้ว') && l.startDate <= todayStr && l.endDate >= todayStr) {
-                  approvedLeavesToday.push(l);
-                }
-              });
-
-              let leaveList = [];
-              let presentList = [];
-              let lateList = [];
-              let absentList = [];
-
-              allEmployees.forEach(emp => {
-                const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
-                const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
-
-                if (leave) {
-                  leaveList.push({ emp, leave });
-                } else if (present) {
-                  if (present.time > globalLateTime) {
-                    lateList.push({ emp, present });
-                  } else {
-                    presentList.push({ emp, present });
-                  }
-                } else {
-                  absentList.push({ emp });
-                }
-              });
-
-              presentList.sort((a, b) => (a.present.time || "").localeCompare(b.present.time || ""));
-              lateList.sort((a, b) => (a.present.time || "").localeCompare(b.present.time || ""));
-
-              let html = '';
-
-              leaveList.forEach(item => {
-                html += `<div class="emp-tag-leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
-              });
-
-              presentList.forEach(item => {
-                html += `<div class="emp-tag-present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
-              });
-
-              lateList.forEach(item => {
-                html += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b></span></div>`;
-              });
-
-              absentList.forEach(item => {
-                html += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
-              });
-
-              let totalPresentCount = presentList.length + lateList.length;
-
-              if (statsContainer) {
-                statsContainer.innerHTML = `
-                  <div class="stats-card-container">
-                    <div class="stat-box" style="background:#e8f5e9; color:#2e7d32;">มา<b>${totalPresentCount}</b></div>
-                    <div class="stat-box" style="background:#fff3cd; color:#856404;">ลา<b>${leaveList.length}</b></div>
-                    <div class="stat-box" style="background:#ffebee; color:#c62828;">ไม่มา<b>${absentList.length}</b></div>
-                  </div>
-                `;
-              }
-              container.innerHTML = html;
-            });
-          });
+        allEmployees.forEach(emp => {
+          const present = checkedInList.find(item => String(item.empId) === String(emp.empId));
+          const leave = approvedLeavesToday.find(item => String(item.empId) === String(emp.empId));
+          if (leave) {
+            leaveList.push({ emp, leave });
+          } else if (present) {
+            (present.time > globalLateTime ? lateList : presentList).push({ emp, present });
+          } else {
+            absentList.push({ emp });
+          }
         });
+
+        presentList.sort((a, b) => (a.present.time || "").localeCompare(b.present.time || ""));
+        lateList.sort((a, b) => (a.present.time || "").localeCompare(b.present.time || ""));
+
+        let html = '';
+        leaveList.forEach(item => {
+          html += `<div class="emp-tag-leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
+        });
+        presentList.forEach(item => {
+          html += `<div class="emp-tag-present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
+        });
+        lateList.forEach(item => {
+          html += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b></span></div>`;
+        });
+        absentList.forEach(item => {
+          html += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
+        });
+
+        let totalPresentCount = presentList.length + lateList.length;
+        if (statsContainer) {
+          statsContainer.innerHTML = `
+            <div class="stats-card-container">
+              <div class="stat-box" style="background:#e8f5e9; color:#2e7d32;">มา<b>${totalPresentCount}</b></div>
+              <div class="stat-box" style="background:#fff3cd; color:#856404;">ลา<b>${leaveList.length}</b></div>
+              <div class="stat-box" style="background:#ffebee; color:#c62828;">ไม่มา<b>${absentList.length}</b></div>
+            </div>
+          `;
+        }
+        container.innerHTML = html;
+
+        // Auto-refresh every 15 seconds instead of using .on('value') listener
+        if (todayListRefreshTimer) clearTimeout(todayListRefreshTimer);
+        todayListRefreshTimer = setTimeout(loadTodayListRealtime, 15000);
       });
     }
 

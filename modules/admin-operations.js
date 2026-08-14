@@ -62,85 +62,83 @@
 
     container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
 
-    window.db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
+    Promise.all([
+      window.db.ref('settings/globalLateTime').once('value'),
+      window.db.ref('employees').once('value'),
+      window.db.ref('logs').once('value'),
+      window.db.ref('leaves').once('value')
+    ]).then(([settingsSnap, empSnap, logSnap, leaveSnap]) => {
       const globalLateTime = settingsSnap.val() || '08:00';
+      const employees = empSnap.val() || {};
+      const logs = logSnap.val() || {};
+      const leaves = leaveSnap.val() || {};
 
-      window.db.ref('employees').once('value', (empSnap) => {
-        const employees = empSnap.val() || {};
-        window.db.ref('logs').once('value', (logSnap) => {
-          const logs = logSnap.val() || {};
-          window.db.ref('leaves').once('value', (leaveSnap) => {
-            const leaves = leaveSnap.val() || {};
+      const summaryList = [];
+      const empKeys = Object.keys(employees);
 
-            const summaryList = [];
-            const empKeys = Object.keys(employees);
+      if (empKeys.length === 0) {
+        container.innerHTML = '<div style="color:#888; margin:20px 0;">ไม่มีข้อมูลพนักงานในระบบ</div>';
+        return;
+      }
 
-            if (empKeys.length === 0) {
-              container.innerHTML = '<div style="color:#888; margin:20px 0;">ไม่มีข้อมูลพนักงานในระบบ</div>';
-              return;
+      empKeys.forEach((ek) => {
+        const emp = employees[ek];
+        let presentCount = 0;
+        let lateCount = 0;
+        let leaveCount = 0;
+
+        Object.keys(logs).forEach((lk) => {
+          const log = logs[lk];
+          if (String(log.empId) === String(emp.empId) && log.date && log.date >= startDate && log.date <= endDate && log.type === 'เข้างาน') {
+            presentCount++;
+            if (log.time > globalLateTime) {
+              lateCount++;
             }
+          }
+        });
 
-            empKeys.forEach((ek) => {
-              const emp = employees[ek];
-              let presentCount = 0;
-              let lateCount = 0;
-              let leaveCount = 0;
+        Object.keys(leaves).forEach((fk) => {
+          const leave = leaves[fk];
+          const statusStr = String(leave.status || '');
+          if (String(leave.empId) === String(emp.empId) && leave.startDate && leave.endDate && leave.startDate <= endDate && leave.endDate >= startDate && statusStr.includes('อนุมัติแล้ว')) {
+            leaveCount++;
+          }
+        });
 
-              Object.keys(logs).forEach((lk) => {
-                const log = logs[lk];
-                if (String(log.empId) === String(emp.empId) && log.date && log.date >= startDate && log.date <= endDate && log.type === 'เข้างาน') {
-                  presentCount++;
-                  if (log.time > globalLateTime) {
-                    lateCount++;
-                  }
-                }
-              });
-
-              Object.keys(leaves).forEach((fk) => {
-                const leave = leaves[fk];
-                const statusStr = String(leave.status || '');
-                if (String(leave.empId) === String(emp.empId) && leave.startDate && leave.endDate && leave.startDate <= endDate && leave.endDate >= startDate && statusStr.includes('อนุมัติแล้ว')) {
-                  leaveCount++;
-                }
-              });
-
-              summaryList.push({
-                empId: emp.empId,
-                empName: emp.empName,
-                presentCount,
-                lateCount,
-                leaveCount
-              });
-            });
-
-            currentAttendanceSummaryCache = summaryList;
-
-            let html = `
-              <div style="background: linear-gradient(135deg, #0dcaf0, #0d6efd); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
-                <b>📊 สรุปสถิติพนักงานช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-                👥 จำนวนพนักงานทั้งหมด: <b>${summaryList.length} คน</b> (เกณฑ์มาสาย: หลัง ${globalLateTime} น.)
-              </div>
-            `;
-
-            summaryList.forEach((item) => {
-              html += `
-                <div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
-                  <div>
-                    <b>👤 ${item.empName}</b> (${item.empId})<br>
-                    <span style="color: #6c757d; font-size: 12px;">มาทำงาน: <b style="color: #28a745;">${item.presentCount}</b> วัน</span>
-                  </div>
-                  <div style="display: flex; gap: 8px; text-align: right;">
-                    <span style="background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 13px;">⏰ มาสาย: <b>${item.lateCount}</b> ครั้ง</span>
-                    <span style="background: #e2e3e5; color: #383d41; padding: 4px 10px; border-radius: 6px; font-size: 13px;">🌴 ลา: <b>${item.leaveCount}</b> วัน</span>
-                  </div>
-                </div>
-              `;
-            });
-
-            container.innerHTML = html;
-          });
+        summaryList.push({
+          empId: emp.empId,
+          empName: emp.empName,
+          presentCount,
+          lateCount,
+          leaveCount
         });
       });
+
+      currentAttendanceSummaryCache = summaryList;
+
+      let html = `
+        <div style="background: linear-gradient(135deg, #0dcaf0, #0d6efd); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
+          <b>📊 สรุปสถิติพนักงานช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
+          👥 จำนวนพนักงานทั้งหมด: <b>${summaryList.length} คน</b> (เกณฑ์มาสาย: หลัง ${globalLateTime} น.)
+        </div>
+      `;
+
+      summaryList.forEach((item) => {
+        html += `
+          <div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <b>👤 ${item.empName}</b> (${item.empId})<br>
+              <span style="color: #6c757d; font-size: 12px;">มาทำงาน: <b style="color: #28a745;">${item.presentCount}</b> วัน</span>
+            </div>
+            <div style="display: flex; gap: 8px; text-align: right;">
+              <span style="background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 13px;">⏰ มาสาย: <b>${item.lateCount}</b> ครั้ง</span>
+              <span style="background: #e2e3e5; color: #383d41; padding: 4px 10px; border-radius: 6px; font-size: 13px;">🌴 ลา: <b>${item.leaveCount}</b> วัน</span>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
     });
   }
 

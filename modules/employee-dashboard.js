@@ -1,6 +1,6 @@
 (function () {
   function escape(value) {
-    return window.PinThipSafe?.ui?.escapeHtml ? window.PinThipSafe.ui.escapeHtml(value) : String(value ?? '');
+    return window.PinThipSafe?.escapeHtml ? window.PinThipSafe.escapeHtml(value) : String(value ?? '');
   }
 
   function buildLoginHtml(t) {

@@ -1,4 +1,10 @@
 (function () {
+  // Device access default config
+  window.__PINTHIP_DEVICE_ACCESS__ = {
+    enabled: true,
+    customAuthEnabled: true
+  };
+
   const firebaseConfig = {
     apiKey: 'AIzaSyBeBOyADRqJPLfGGREE8vNWBW051hQJKCo',
     authDomain: 'pinthip-checkin.firebaseapp.com',
