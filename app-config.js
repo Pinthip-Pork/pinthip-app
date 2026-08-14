@@ -11,9 +11,9 @@
   };
 
   const adminCredentials = {
-    enabled: false,
+    enabled: true,
     username: 'admin',
-    pin: ''
+    pin: '8888'
   };
 
   window.PinThipSafe = window.PinThipSafe || {};

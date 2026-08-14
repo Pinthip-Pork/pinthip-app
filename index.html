@@ -410,6 +410,27 @@
 
     const i18n = window.PinThipSafe.i18n;
 
+    const escapeHtml = window.PinThipSafe?.escapeHtml || ((value) => String(value ?? '').replace(/[&<>"']/g, (char) => {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return map[char] || char;
+    }));
+
+    function safeText(value) {
+      return escapeHtml(value);
+    }
+
+    function setStatusText(elementId, message) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.textContent = String(message ?? '');
+    }
+
     const getLocalDateTimeString = window.PinThipSafe.utils.getLocalDateTimeString;
     const downloadCSV = window.PinThipSafe.utils.downloadCSV;
 
@@ -585,11 +606,16 @@
         if (pendingLeavesCache.length > 0) {
           html += `<div style="font-weight:bold; color:#fd7e14; margin-bottom:5px;">🌴 รายการขอลางาน (${pendingLeavesCache.length}):</div>`;
           pendingLeavesCache.forEach(item => {
+            const empName = safeText(item.empName || '');
+            const leaveType = safeText(item.leaveType || '');
+            const startDate = safeText(item.startDate || '');
+            const endDate = safeText(item.endDate || '');
+            const reason = safeText(item.reason || '');
             html += `
               <div class="history-item" style="cursor:pointer; background:#fff3cd;" onclick="closeModal(); showAdminLeaves();">
-                <b>👤 ${item.empName}</b> (${item.leaveType})<br>
-                📅 ${item.startDate} ถึง ${item.endDate}<br>
-                💬 เหตุผล: ${item.reason}
+                <b>👤 ${empName}</b> (${leaveType})<br>
+                📅 ${startDate} ถึง ${endDate}<br>
+                💬 เหตุผล: ${reason}
               </div>
             `;
           });
@@ -598,12 +624,14 @@
         if (pendingFuelsCache.length > 0) {
           html += `<div style="font-weight:bold; color:#e67e22; margin-top:10px; margin-bottom:5px;">⛽/🔧 รายการเบิกค่าน้ำมัน/ค่าซ่อม (${pendingFuelsCache.length}):</div>`;
           pendingFuelsCache.forEach(item => {
-            let typeLabel = item.requestType || 'เบิกค่าน้ำมัน';
-            let plateText = item.carPlate ? `ทะเบียน: ${item.carPlate}` : '';
+            const empName = safeText(item.empName || '');
+            let typeLabel = safeText(item.requestType || 'เบิกค่าน้ำมัน');
+            let plateText = item.carPlate ? `ทะเบียน: ${safeText(item.carPlate)}` : '';
+            let routeText = safeText(item.route || '-');
             html += `
               <div class="history-item" style="cursor:pointer; background:#fff3cd;" onclick="closeModal(); showAdminFuelRequests();">
-                <b>👤 ${item.empName}</b> [${typeLabel}] ${plateText}<br>
-                📍 รายละเอียด: ${item.route || '-'}
+                <b>👤 ${empName}</b> [${typeLabel}] ${plateText}<br>
+                📍 รายละเอียด: ${routeText}
               </div>
             `;
           });
@@ -668,15 +696,15 @@
       const statusDiv = document.getElementById('status');
 
       if (!inputId || !inputPin) {
-        statusDiv.innerHTML = t.emptyInputErr;
+        setStatusText('status', t.emptyInputErr);
         return;
       }
 
-      statusDiv.innerHTML = t.checking;
+      setStatusText('status', t.checking);
 
       const adminAttempt = window.PinThipSafe.auth.tryLoginAdmin(inputId, inputPin);
       if (adminAttempt.allowed) {
-        statusDiv.innerHTML = "";
+        setStatusText('status', '');
         const sessionState = PinThipSafe.session.setAdminSession();
         isAdmin = sessionState.isAdmin;
         currentUser = sessionState.currentUser;
@@ -690,7 +718,7 @@
         const foundUser = window.PinThipSafe.auth.findEmployeeByCredentials(employees, inputId, inputPin);
 
         if (foundUser) {
-          statusDiv.innerHTML = "";
+          setStatusText('status', '');
           isAdmin = false;
           currentUser = window.PinThipSafe.auth.normalizeSessionUser({
             success: true,
@@ -706,7 +734,7 @@
           showDashboard();
           startEmployeeNotificationListener();
         } else {
-          statusDiv.innerHTML = adminAttempt.allowed ? "" : "❌ รหัสเข้าใช้งาน หรือ PIN ไม่ถูกต้อง!";
+          setStatusText('status', adminAttempt.allowed ? '' : '❌ รหัสเข้าใช้งาน หรือ PIN ไม่ถูกต้อง!');
         }
       });
     }
