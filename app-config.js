@@ -10,10 +10,19 @@
     measurementId: 'G-FWKZ4L2LST'
   };
 
-  const adminCredentials = {
+  const defaultAdminCredentials = {
     enabled: true,
     username: 'admin',
     pin: '8888'
+  };
+
+  const runtimeAdminCredentials = window.__PINTHIP_ADMIN__ || {};
+  const adminCredentials = {
+    ...defaultAdminCredentials,
+    ...runtimeAdminCredentials,
+    enabled: Boolean(runtimeAdminCredentials.enabled ?? defaultAdminCredentials.enabled),
+    username: String(runtimeAdminCredentials.username || defaultAdminCredentials.username),
+    pin: String(runtimeAdminCredentials.pin || defaultAdminCredentials.pin)
   };
 
   window.PinThipSafe = window.PinThipSafe || {};

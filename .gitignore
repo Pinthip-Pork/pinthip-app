@@ -35,5 +35,9 @@ tmp/
 .firebase/
 .firebaserc
 
+# Local secrets for admin login
+local-admin-config.js
+.env.local
+
 # OS files
 Thumbs.db
