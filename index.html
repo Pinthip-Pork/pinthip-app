@@ -303,6 +303,7 @@
             🔔<span class="bell-badge" id="bellBadge" style="display:none;">0</span>
           </button>
           <button class="bell-btn" id="soundBtn" onclick="toggleNotificationSound()" style="display:none;" title="เปิด/ปิดเสียงแจ้งเตือน" aria-label="เปิด/ปิดเสียงแจ้งเตือน">🔊</button>
+          <button class="bell-btn" id="desktopNotificationBtn" onclick="enableDesktopNotifications()" style="display:none;" title="เปิดแจ้งเตือน Windows" aria-label="เปิดแจ้งเตือน Windows">🖥️</button>
         </div>
         <div class="lang-switcher">
           <button class="home-btn" id="homeBtn" onclick="goHome()" title="กลับหน้าหลัก" aria-label="กลับหน้าหลัก">←</button>
@@ -384,6 +385,7 @@
     let deviceAccessAutoApproveCache = true;
     let notificationAudioContext = null;
     let notificationMode = localStorage.getItem('pinthip_notification_mode') || (localStorage.getItem('pinthip_notification_sound') === 'off' ? 'off' : 'beep');
+    let desktopNotificationsEnabled = localStorage.getItem('pinthip_desktop_notifications') === 'on';
 
     let touchStartY = 0;
     window.addEventListener('touchstart', (e) => {
@@ -429,6 +431,49 @@
       soundBtn.innerText = notificationMode === 'off' ? '🔇' : (notificationMode === 'voice' ? '🗣️' : '🔊');
       soundBtn.title = 'เลือกรูปแบบเสียงแจ้งเตือน';
       soundBtn.setAttribute('aria-label', soundBtn.title);
+    }
+
+    function isWindowsBrowser() {
+      const ua = navigator.userAgent;
+      return /Windows NT/i.test(ua) && /Chrome|Edg\//i.test(ua) && !/OPR\//i.test(ua);
+    }
+
+    function updateDesktopNotificationButton() {
+      const button = document.getElementById('desktopNotificationBtn');
+      if (!button) return;
+      button.innerText = desktopNotificationsEnabled ? '🖥️' : '🔕';
+      button.title = desktopNotificationsEnabled ? 'ปิดแจ้งเตือน Windows' : 'เปิดแจ้งเตือน Windows';
+      button.setAttribute('aria-label', button.title);
+    }
+
+    function showDesktopNotificationControl(visible) {
+      const button = document.getElementById('desktopNotificationBtn');
+      if (!button) return;
+      const supported = isWindowsBrowser() && 'Notification' in window;
+      button.style.display = visible && supported ? 'block' : 'none';
+      updateDesktopNotificationButton();
+    }
+
+    async function enableDesktopNotifications() {
+      if (!isWindowsBrowser() || !('Notification' in window)) return;
+      if (Notification.permission === 'denied') {
+        showModal('แจ้งเตือน Windows', 'Browser ถูกปิดสิทธิ์แจ้งเตือนไว้ กรุณาเปิดสิทธิ์จากไอคอนรูปกุญแจหน้าเว็บ', '<button class="btn-ok" onclick="closeModal()">ตกลง</button>');
+        return;
+      }
+      const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+      desktopNotificationsEnabled = permission === 'granted';
+      localStorage.setItem('pinthip_desktop_notifications', desktopNotificationsEnabled ? 'on' : 'off');
+      updateDesktopNotificationButton();
+      if (desktopNotificationsEnabled) showDesktopNotification('เปิดแจ้งเตือน Windows แล้ว', 'ระบบจะแจ้งเตือนเมื่อมีรายการใหม่');
+    }
+
+    function showDesktopNotification(title, body) {
+      if (!desktopNotificationsEnabled || !isWindowsBrowser() || !('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        new Notification(title, { body, icon: './icon-192.png', tag: 'pinthip-notification' });
+      } catch (error) {
+        console.warn('Desktop notification failed:', error);
+      }
     }
 
     function getNotificationAudioContext() {
@@ -544,6 +589,7 @@
           isAdmin = true;
           currentUser = null;
           showNotificationSoundControl(true);
+          showDesktopNotificationControl(true);
           startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
           showAdminDashboard();
           startAdminNotificationListener();
@@ -551,6 +597,7 @@
           currentUser = restored.currentUser;
           isAdmin = false;
           showNotificationSoundControl(true);
+          showDesktopNotificationControl(true);
           startDevicePresence(window.PinThipSafe.utils.getDeviceId(), currentUser.empName, 'employee');
           showDashboard();
           startDeviceAccessGuard();
@@ -618,6 +665,7 @@
 
         if (!isInitialLoadLeaves && newPendingCount > 0) {
           playNotificationAlert('มีคำขอลาใหม่ กรุณาตรวจสอบ');
+          showDesktopNotification('มีคำขอลาใหม่', 'กรุณาตรวจสอบคำขอลาจากพนักงาน');
           showModal("🔔 แจ้งเตือนคำขอใหม่", "มีพนักงานส่งคำขอลามาใหม่ กรุณาตรวจสอบในเมนูอนุมัติใบลา", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
         }
         isInitialLoadLeaves = false;
@@ -638,6 +686,7 @@
 
         if (!isInitialLoadFuels && newFuelPendingCount > 0) {
           playNotificationAlert('มีคำขอเบิกน้ำมันหรือค่าซ่อมใหม่ กรุณาตรวจสอบ');
+          showDesktopNotification('มีคำขอเบิกจ่ายใหม่', 'มีคำขอเบิกน้ำมันหรือค่าซ่อมรถ');
           showModal("🔔 แจ้งเตือนเบิกจ่ายใหม่", "มีพนักงานส่งคำขอเบิกค่าน้ำมัน/ค่าซ่อมรถมาใหม่", `<button class="btn-ok" onclick="closeModal()">ตกลง</button>`);
         }
         isInitialLoadFuels = false;
@@ -709,6 +758,7 @@
 
         if (!isInitialLoadEmpJobs && myNewJobsCount > 0) {
           playNotificationAlert('มีงานส่งของใหม่ กรุณาตรวจสอบงานของคุณ');
+          showDesktopNotification('มีงานส่งของใหม่', 'กรุณาตรวจสอบงานส่งของของคุณ');
           showModal("📦 มีงานส่งของใหม่!", `คุณได้รับมอบหมายจ๊อบส่งของใหม่วันนี้ (${myNewJobsCount} ร้าน)\nกรุณาตรวจสอบที่กระดิ่งแจ้งเตือน`, `<button class="btn-ok" onclick="closeModal(); showDriverMyJobsView();">ไปที่งานของฉัน</button>`);
         }
         isInitialLoadEmpJobs = false;
@@ -813,6 +863,7 @@
       document.getElementById('hamburgerBtn').style.display = 'none';
       document.getElementById('bellBtn').style.display = 'none';
       showNotificationSoundControl(false);
+      showDesktopNotificationControl(false);
       const t = i18n[currentLang];
       document.getElementById('pageTitle').innerText = t.pageTitleLogin;
       document.getElementById('status').innerText = "";
@@ -850,6 +901,7 @@
         currentUser = sessionState.currentUser;
         showNotificationSoundControl(true);
         enableNotificationSound();
+        showDesktopNotificationControl(true);
         startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
         showAdminDashboard();
         startAdminNotificationListener();
@@ -887,6 +939,7 @@
           isAdmin = sessionState.isAdmin;
           showNotificationSoundControl(true);
           enableNotificationSound();
+          showDesktopNotificationControl(true);
           startDevicePresence(deviceAccess.deviceId, currentUser.empName, 'employee');
           showDashboard();
           startDeviceAccessGuard();
@@ -936,6 +989,7 @@
           setStatusText('status', '');
           showNotificationSoundControl(true);
           enableNotificationSound();
+          showDesktopNotificationControl(true);
           startDevicePresence(result.data.deviceId, currentUser.empName, 'employee');
           showDashboard();
           startDeviceAccessGuard();
@@ -1987,6 +2041,7 @@
       currentUser = null;
       isAdmin = false;
       showNotificationSoundControl(false);
+      showDesktopNotificationControl(false);
       PinThipSafe.session.clearAuthState();
       showLoginForm();
     }
