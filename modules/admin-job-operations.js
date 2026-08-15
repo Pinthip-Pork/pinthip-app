@@ -682,6 +682,9 @@
 
     const mainContent = document.getElementById('mainContent');
     if (mainContent) mainContent.innerHTML = window.PinThipSafe.employeeDashboard.buildDashboardHtml(getCurrentUser(), t);
+    if (typeof window.updateClockInStatus === 'function') {
+      window.updateClockInStatus();
+    }
     if (typeof window.loadTodayListRealtime === 'function') {
       window.loadTodayListRealtime();
     }

@@ -1501,8 +1501,35 @@
       document.getElementById('status').innerText = "";
       document.getElementById('listBox').style.display = "block";
       document.getElementById('mainContent').innerHTML = window.PinThipSafe.employeeDashboard.buildDashboardHtml(currentUser, t);
+      updateClockInStatus();
       loadTodayListRealtime();
     }
+
+    function updateClockInStatus() {
+      const statusEl = document.getElementById('clockInStatus');
+      if (!statusEl || !currentUser) return;
+      const t = i18n[currentLang];
+      const todayStr = getLocalDateTimeString();
+      PinThipSafe.logsRepo.fetchLogsForRange(db, todayStr, todayStr).then((logsObj) => {
+        const todayLogs = Object.values(logsObj).filter(
+          l => l.date === todayStr && String(l.empId) === String(currentUser.empId) && l.type === 'เข้างาน'
+        );
+        if (todayLogs.length > 0) {
+          statusEl.innerHTML = t.clockedIn;
+          statusEl.style.background = '#e8f5e9';
+          statusEl.style.color = '#2e7d32';
+        } else {
+          statusEl.innerHTML = t.notClockedIn;
+          statusEl.style.background = '#fff3cd';
+          statusEl.style.color = '#856404';
+        }
+      }).catch(() => {
+        statusEl.innerHTML = '⚠️ ไม่สามารถตรวจสอบสถานะได้';
+        statusEl.style.background = '#ffebee';
+        statusEl.style.color = '#c62828';
+      });
+    }
+    window.updateClockInStatus = updateClockInStatus;
 
     function showClockInForm() {
       const t = i18n[currentLang];
