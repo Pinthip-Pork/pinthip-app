@@ -21,8 +21,10 @@
     ` : '';
 
     return `
-      <div class="user-banner">${escape(t.welcome(currentUser?.empName || 'Employee'))} (${userId})</div>
-      <div id="clockInStatus" class="clock-status" style="text-align:center; margin-bottom:12px; font-size:14px; padding:8px; border-radius:8px;">⏳ กำลังตรวจสอบ...</div>
+      <div class="user-banner">
+        <div class="user-banner-title">${escape(t.welcome(currentUser?.empName || 'Employee'))} (${userId})</div>
+        <div class="user-banner-status"><span id="clockInStatus" class="user-status-badge status-pending">⏳ กำลังตรวจสอบ...</span></div>
+      </div>
       <button class="btn-clock" onclick="showClockInForm()">${escape(t.btnClockInMenu)}</button>
       ${driverExtras}
       <button class="btn-leave" onclick="showLeaveForm()">${escape(t.btnLeaveMenu)}</button>

@@ -163,7 +163,46 @@
     .btn-danger { background: linear-gradient(135deg, #dc3545, #c82333) !important; }
     
     #status { margin-top: 15px; font-weight: bold; white-space: pre-line; color: #333; font-size: 14px; }
-    .user-banner { background: #e9ecef; padding: 10px; border-radius: 10px; font-weight: bold; color: #333; margin-bottom: 15px; text-align: left; }
+    .user-banner {
+      background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+      border: 1px solid #dfe7f5;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 15px;
+      text-align: left;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+    .user-banner-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1f2937;
+      line-height: 1.5;
+    }
+    .user-banner-status {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .user-status-badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+    }
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .status-done {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .status-error {
+      background: #ffebee;
+      color: #c62828;
+    }
     .history-item { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; margin: 8px 0; text-align: left; font-size: 13px; line-height: 1.5; }
     
     .stats-card-container { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -1516,17 +1555,14 @@
         );
         if (todayLogs.length > 0) {
           statusEl.innerHTML = t.clockedIn;
-          statusEl.style.background = '#e8f5e9';
-          statusEl.style.color = '#2e7d32';
+          statusEl.className = 'user-status-badge status-done';
         } else {
           statusEl.innerHTML = t.notClockedIn;
-          statusEl.style.background = '#fff3cd';
-          statusEl.style.color = '#856404';
+          statusEl.className = 'user-status-badge status-pending';
         }
       }).catch(() => {
         statusEl.innerHTML = '⚠️ ไม่สามารถตรวจสอบสถานะได้';
-        statusEl.style.background = '#ffebee';
-        statusEl.style.color = '#c62828';
+        statusEl.className = 'user-status-badge status-error';
       });
     }
     window.updateClockInStatus = updateClockInStatus;
