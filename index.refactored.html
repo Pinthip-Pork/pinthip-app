@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- สำหรับ iOS (iPhone/iPad) -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
+  <link rel="manifest" href="manifest.json?v=20260809-13">
+  <meta name="theme-color" content="#16a34a">
+
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ปิ่นทิพย์ เช็กอิน">
+  
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+
+  <!-- Core modules (no dependency on scripts/) -->
+  <script src="./security-helpers-browser.js"></script>
+  <script src="./app-state.js"></script>
+  <script src="./app-config.js"></script>
+  <script src="./auth.js"></script>
+  <script src="./app-utils.js"></script>
+  <script src="./app-i18n.js"></script>
+
+  <!-- Feature modules (may reference window.PinThipSafe.*) -->
+  <script src="./modules/logs-repository.js"></script>
+  <script src="./modules/ui-helpers.js"></script>
+  <script src="./modules/employee-dashboard.js"></script>
+  <script src="./modules/admin-dashboard.js?v=attendance-fix-5"></script>
+  <script src="./modules/admin-operations.js?v=report-fix-2"></script>
+  <script src="./modules/admin-job-operations.js"></script>
+
+  <!-- External CSS (replaces inline <style>) -->
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+  <!-- Pull-to-Refresh Indicator -->
+  <div id="pullRefreshIndicator" style="position: fixed; top: -45px; left: 0; width: 100%; text-align: center; padding: 12px 0; background: #333; color: white; font-size: 14px; z-index: 9999; transition: top 0.3s ease;">⬇️ ดึงเพื่อรีเฟรช</div>
+
+  <div class="card" id="mainCard">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="top-controls">
+        <div class="top-left-group">
+          <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleDrawer(true)" style="display:none;" aria-label="เมนู">☰</button>
+          <button class="home-btn" onclick="goHome()" title="หน้าแรก">🏠</button>
+        </div>
+
+        <h1 id="companyTitle">🏪 ปิ่นทิพย์ เช็กอิน</h1>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button id="soundBtn" onclick="toggleNotificationSound()" style="display:none; width:auto !important; margin:0 !important; padding:6px 10px !important; font-size:18px !important; line-height:1 !important; border-radius:8px !important; background:#f8f9fa !important; color:#333 !important; border:1px solid #ced4da !important; box-shadow:none !important; cursor:pointer;" aria-label="เลือกรูปแบบเสียงแจ้งเตือน">🔊</button>
+          <button id="desktopNotificationBtn" onclick="enableDesktopNotifications()" style="display:none; width:auto !important; margin:0 !important; padding:6px 10px !important; font-size:18px !important; line-height:1 !important; border-radius:8px !important; background:#f8f9fa !important; color:#333 !important; border:1px solid #ced4da !important; box-shadow:none !important; cursor:pointer;" aria-label="เปิดแจ้งเตือน Windows">🔕</button>
+          <button class="bell-btn" id="bellBtn" onclick="showNotificationModal()" style="display:none;" aria-label="การแจ้งเตือน">
+            🔔<span class="bell-badge" id="bellBadge">0</span>
+          </button>
+          <div class="lang-switcher">
+            <button class="lang-btn active" id="btnTH" onclick="setLanguage('TH')">ไทย</button>
+            <button class="lang-btn" id="btnMM" onclick="setLanguage('MM')">မြန်မာ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="pageTitle">🔑 เข้าสู่ระบบ</h2>
+    
+    <div id="mainContent"></div>
+    <div id="status"></div>
+
+    <div class="list-box" id="listBox">
+      <div class="list-title" id="listTitle">📊 สถานะพนักงานวันนี้:</div>
+      <div id="quickStatsContainer"></div>
+      <div id="checkinContainer"><span class="no-data" id="loadingText">กำลังโหลดข้อมูล...</span></div>
+    </div>
+  </div>
+
+  <!-- Drawer Menu -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer(false)"></div>
+  <div class="drawer-menu" id="drawerMenu">
+    <div class="drawer-header">
+      <span>👑 เมนูผู้ดูแลระบบ</span>
+      <span onclick="toggleDrawer(false)" style="cursor:pointer; font-size:22px;">&times;</span>
+    </div>
+    <div class="drawer-section-label">ภาพรวม</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()">🏠 แดสบอร์ดภาพรวม</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()">⚡ ศูนย์บัญชาการ Live</div>
+
+    <div class="drawer-section-label">งานส่งของ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()">📦 มอบหมายจ๊อบส่งของ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()">📜 ประวัติการส่งของ</div>
+
+    <div class="drawer-section-label">รออนุมัติ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">🌴 อนุมัติคำขอลา <span class="drawer-badge" id="pendingLeavesBadge">0</span></div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">⛽ อนุมัติน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="pendingFuelsBadge">0</span></div>
+
+    <div class="drawer-section-label">พนักงาน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showDeviceAccessManagement()">🔐 จัดการอุปกรณ์ทดลอง</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">👥 สรุปขาด ลา สาย</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">📜 ประวัติลงเวลา</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showEmpManagement()">⚙️ จัดการพนักงาน</div>
+
+    <div class="drawer-section-label">รายงานและตั้งค่า</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaveHistory()">📜 ประวัติการลา</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelHistory()">📜 ประวัติเบิกจ่าย</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showDailyPayroll()">💵 ค่าแรงรายวัน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAnalyticsReport()">📈 ค่าใช้จ่ายรายเดือน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showLocationManagement()">📍 พิกัด GPS</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showHolidayManagement()">🗓️ วันหยุดร้าน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); handleLogout()" style="color:#dc3545; margin-top:auto;">🚪 ออกจากระบบ</div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="customModal">
+    <div class="modal-box" id="modalBoxContainer">
+      <div class="modal-title" id="modalTitle">ยืนยัน</div>
+      <div id="modalBodyWrapper" class="">
+        <div class="modal-text" id="modalText">ข้อความ...</div>
+        <div id="modalCustomContent"></div>
+      </div>
+      <div class="modal-btns" id="modalBtns"></div>
+    </div>
+  </div>
+
+  <!-- Extracted Scripts (loaded in dependency order) -->
+  <script src="./scripts/app-globals.js"></script>
+  <script src="./scripts/notification.js"></script>
+  <script src="./scripts/device-access.js"></script>
+  <script src="./scripts/auth-ui.js"></script>
+  <script src="./scripts/employee-ui.js"></script>
+  <script src="./scripts/admin-quick-modal.js"></script>
+  <script src="./scripts/upload.js"></script>
+
+  <!-- Bootstrap: start the app -->
+  <script>
+    initApp();
+  </script>
+</body>
+</html>
