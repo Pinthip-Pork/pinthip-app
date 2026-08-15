@@ -65,12 +65,11 @@
     Promise.all([
       window.db.ref('settings/globalLateTime').once('value'),
       window.db.ref('employees').once('value'),
-      window.db.ref('logs').once('value'),
+      window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, startDate, endDate),
       window.db.ref('leaves').once('value')
-    ]).then(([settingsSnap, empSnap, logSnap, leaveSnap]) => {
+    ]).then(([settingsSnap, empSnap, logs, leaveSnap]) => {
       const globalLateTime = settingsSnap.val() || '08:00';
       const employees = empSnap.val() || {};
-      const logs = logSnap.val() || {};
       const leaves = leaveSnap.val() || {};
 
       const summaryList = [];
@@ -1078,8 +1077,7 @@
 
     container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
 
-    window.db.ref('logs').once('value', (snapshot) => {
-      const logsObj = snapshot.val() || {};
+    window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, startDate, endDate).then((logsObj) => {
       const list = Object.keys(logsObj).map((k) => logsObj[k]);
 
       currentLogFilteredList = list.filter((item) => item.date && item.date >= startDate && item.date <= endDate);
@@ -1200,8 +1198,7 @@
     window.db.ref('employees').once('value', (empSnap) => {
       const employeesObj = empSnap.val() || {};
 
-      window.db.ref('logs').once('value', (logSnap) => {
-        const logsObj = logSnap.val() || {};
+      window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, startDate, endDate).then((logsObj) => {
         const attendanceByEmployeeDate = new Map();
 
         Object.keys(logsObj).forEach((k) => {
@@ -1365,8 +1362,7 @@
 
     window.db.ref('employees').once('value', (empSnap) => {
       const empObj = empSnap.val() || {};
-      window.db.ref('logs').once('value', (logSnap) => {
-        const logObj = logSnap.val() || {};
+      window.PinThipSafe.logsRepo.fetchLogsForMonth(window.db, ym).then((logObj) => {
         window.db.ref('fuel_requests').once('value', (fuelSnap) => {
           const fuelObj = fuelSnap.val() || {};
 

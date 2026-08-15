@@ -21,12 +21,11 @@
 
     Promise.all([
       window.db.ref('employees').once('value'),
-      window.db.ref('logs').once('value'),
+      window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, todayStr, todayStr),
       window.db.ref('leaves').once('value'),
       window.db.ref('fuel_requests').once('value')
-    ]).then(([empSnap, logSnap, leaveSnap, fuelSnap]) => {
+    ]).then(([empSnap, logsObj, leaveSnap, fuelSnap]) => {
       const employeesObj = empSnap.val() || {};
-      const logsObj = logSnap.val() || {};
       const leavesObj = leaveSnap.val() || {};
       const fuelObj = fuelSnap.val() || {};
 
@@ -219,13 +218,12 @@
     Promise.all([
       window.db.ref('settings/globalLateTime').once('value'),
       window.db.ref('employees').once('value'),
-      window.db.ref('logs').once('value'),
+      window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, todayStr, todayStr),
       window.db.ref('leaves').once('value'),
       window.db.ref('delivery_jobs/' + todayStr).once('value')
-    ]).then(([settingsSnap, empSnap, logSnap, leaveSnap, jobSnap]) => {
+    ]).then(([settingsSnap, empSnap, logsObj, leaveSnap, jobSnap]) => {
       const globalLateTime = settingsSnap.val() || '08:00';
       const employeesObj = empSnap.val() || {};
-      const logsObj = logSnap.val() || {};
       const leavesObj = leaveSnap.val() || {};
       const jobsObj = jobSnap.val() || {};
 

@@ -24,6 +24,7 @@
   <script src="./auth.js"></script>
   <script src="./app-utils.js"></script>
   <script src="./app-i18n.js"></script>
+  <script src="./modules/logs-repository.js"></script>
   <script src="./modules/ui-helpers.js"></script>
   <script src="./modules/employee-dashboard.js"></script>
   <script src="./modules/admin-dashboard.js?v=attendance-fix-5"></script>
@@ -1556,8 +1557,7 @@
       const now = new Date();
       const dateStr = getLocalDateTimeString();
 
-      db.ref('logs').once('value', (logSnap) => {
-        const logsObj = logSnap.val() || {};
+      PinThipSafe.logsRepo.fetchLogsForRange(db, dateStr, dateStr).then((logsObj) => {
         let alreadyCheckedInToday = false;
 
         Object.keys(logsObj).forEach(k => {
@@ -1605,7 +1605,7 @@
 
             const timeStr = now.toTimeString().substring(0, 5);
 
-            db.ref('logs').push().set({
+            PinThipSafe.logsRepo.writeLogEntry(db, {
               empId: currentUser.empId,
               empName: currentUser.empName,
               type: "เข้างาน",
@@ -1683,11 +1683,10 @@
 
       Promise.all([
         db.ref('settings/globalLateTime').once('value'),
-        db.ref('logs').once('value'),
+        PinThipSafe.logsRepo.fetchAllLogs(db),
         db.ref('leaves').once('value')
-      ]).then(([settingsSnap, logSnap, leaveSnap]) => {
+      ]).then(([settingsSnap, logsObj, leaveSnap]) => {
         const globalLateTime = settingsSnap.val() || "08:00";
-        const logsObj = logSnap.val() || {};
         const leavesObj = leaveSnap.val() || {};
 
         let presentDays = 0;
@@ -1835,12 +1834,11 @@
       Promise.all([
         db.ref('settings/globalLateTime').once('value'),
         db.ref('employees').once('value'),
-        db.ref('logs').once('value'),
+        PinThipSafe.logsRepo.fetchLogsForRange(db, todayStr, todayStr),
         db.ref('leaves').once('value')
-      ]).then(([settingsSnap, empSnap, logSnap, leaveSnap]) => {
+      ]).then(([settingsSnap, empSnap, logsObj, leaveSnap]) => {
         const globalLateTime = settingsSnap.val() || "08:00";
         const employeesObj = empSnap.val() || {};
-        const logsObj = logSnap.val() || {};
         const leavesObj = leaveSnap.val() || {};
 
         const allEmployees = Object.values(employeesObj);
