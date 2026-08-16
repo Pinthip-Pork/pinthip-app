@@ -9,7 +9,11 @@ const loadFoamCustomerRepo = async () => {
       PinThipSafe: {},
       db: null
     },
-    console: { warn: () => {} }
+    console: {
+      log: () => {},
+      warn: () => {},
+      error: () => {}
+    }
   };
 
   const code = await fs.readFile('modules/foam-customer-repo.js', 'utf8');

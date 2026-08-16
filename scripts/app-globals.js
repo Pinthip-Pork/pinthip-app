@@ -162,10 +162,43 @@ function showLoginForm() {
   document.getElementById('mainContent').innerHTML = window.PinThipSafe.employeeDashboard.buildLoginHtml(t);
 }
 
+function resetExpiredAuthSession() {
+  if (typeof stopDeviceAccessGuard === 'function') stopDeviceAccessGuard();
+  if (typeof stopDevicePresence === 'function') stopDevicePresence();
+  currentUser = null;
+  window.currentUser = null;
+  isAdmin = false;
+  window.isAdmin = false;
+  PinThipSafe.session.clearAuthState();
+}
+
+function requireFirebaseAuth() {
+  var firebaseUser = firebase.auth().currentUser;
+  if (firebaseUser) return true;
+
+  console.warn('Firebase Auth session is required before accessing protected data.');
+  resetExpiredAuthSession();
+  if (typeof showLoginForm === 'function') showLoginForm();
+  window.alert('เซสชันเข้าสู่ระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  return false;
+}
+
+window.PinThipSafe.requireFirebaseAuth = requireFirebaseAuth;
+
 // ===== Init App =====
 function initApp() {
-  var unsubscribe = firebase.auth().onAuthStateChanged(function(firebaseUser) {
-    unsubscribe();
+  var isInitialAuthState = true;
+  firebase.auth().onAuthStateChanged(function(firebaseUser) {
+    if (!isInitialAuthState) {
+      if (!firebaseUser) {
+        console.warn('Firebase Auth session ended');
+        resetExpiredAuthSession();
+        if (typeof showLoginForm === 'function') showLoginForm();
+      }
+      return;
+    }
+    isInitialAuthState = false;
+
     try {
       var restored = PinThipSafe.session.restoreSession();
 
@@ -185,10 +218,10 @@ function initApp() {
           if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
         } else {
           console.warn('Admin Firebase Auth session expired');
-          PinThipSafe.session.clearAuthState();
+          resetExpiredAuthSession();
           if (typeof showLoginForm === 'function') showLoginForm();
         }
-      } else if (restored.currentUser && restored.currentUser.empId) {
+      } else if (firebaseUser && restored.currentUser && restored.currentUser.empId) {
         currentUser = restored.currentUser;
         window.currentUser = currentUser;
         isAdmin = false;
@@ -202,12 +235,13 @@ function initApp() {
         if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
         if (typeof startEmployeeNotificationListener === 'function') startEmployeeNotificationListener();
       } else {
-        PinThipSafe.session.clearAuthState();
+        if (restored.currentUser && !firebaseUser) console.warn('Employee Firebase Auth session expired');
+        resetExpiredAuthSession();
         if (typeof showLoginForm === 'function') showLoginForm();
       }
     } catch (e) {
       console.warn('Init app failed:', e);
-      PinThipSafe.session.clearAuthState();
+      resetExpiredAuthSession();
       if (typeof showLoginForm === 'function') showLoginForm();
     }
   });

@@ -56,6 +56,10 @@
   }
 
   function showFoamAdminView() {
+    if (!window.PinThipSafe || !window.PinThipSafe.requireFirebaseAuth || !window.PinThipSafe.requireFirebaseAuth()) {
+      return;
+    }
+
     window.isAdmin = true;
     var mainCard = document.getElementById('mainCard');
     if (mainCard) mainCard.classList.add('admin-wide');

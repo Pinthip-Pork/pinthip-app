@@ -45,7 +45,12 @@ function stopDevicePresence() {
     devicePresenceInterval = null;
   }
   if (devicePresenceKey) {
-    db.ref('device_access/' + devicePresenceKey).update({ online: false, lastSeenAt: new Date().toISOString() });
+    var presenceUpdate = db.ref('device_access/' + devicePresenceKey).update({ online: false, lastSeenAt: new Date().toISOString() });
+    if (presenceUpdate && typeof presenceUpdate.catch === 'function') {
+      presenceUpdate.catch(function (error) {
+        console.warn('Device presence update skipped:', error);
+      });
+    }
     devicePresenceKey = null;
   }
 }

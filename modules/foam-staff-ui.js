@@ -21,6 +21,10 @@
 
   // ===== Main Staff View =====
   function showFoamStaffView() {
+    if (!window.PinThipSafe || !window.PinThipSafe.requireFirebaseAuth || !window.PinThipSafe.requireFirebaseAuth()) {
+      return;
+    }
+
     window.isAdmin = false;
     document.getElementById('mainCard').classList.remove('admin-wide');
     document.getElementById('hamburgerBtn').style.display = 'none';
