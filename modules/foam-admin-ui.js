@@ -526,10 +526,10 @@
           '</select>' +
         '</div>' +
         '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;">' +
-          '<button class="btn-blue" onclick="foamAdminSaveSelected(' + JSON.stringify(requestKey) + ', ' + JSON.stringify(dateStr) + ')" style="flex:1; min-width:120px;">💾 บันทึกข้อมูล</button>' +
-          (canApprove ? '<button class="btn-fuel" onclick="foamAdminApproveSelected(' + JSON.stringify(requestKey) + ', ' + JSON.stringify(dateStr) + ')" style="flex:1; min-width:120px;">✅ อนุมัติ</button>' : '') +
-          '<button class="btn-danger" onclick="foamAdminRejectSelected(' + JSON.stringify(requestKey) + ', ' + JSON.stringify(dateStr) + ')" style="flex:1; min-width:120px;">❌ ยกเลิก</button>' +
-          '<button class="btn-purple" onclick="foamAdminPrintSelected(' + JSON.stringify(requestKey) + ', ' + JSON.stringify(dateStr) + ')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
+          '<button class="btn-blue" onclick="foamAdminSaveSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">💾 บันทึกข้อมูล</button>' +
+          (canApprove ? '<button class="btn-fuel" onclick="foamAdminApproveSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">✅ อนุมัติ</button>' : '') +
+          '<button class="btn-danger" onclick="foamAdminRejectSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">❌ ยกเลิก</button>' +
+          '<button class="btn-purple" onclick="foamAdminPrintSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
         '</div>';
 
       detail.innerHTML = html;
