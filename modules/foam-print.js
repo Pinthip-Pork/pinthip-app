@@ -37,7 +37,7 @@
     var nameFontSize = nameLen > 30 ? '36px' : nameLen > 20 ? '48px' : '60px';
 
     var addrLen = addrLines.join(' ').length;
-    var addrFontSize = addrLen > 80 ? '22px' : addrLen > 50 ? '28px' : '34px';
+    var addrFontSize = addrLen > 100 ? '28px' : addrLen > 65 ? '34px' : '40px';
 
     return '<div class="foam-label-page">' +
       // Header row
@@ -115,7 +115,7 @@
         '}' +
 
         '.foam-label-addr-line {' +
-          'font-size: 34px; line-height: 1.6; color: #000;' +
+          'font-size: 40px; line-height: 1.45; color: #000;' +
           'word-break: break-word;' +
         '}' +
 
