@@ -201,7 +201,10 @@ function renderDeviceAccessManagement() {
   var mainContent = document.getElementById('mainContent');
   if (!mainContent) return;
   var searchInput = document.getElementById('deviceAccessSearch');
-  var search = String(searchInput ? searchInput.value : '').trim().toLowerCase();
+  var rawValue = searchInput ? searchInput.value : '';
+  var search = String(rawValue).trim().toLowerCase();
+  var cursorPos = searchInput ? searchInput.selectionStart : 0;
+  var wasFocused = searchInput && document.activeElement === searchInput;
   var filterSelect = document.getElementById('deviceAccessFilter');
   var filter = filterSelect ? filterSelect.value : 'all';
 
@@ -275,6 +278,15 @@ function renderDeviceAccessManagement() {
 
   html += '\u003Cbutton class=\"btn-back\" onclick=\"showAdminDashboard()\" style=\"margin-top:15px;\"\u003E\u2B05\uFE0F \u0E01\u0E25\u0E31\u0E1A\u0E2B\u0E19\u0E49\u0E32\u0E41\u0E14\u0E2A\u0E1A\u0E2D\u0E23\u0E4C\u0E14\u003C/button\u003E';
   mainContent.innerHTML = html;
+
+  // Restore cursor position and focus on search input
+  if (wasFocused) {
+    var newInput = document.getElementById('deviceAccessSearch');
+    if (newInput) {
+      newInput.focus();
+      newInput.setSelectionRange(cursorPos, cursorPos);
+    }
+  }
 }
 
 function setDeviceAutoApprove(enabled) {
