@@ -50,14 +50,22 @@
     },
     "foam_customers": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null",
+      "$customerId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
     },
     "foam_delivery_requests": {
       ".read": "auth != null",
       ".write": "auth != null",
       "$date": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null",
+        "$requestId": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
       }
     },
     "routes_preset": {

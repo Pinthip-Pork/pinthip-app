@@ -18,11 +18,16 @@
    * @returns {Promise<Array<{key: string, name: string, phone: string, address: string, ...}>>}
    */
   function fetchAllCustomers() {
-    return getDb().ref(getCustomerPath()).once('value').then(function (snapshot) {
+    var db = getDb();
+    if (!db) return Promise.reject(new Error('Firebase database not initialized'));
+    return db.ref(getCustomerPath()).once('value').then(function (snapshot) {
       var obj = snapshot.val() || {};
       return Object.keys(obj).map(function (k) {
         return Object.assign({ key: k }, obj[k]);
       });
+    }).catch(function (err) {
+      console.error('Fetch customers error:', err.code, err.message);
+      throw err;
     });
   }
 
@@ -39,6 +44,9 @@
         return (String(c.name || '').toLowerCase().indexOf(q) !== -1) ||
                (String(c.phone || '').toLowerCase().indexOf(q) !== -1);
       });
+    }).catch(function (err) {
+      console.error('Search customers error:', err);
+      throw err;
     });
   }
 
@@ -61,6 +69,10 @@
    * @returns {Promise<{key: string}>}
    */
   function addCustomer(data, createdBy) {
+    var db = getDb();
+    if (!db) return Promise.reject(new Error('Firebase database not initialized'));
+    if (!data.name || !String(data.name || '').trim()) return Promise.reject(new Error('Customer name is required'));
+    
     var now = new Date().toISOString();
     var entry = {
       name: String(data.name || '').trim(),
@@ -76,10 +88,17 @@
       updatedAt: now,
       createdBy: String(createdBy || '')
     };
-    var ref = getDb().ref(getCustomerPath()).push();
+    
+    var ref = db.ref(getCustomerPath()).push();
     return new Promise(function (resolve, reject) {
       ref.set(entry, function (err) {
-        if (err) return reject(err);
+        if (err) {
+          console.error('Firebase write error:', err.code, err.message);
+          if (err.code === 'PERMISSION_DENIED') {
+            return reject(new Error('ไม่มีสิทธิ์เขียนข้อมูล กรุณาตรวจสอบสิทธิ์ผู้ใช้'));
+          }
+          return reject(err);
+        }
         resolve({ key: ref.key });
       });
     });

@@ -392,8 +392,9 @@
     repo.addCustomer(payload, 'admin').then(function () {
       window.showModal('✅ สำเร็จ', 'เพิ่มลูกค้าลังโฟมเรียบร้อยแล้ว', '<button class="btn-ok" onclick="closeModal(); showFoamCustomerManager();">ตกลง</button>');
     }).catch(function (err) {
-      console.warn('Add foam customer failed:', err);
-      window.alert('เพิ่มลูกค้าไม่สำเร็จ กรุณาลองใหม่');
+      console.error('Add foam customer failed:', err);
+      var errMsg = (err && err.message) ? err.message : 'เพิ่มลูกค้าไม่สำเร็จ';
+      window.alert(errMsg + '\n\nตรวจสอบคอนโซล (F12) สำหรับรายละเอียด');
     });
   }
 
