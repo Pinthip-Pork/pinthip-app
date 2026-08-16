@@ -64,6 +64,7 @@
       empId: String(user.empId),
       empName: String(user.empName || ''),
       isDriver: Boolean(user.isDriver),
+      canSendFoamLabels: Boolean(user.canSendFoamLabels),
       pin: user.pin || undefined,
       role: user.role || 'employee'
     };

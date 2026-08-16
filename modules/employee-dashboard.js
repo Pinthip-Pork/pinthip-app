@@ -15,6 +15,10 @@
 
   function buildDashboardHtml(currentUser, t) {
     const userId = escape(currentUser?.empId || '');
+    const foamExtras = currentUser?.canSendFoamLabels ? `
+      <button class="btn-fuel" onclick="showFoamStaffView()">📦 ส่งลังโฟม</button>
+    ` : '';
+
     const driverExtras = currentUser?.isDriver ? `
       <button class="btn-fuel" onclick="showDriverMyJobsView()">📦 งานส่งของของฉันวันนี้</button>
       <button class="btn-fuel" onclick="showFuelRequestForm()">${escape(t.btnFuelMenu)}</button>
@@ -26,6 +30,7 @@
         <div class="user-banner-status"><span id="clockInStatus" class="user-status-badge status-pending">${escape(t.clockInStatusLoading)}</span></div>
       </div>
       <button class="btn-clock" onclick="showClockInForm()">${escape(t.btnClockInMenu)}</button>
+      ${foamExtras}
       ${driverExtras}
       <button class="btn-leave" onclick="showLeaveForm()">${escape(t.btnLeaveMenu)}</button>
       <button class="btn-history" onclick="showMyAttendance()">${escape(t.btnMyAttendance)}</button>

@@ -630,6 +630,94 @@ button:disabled {
   border-radius: 8px;
 }
 
+/* ---- Foam Label Print Styles ---- */
+@media print {
+  body {
+    background: #fff !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  #mainCard,
+  .top-bar,
+  .drawer-menu,
+  .modal-overlay,
+  .list-box,
+  #pullRefreshIndicator {
+    display: none !important;
+  }
+
+  .foam-label-page {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10mm;
+    box-sizing: border-box;
+    page-break-after: always;
+  }
+
+  .foam-label-page:last-child {
+    page-break-after: auto;
+  }
+
+  .foam-label-header,
+  .foam-label-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid #000;
+    border-top: 3px solid #000;
+    padding: 6px 0;
+  }
+
+  .foam-label-header {
+    border-top: none;
+  }
+
+  .foam-label-header-left,
+  .foam-label-footer-left {
+    font-size: 32px;
+    font-weight: bold;
+    color: #111;
+  }
+
+  .foam-label-header-right,
+  .foam-label-footer-right {
+    font-size: 50px;
+    font-weight: bold;
+    color: #000;
+    text-align: right;
+  }
+
+  .foam-label-address {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  .foam-label-addr-line {
+    font-size: 32px;
+    line-height: 1.5;
+    color: #000;
+  }
+
+  .foam-label-shipping {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #0d6efd;
+    border: 2px dashed #0d6efd;
+    border-radius: 8px;
+    padding: 6px 12px;
+    width: fit-content;
+  }
+}
+
 /* ---- Pull-to-Refresh ---- */
 #pullRefreshIndicator {
   position: absolute;

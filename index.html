@@ -36,6 +36,13 @@
   <script src="./modules/admin-operations.js?v=report-fix-2"></script>
   <script src="./modules/admin-job-operations.js"></script>
 
+  <!-- Foam Label modules -->
+  <script src="./modules/foam-customer-repo.js"></script>
+  <script src="./modules/foam-delivery-repo.js"></script>
+  <script src="./modules/foam-print.js"></script>
+  <script src="./modules/foam-staff-ui.js"></script>
+  <script src="./modules/foam-admin-ui.js"></script>
+
   <!-- External CSS (replaces inline <style>) -->
   <link rel="stylesheet" href="styles/main.css">
 </head>
@@ -97,6 +104,7 @@
     <div class="drawer-section-label">รออนุมัติ</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">🌴 อนุมัติคำขอลา <span class="drawer-badge" id="pendingLeavesBadge">0</span></div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">⛽ อนุมัติน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="pendingFuelsBadge">0</span></div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showFoamAdminView()">📦 จัดการป้ายลังโฟม <span class="drawer-badge" id="pendingFoamBadge" style="display:none;">0</span></div>
 
     <div class="drawer-section-label">พนักงาน</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showDeviceAccessManagement()">🔐 จัดการอุปกรณ์ทดลอง <span class="drawer-badge" id="pendingDevicesBadge" style="display:none;">0</span></div>

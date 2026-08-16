@@ -91,6 +91,7 @@ async function handleLogin() {
         empId: foundUser.empId,
         empName: foundUser.empName,
         isDriver: foundUser.isDriver || false,
+        canSendFoamLabels: foundUser.canSendFoamLabels || false,
         pin: foundUser.pin,
         role: foundUser.role || 'employee'
       });
@@ -137,6 +138,7 @@ async function handleCustomAuthLogin(inputId, inputPin) {
         empId: foundUser.empId,
         empName: foundUser.empName,
         isDriver: foundUser.isDriver || false,
+        canSendFoamLabels: foundUser.canSendFoamLabels || false,
         role: foundUser.role || 'employee'
       });
       var sessionState = PinThipSafe.session.setUserSession(currentUser);

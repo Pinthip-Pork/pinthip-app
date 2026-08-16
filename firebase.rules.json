@@ -48,6 +48,14 @@
       ".read": "auth != null",
       ".write": "auth != null && auth.token.role === 'admin'"
     },
+    "foam_delivery_requests": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$date": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
     "routes_preset": {
       ".read": "auth != null",
       ".write": "auth != null && auth.token.role === 'admin'"

@@ -473,13 +473,41 @@ function handleLogout() {
 // ========================================================
 var pendingLeavesCache = [];
 var pendingFuelsCache = [];
+var pendingFoamCache = [];
 var isInitialLoadLeaves = true;
 var isInitialLoadFuels = true;
+var isInitialLoadFoam = true;
 var myPendingJobsCache = [];
 var isInitialLoadEmpJobs = true;
 
 function startAdminNotificationListener() {
   document.getElementById('bellBtn').style.display = 'block';
+
+  db.ref('foam_delivery_requests').on('value', function(snap) {
+    var obj = snap.val() || {};
+    pendingFoamCache = [];
+    var newPendingFoamCount = 0;
+
+    Object.keys(obj).forEach(function(dateKey) {
+      var group = obj[dateKey] || {};
+      Object.keys(group).forEach(function(k) {
+        var item = group[k];
+        if (String(item.status || '').indexOf('pending') !== -1 || String(item.status || '').indexOf('รอ') !== -1) {
+          pendingFoamCache.push({ key: k, dateKey: dateKey, ...item });
+          newPendingFoamCount++;
+        }
+      });
+    });
+
+    if (!isInitialLoadFoam && newPendingFoamCount > 0) {
+      if (typeof playNotificationAlert === 'function') playNotificationAlert('มีรายการป้ายลังโฟมรออนุมัติ');
+      if (typeof showDesktopNotification === 'function') showDesktopNotification('มีรายการป้ายลังโฟม', 'รายการส่งลังโฟมใหม่รอแอดมินตรวจสอบ');
+      showModal('🔔 มีรายการป้ายลังโฟม', 'มีรายการส่งลังโฟมใหม่ที่ต้องตรวจสอบ', '<button class="btn-ok" onclick="closeModal(); showFoamAdminView();">ตกลง</button>');
+    }
+
+    isInitialLoadFoam = false;
+    updateAdminBellBadgeCount();
+  });
 
   db.ref('leaves').on('value', function(snap) {
     var obj = snap.val() || {};
@@ -525,7 +553,7 @@ function startAdminNotificationListener() {
 }
 
 function updateAdminBellBadgeCount() {
-  var totalPending = pendingLeavesCache.length + pendingFuelsCache.length;
+  var totalPending = pendingLeavesCache.length + pendingFuelsCache.length + pendingFoamCache.length;
   var badge = document.getElementById('bellBadge');
   if (badge) {
     if (totalPending > 0) {
@@ -538,6 +566,7 @@ function updateAdminBellBadgeCount() {
 
   var leavesBadge = document.getElementById('pendingLeavesBadge');
   var fuelsBadge = document.getElementById('pendingFuelsBadge');
+  var foamBadge = document.getElementById('pendingFoamBadge');
   if (leavesBadge) {
     leavesBadge.innerText = pendingLeavesCache.length;
     leavesBadge.style.display = pendingLeavesCache.length > 0 ? 'inline-block' : 'none';
@@ -545,6 +574,10 @@ function updateAdminBellBadgeCount() {
   if (fuelsBadge) {
     fuelsBadge.innerText = pendingFuelsCache.length;
     fuelsBadge.style.display = pendingFuelsCache.length > 0 ? 'inline-block' : 'none';
+  }
+  if (foamBadge) {
+    foamBadge.innerText = pendingFoamCache.length;
+    foamBadge.style.display = pendingFoamCache.length > 0 ? 'inline-block' : 'none';
   }
   if (typeof updatePendingDevicesBadge === 'function') updatePendingDevicesBadge();
 
@@ -617,7 +650,7 @@ function showNotificationModal() {
 function showAdminNotificationModal() {
   var html = '\u003Cdiv style=\"max-height: 350px; overflow-y: auto;\"\u003E';
 
-  if (pendingLeavesCache.length === 0 && pendingFuelsCache.length === 0) {
+  if (pendingLeavesCache.length === 0 && pendingFuelsCache.length === 0 && pendingFoamCache.length === 0) {
     html += '\u003Cdiv style=\"text-align:center; color:#888; padding:20px;\"\u003E\uD83C\uDF89 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E04\u0E33\u0E02\u0E2D\u0E17\u0E35\u0E48\u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E43\u0E19\u0E02\u0E13\u0E30\u0E19\u0E35\u0E49\u003C/div\u003E';
   } else {
     if (pendingLeavesCache.length > 0) {
@@ -645,6 +678,18 @@ function showAdminNotificationModal() {
         html += '\u003Cdiv class=\"history-item\" style=\"cursor:pointer; background:#fff3cd;\" onclick=\"closeModal(); showAdminFuelRequests();\"\u003E' +
           '\u003Cb\u003E\uD83D\uDC64 ' + empName + '\u003C/b\u003E [' + typeLabel + '] ' + plateText + '\u003Cbr\u003E' +
           '\uD83D\uDCCD \u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14: ' + routeText + '\u003C/div\u003E';
+      });
+    }
+
+    if (pendingFoamCache.length > 0) {
+      html += '\u003Cdiv style=\"font-weight:bold; color:#0d6efd; margin-top:10px; margin-bottom:5px;\"\u003E\uD83D\uDCE6 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E1B\u0E49\u0E33\u0E22\u0E19\u0E25\u0E39\u0E1D\u0E4C\u0E21\u0E4C\u0E2D\u0E2D\u0E19 (' + pendingFoamCache.length + '):\u003C/div\u003E';
+      pendingFoamCache.forEach(function(item) {
+        var custName = safeText((item.customerSnapshot && item.customerSnapshot.name) || 'ลูกค้าใหม่');
+        var shipping = safeText((item.customerSnapshot && item.customerSnapshot.shipping) || item.shipping || '');
+        html += '\u003Cdiv class=\"history-item\" style=\"cursor:pointer; background:#eaf3ff;\" onclick=\"closeModal(); showFoamAdminView();\"\u003E' +
+          '\u003Cb\u003E\uD83C\uDFEC ' + custName + '\u003C/b\u003E\u003Cbr\u003E' +
+          '\uD83D\uDCE6 \u0E2D\u0E32\u0E23\u0E39\u0E07\u0E40\u0E25\u0E37\u0E2D: ' + (item.boxCount || 1) + '\u003Cbr\u003E' +
+          '\uD83D\uDE9A \u0E02\u0E19\u0E31\u0E14: ' + (shipping || '-') + '\u003C/div\u003E';
       });
     }
   }

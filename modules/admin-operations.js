@@ -1473,14 +1473,15 @@
           html += '<h3>📋 รายชื่อพนักงานทั้งหมด:</h3>';
           empList.forEach((emp) => {
             const driverBadge = emp.isDriver ? '🚚 <b style="color:#e67e22;">พนักงานขับรถ</b>' : '👤 พนักงานทั่วไป';
+            const foamBadge = emp.canSendFoamLabels ? ' 📦 <b style="color:#0d6efd;">ส่งลังโฟม</b>' : '';
             html += `
               <div class="history-item" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                   <b>👤 ${emp.empName}</b> (${emp.empId})<br>
-                  🔑 PIN: ${emp.pin} | ค่าแรง: ${emp.dailyRate || 0} บาท | ${driverBadge}
+                  🔑 PIN: ${emp.pin} | ค่าแรง: ${emp.dailyRate || 0} บาท | ${driverBadge}${foamBadge}
                 </div>
                 <div style="display:flex; gap:5px;">
-                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditEmpModal('${emp.key}', '${emp.empId}', '${emp.empName}', '${emp.pin}', '${emp.dailyRate || 0}', ${emp.isDriver || false})">✏️</button>
+                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditEmpModal('${emp.key}', '${emp.empId}', '${emp.empName}', '${emp.pin}', '${emp.dailyRate || 0}', ${emp.isDriver || false}, ${emp.canSendFoamLabels || false})">✏️</button>
                   <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteEmp('${emp.key}', '${emp.empName}')">🗑️</button>
                 </div>
               </div>
@@ -1519,6 +1520,9 @@
       <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
         <input type="checkbox" id="newEmpDriver" style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
       </label>
+      <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
+        <input type="checkbox" id="newEmpFoamLabels" style="width:20px; height:20px; margin:0;"> มีสิทธิ์ใช้งานระบบส่งลังโฟม (เห็นเมนูส่งลังโฟม & รายชื่อลูกค้าทั้งหมด)
+      </label>
       <button class="btn-blue" onclick="submitAddEmp()">💾 บันทึกพนักงาน</button>
       <button class="btn-back" onclick="showEmpManagement()">⬅️ ย้อนกลับ</button>
     `;
@@ -1532,6 +1536,7 @@
     const pin = document.getElementById('newEmpPin')?.value.trim();
     const rate = document.getElementById('newEmpRate')?.value.trim();
     const isDriver = document.getElementById('newEmpDriver')?.checked;
+    const canSendFoamLabels = document.getElementById('newEmpFoamLabels')?.checked;
 
     if (!id || !name || !pin || !rate) {
       window.alert('กรุณากรอกข้อมูลให้ครบถ้วน');
@@ -1556,7 +1561,8 @@
         empName: name,
         pin,
         dailyRate: Number(rate),
-        isDriver
+        isDriver,
+        canSendFoamLabels
       }, (err) => {
         if (!err) {
           window.showModal('🎉 สำเร็จ', 'เพิ่มพนักงานเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
@@ -1565,7 +1571,7 @@
     });
   }
 
-  function showEditEmpModal(key, id, name, pin, rate, isDriver) {
+  function showEditEmpModal(key, id, name, pin, rate, isDriver, canSendFoamLabels) {
     const html = `
       <div class="user-banner">✏️ แก้ไขพนักงาน: ${name}</div>
       <input type="hidden" id="editKey" value="${key}">
@@ -1575,6 +1581,9 @@
       <input type="number" id="editEmpRate" value="${rate}" placeholder="ค่าแรงต่อวัน">
       <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
         <input type="checkbox" id="editEmpDriver" ${isDriver ? 'checked' : ''} style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
+        <input type="checkbox" id="editEmpFoamLabels" ${canSendFoamLabels ? 'checked' : ''} style="width:20px; height:20px; margin:0;"> มีสิทธิ์ใช้งานระบบส่งลังโฟม (เห็นเมนูส่งลังโฟม & รายชื่อลูกค้าทั้งหมด)
       </label>
       <button class="btn-blue" onclick="submitEditEmp()">💾 บันทึกการแก้ไข</button>
       <button class="btn-back" onclick="showEmpManagement()">⬅️ ย้อนกลับ</button>
@@ -1590,13 +1599,15 @@
     const pin = document.getElementById('editEmpPin')?.value.trim();
     const rate = document.getElementById('editEmpRate')?.value.trim();
     const isDriver = document.getElementById('editEmpDriver')?.checked;
+    const canSendFoamLabels = document.getElementById('editEmpFoamLabels')?.checked;
 
     window.db.ref('employees/' + key).update({
       empId: newId,
       empName: name,
       pin,
       dailyRate: Number(rate),
-      isDriver
+      isDriver,
+      canSendFoamLabels
     }, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
