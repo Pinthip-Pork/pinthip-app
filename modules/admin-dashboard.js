@@ -18,9 +18,6 @@
     if (status) status.innerText = '';
     if (listBox) listBox.style.display = 'block';
 
-    const foamBtn = document.getElementById('foamLabelBtn');
-    if (foamBtn) foamBtn.style.display = 'block';
-
     const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
 
     Promise.all([
@@ -185,6 +182,7 @@
       <div class="user-banner" style="display:flex; justify-content:space-between; align-items:center;">
         <span>DASHBORD Real-Time ประจำวันที่: <b>${todayStr}</b></span>
         <button class="btn-blue" onclick="showAdminCommandCenter()" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">🔄 รีเฟรชข้อมูลสด</button>
+        <button class="btn-blue" onclick="showFoamAdminView()" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">📦 จัดการป้ายลังโฟม</button>
       </div>
 
       <div class="command-center-container">
