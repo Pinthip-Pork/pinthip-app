@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pinthip-cache-v20260814-1';
+const CACHE_NAME = 'pinthip-cache-v20260816-2';
 const APP_ASSETS = [
   './',
   './index.html',
@@ -43,7 +43,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const safeStaticTypes = ['script', 'style', 'image', 'font', 'manifest'];
+  const networkFirstTypes = ['script', 'style'];
+  if (networkFirstTypes.includes(request.destination)) {
+    event.respondWith(
+      fetch(request).then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        return response;
+      }).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  const safeStaticTypes = ['image', 'font', 'manifest'];
   const isAppAsset = safeStaticTypes.includes(request.destination) || request.url.includes('.png') || request.url.includes('.json');
 
   if (isAppAsset) {

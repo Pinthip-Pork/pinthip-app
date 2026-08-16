@@ -37,11 +37,11 @@
   <script src="./modules/admin-job-operations.js"></script>
 
   <!-- Foam Label modules -->
-  <script src="./modules/foam-customer-repo.js"></script>
+  <script src="./modules/foam-customer-repo.js?v=foam-auth-20260816-2"></script>
   <script src="./modules/foam-delivery-repo.js"></script>
   <script src="./modules/foam-print.js"></script>
-  <script src="./modules/foam-staff-ui.js"></script>
-  <script src="./modules/foam-admin-ui.js"></script>
+  <script src="./modules/foam-staff-ui.js?v=foam-auth-20260816-2"></script>
+  <script src="./modules/foam-admin-ui.js?v=foam-auth-20260816-2"></script>
 
   <!-- External CSS (replaces inline <style>) -->
   <link rel="stylesheet" href="styles/main.css">
@@ -135,9 +135,9 @@
   </div>
 
   <!-- Extracted Scripts (loaded in dependency order) -->
-  <script src="./scripts/app-globals.js"></script>
+  <script src="./scripts/app-globals.js?v=foam-auth-20260816-2"></script>
   <script src="./scripts/notification.js"></script>
-  <script src="./scripts/device-access.js"></script>
+  <script src="./scripts/device-access.js?v=foam-auth-20260816-2"></script>
   <script src="./scripts/auth-ui.js"></script>
   <script src="./scripts/employee-ui.js"></script>
   <script src="./scripts/admin-quick-modal.js"></script>
@@ -145,6 +145,13 @@
 
   <!-- Bootstrap: start the app -->
   <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./sw.js').catch(function (error) {
+          console.warn('Service worker registration failed:', error);
+        });
+      });
+    }
     initApp();
   </script>
 </body>
