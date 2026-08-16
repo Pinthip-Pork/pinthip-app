@@ -111,16 +111,6 @@ function setLanguage(lang) {
   }
 }
 
-function goHome() {
-  if (isAdmin) {
-    if (typeof showAdminDashboard === 'function') showAdminDashboard();
-  } else if (currentUser) {
-    if (typeof showDashboard === 'function') showDashboard();
-  } else {
-    if (typeof showLoginForm === 'function') showLoginForm();
-  }
-}
-
 // ===== Modal =====
 function showModal(title, text, customHtml, btnsHtml) {
   document.getElementById('modalBoxContainer').classList.remove('modal-wide');

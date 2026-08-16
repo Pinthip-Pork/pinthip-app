@@ -23,7 +23,7 @@
     return `
       <div class="user-banner">
         <div class="user-banner-title">${escape(t.welcome(currentUser?.empName || 'Employee'))} (${userId})</div>
-        <div class="user-banner-status"><span id="clockInStatus" class="user-status-badge status-pending">⏳ กำลังตรวจสอบ...</span></div>
+        <div class="user-banner-status"><span id="clockInStatus" class="user-status-badge status-pending">${escape(t.clockInStatusLoading)}</span></div>
       </div>
       <button class="btn-clock" onclick="showClockInForm()">${escape(t.btnClockInMenu)}</button>
       ${driverExtras}

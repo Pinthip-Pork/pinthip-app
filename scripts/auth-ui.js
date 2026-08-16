@@ -18,7 +18,6 @@ async function handleLogin() {
   var t = i18n[currentLang];
   var inputId = document.getElementById('loginId').value.trim();
   var inputPin = document.getElementById('loginPin').value.trim();
-  var statusDiv = document.getElementById('status');
 
   if (!inputId || !inputPin) {
     setStatusText('status', t.emptyInputErr);

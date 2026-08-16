@@ -4,7 +4,7 @@
  * Dependencies: app-globals.js (for getLocalDateTimeString, showModal, closeModal, db)
  */
 
-function uploadDeliveryPhotoToDrive(event, jobKey, customerName) {
+function uploadDeliveryPhotoToDrive(event, jobKey) {
   var file = event.target.files[0];
   if (!file) return;
 

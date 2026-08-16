@@ -546,7 +546,7 @@
               ${actionBtnHtml}
               <label class="btn-fuel" style="margin:0; padding:8px; font-size:13px; flex:1; text-align:center; border-radius:8px; cursor:pointer; display:inline-block; box-sizing:border-box;">
                 📸 ถ่ายรูปหลักฐาน
-                <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadDeliveryPhotoToDrive(event, '${j.key}', '${j.customerName}')">
+                <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadDeliveryPhotoToDrive(event, '${j.key}')">
               </label>
               <button class="btn-danger" style="width:auto; margin:0; padding:8px 12px; font-size:12px;" onclick="driverDeleteMyJob('${j.key}')">🗑️ ลบ</button>
             </div>
