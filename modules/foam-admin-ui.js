@@ -352,14 +352,14 @@
       var html = '';
       customers.forEach(function (customer) {
         var addr = [customer.address, customer.subdistrict, customer.district, customer.province, customer.postalCode].filter(Boolean).join(' ');
-        html += '<div class="history-item" style="display:flex; flex-direction:column; gap:8px;">' +
+        html += '<div class="history-item" style="display:flex; flex-direction:column; gap:9px; padding:14px;">' +
           '<div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">' +
-            '<div><b>' + escape(customer.name || '-') + '</b>' + (customer.phone ? ' | 📞 ' + escape(customer.phone) : '') + '</div>' +
+            '<div style="font-size:18px; line-height:1.4;"><b>' + escape(customer.name || '-') + '</b>' + (customer.phone ? '<span style="font-size:15px; font-weight:normal; white-space:nowrap;"> | 📞 ' + escape(customer.phone) + '</span>' : '') + '</div>' +
             '<button class="btn-danger" onclick="foamDeleteCustomerFromManager(\'' + escape(customer.key || '') + '\')" aria-label="ลบลูกค้า ' + escape(customer.name || '') + '" title="ลบลูกค้า" style="width:auto; min-width:0; margin:0; padding:4px 8px; font-size:11px; line-height:1.2; border-radius:999px; box-shadow:none;">🗑️ ลบ</button>' +
           '</div>' +
-          (addr ? '<div style="font-size:12px; color:#555;">📍 ' + escape(addr) + '</div>' : '') +
-          (customer.lineName ? '<div style="font-size:12px; color:#16803c;">💬 LINE: ' + escape(customer.lineName) + '</div>' : '') +
-          (customer.shipping ? '<div style="font-size:12px; color:#555;">🚚 ' + escape(customer.shipping) + '</div>' : '') +
+          (addr ? '<div style="font-size:15px; line-height:1.5; color:#444;">📍 ' + escape(addr) + '</div>' : '') +
+          (customer.lineName ? '<div style="font-size:14px; line-height:1.4; color:#16803c;">💬 LINE: ' + escape(customer.lineName) + '</div>' : '') +
+          (customer.shipping ? '<div style="font-size:14px; line-height:1.4; color:#555;">🚚 ' + escape(customer.shipping) + '</div>' : '') +
           '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
             '<button class="btn-fuel" onclick="foamEditCustomerFromManager(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">✏️ แก้ไขข้อมูล</button>' +
             '<button class="btn-blue" onclick="foamUseCustomerForPrint(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
