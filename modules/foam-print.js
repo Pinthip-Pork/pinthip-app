@@ -37,7 +37,7 @@
     var nameFontSize = nameLen > 30 ? '36px' : nameLen > 20 ? '48px' : '60px';
 
     var addrLen = addrLines.join(' ').length;
-    var addrFontSize = addrLen > 130 ? '30px' : addrLen > 90 ? '36px' : addrLen > 60 ? '44px' : addrLen > 35 ? '52px' : '60px';
+    var addrFontSize = addrLen > 130 ? '36px' : addrLen > 90 ? '44px' : addrLen > 60 ? '52px' : addrLen > 35 ? '60px' : '72px';
 
     return '<div class="foam-label-page">' +
       // Header row
@@ -116,12 +116,13 @@
 
         '.foam-label-addr-line {' +
           'font-size: 60px; line-height: 1.25; color: #000;' +
+          'font-weight: bold; text-align: center;' +
           'word-break: break-word;' +
         '}' +
 
         '.foam-label-shipping {' +
-          'font-size: 36px; line-height: 1.3; color: #000; font-weight: normal;' +
-          'margin-top: 14px;' +
+          'font-size: 36px; line-height: 1.3; color: #000; font-weight: bold;' +
+          'text-align: center; margin-top: 14px;' +
         '}' +
 
         '.foam-label-footer {' +
