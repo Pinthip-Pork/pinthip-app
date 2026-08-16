@@ -68,8 +68,9 @@ exports.loginWithPin = onCall(async (request) => {
   }
 
   const autoApprove = autoApproveSnapshot.val() === true;
-  const status = existingDevice?.status || (autoApprove ? 'active' : 'pending');
-  if (status === 'pending') {
+
+  // If device already exists and is pending, throw (already saved before)
+  if (existingDevice && existingDevice.status === 'pending') {
     throw new HttpsError('permission-denied', 'This device is waiting for admin approval.');
   }
 
@@ -84,7 +85,9 @@ exports.loginWithPin = onCall(async (request) => {
     });
   }
 
+  // Save device record FIRST (so admin can see it even if pending)
   const now = new Date().toISOString();
+  const status = existingDevice?.status || (autoApprove ? 'active' : 'pending');
   await database.ref(`device_access/${deviceId}`).update({
     uid,
     empId,
@@ -93,6 +96,11 @@ exports.loginWithPin = onCall(async (request) => {
     status,
     lastSeenAt: now
   });
+
+  // Now throw if pending (device was just saved above)
+  if (status === 'pending') {
+    throw new HttpsError('permission-denied', 'This device is waiting for admin approval.');
+  }
 
   const token = await getAuth().createCustomToken(uid, {
     role: String(foundEmployee.role || 'employee'),
