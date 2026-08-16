@@ -193,6 +193,7 @@
   }
 
   function foamSubmitNewCustomer() {
+    console.log('[foam-staff-ui] foamSubmitNewCustomer called');
     var name = document.getElementById('foamNewName')?.value.trim();
     var phone = document.getElementById('foamNewPhone')?.value.trim();
     var address = document.getElementById('foamNewAddress')?.value.trim();
@@ -200,21 +201,38 @@
     var boxCount = Number(document.getElementById('foamNewBoxCount')?.value) || 1;
     var note = document.getElementById('foamNewNote')?.value.trim();
 
+    console.log('[foam-staff-ui] Form data:', { name, phone, address, shipping, boxCount, note });
+    console.log('[foam-staff-ui] Current user:', window.currentUser);
+
     if (!name) {
       window.alert('กรุณากรอกชื่อลูกค้า');
       return;
     }
 
-    // Add as a new customer first (pending review by admin)
-    getRepo().addCustomer({
+    if (!window.currentUser || !window.currentUser.empId) {
+      window.alert('ข้อผิดพลาด: ไม่พบข้อมูลพนักงาน กรุณาเข้าสู่ระบบใหม่');
+      return;
+    }
+
+    var repo = getRepo();
+    var deliveryRepo = getDeliveryRepo();
+    
+    if (!repo || !deliveryRepo) {
+      window.alert('ระบบยังไม่พร้อมใช้งาน กรุณารีเฟรชหน้า');
+      return;
+    }
+
+    console.log('[foam-staff-ui] Adding customer...');
+    repo.addCustomer({
       name: name,
       phone: phone,
       address: address,
       shipping: shipping,
       note: 'ลูกค้าใหม่ - รอแอดมินตรวจสอบที่อยู่'
-    }, window.currentUser ? window.currentUser.empId : '').then(function (result) {
-      // Then submit delivery request
-      return getDeliveryRepo().submitRequest({
+    }, window.currentUser.empId).then(function (result) {
+      console.log('[foam-staff-ui] Customer added, key:', result.key);
+      console.log('[foam-staff-ui] Submitting delivery request...');
+      return deliveryRepo.submitRequest({
         customerId: result.key,
         customerSnapshot: {
           name: name,
@@ -223,18 +241,20 @@
           shipping: shipping,
           note: note
         },
-        employeeId: window.currentUser ? window.currentUser.empId : '',
-        employeeName: window.currentUser ? window.currentUser.empName : '',
+        employeeId: window.currentUser.empId,
+        employeeName: window.currentUser.empName,
         boxCount: boxCount,
         shipping: shipping,
         note: 'ลูกค้าใหม่ - ' + (note || '')
       });
     }).then(function () {
+      console.log('[foam-staff-ui] Delivery request submitted successfully');
       window.showModal('🎉 สำเร็จ', 'ส่งข้อมูลลูกค้าใหม่เรียบร้อย\nแอดมินจะตรวจสอบและเติมที่อยู่ให้ครบถ้วน',
         '<button class="btn-ok" onclick="closeModal(); showFoamStaffView();">ตกลง</button>');
     }).catch(function (err) {
-      console.warn('Submit new customer failed:', err);
-      window.alert('ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่');
+      console.error('[foam-staff-ui] Operation failed:', err);
+      var errMsg = (err && err.message) ? err.message : 'ส่งข้อมูลไม่สำเร็จ';
+      window.alert(errMsg + '\n\nตรวจสอบคอนโซล (F12) สำหรับรายละเอียด');
     });
   }
 

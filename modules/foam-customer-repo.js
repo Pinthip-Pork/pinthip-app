@@ -70,8 +70,16 @@
    */
   function addCustomer(data, createdBy) {
     var db = getDb();
-    if (!db) return Promise.reject(new Error('Firebase database not initialized'));
-    if (!data.name || !String(data.name || '').trim()) return Promise.reject(new Error('Customer name is required'));
+    console.log('[foam-customer-repo] addCustomer called, db:', !!db, 'data:', data, 'createdBy:', createdBy);
+    
+    if (!db) {
+      console.error('[foam-customer-repo] Database not initialized');
+      return Promise.reject(new Error('Firebase database not initialized'));
+    }
+    if (!data || !data.name || !String(data.name || '').trim()) {
+      console.error('[foam-customer-repo] Name is required');
+      return Promise.reject(new Error('Customer name is required'));
+    }
     
     var now = new Date().toISOString();
     var entry = {
@@ -86,19 +94,23 @@
       note: String(data.note || '').trim(),
       createdAt: now,
       updatedAt: now,
-      createdBy: String(createdBy || '')
+      createdBy: String(createdBy || 'unknown')
     };
     
-    var ref = db.ref(getCustomerPath()).push();
+    var path = getCustomerPath();
+    console.log('[foam-customer-repo] Writing to path:', path);
+    var ref = db.ref(path).push();
+    
     return new Promise(function (resolve, reject) {
       ref.set(entry, function (err) {
         if (err) {
-          console.error('Firebase write error:', err.code, err.message);
+          console.error('[foam-customer-repo] Write failed. Code:', err.code, 'Message:', err.message);
           if (err.code === 'PERMISSION_DENIED') {
             return reject(new Error('ไม่มีสิทธิ์เขียนข้อมูล กรุณาตรวจสอบสิทธิ์ผู้ใช้'));
           }
-          return reject(err);
+          return reject(new Error('Write failed: ' + (err.message || 'Unknown error')));
         }
+        console.log('[foam-customer-repo] Write success. Key:', ref.key);
         resolve({ key: ref.key });
       });
     });
