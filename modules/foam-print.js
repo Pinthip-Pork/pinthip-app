@@ -37,13 +37,13 @@
     var nameFontSize = nameLen > 30 ? '36px' : nameLen > 20 ? '48px' : '60px';
 
     var addrLen = addrLines.join(' ').length;
-    var addrFontSize = addrLen > 100 ? '28px' : addrLen > 65 ? '34px' : '40px';
+    var addrFontSize = addrLen > 130 ? '30px' : addrLen > 90 ? '36px' : addrLen > 60 ? '44px' : addrLen > 35 ? '52px' : '60px';
 
     return '<div class="foam-label-page">' +
       // Header row
       '<div class="foam-label-header">' +
         '<div class="foam-label-header-left">กรุณาส่ง</div>' +
-        '<div class="foam-label-header-right">' + name + '</div>' +
+        '<div class="foam-label-header-right" style="font-size:' + nameFontSize + ';">' + name + '</div>' +
       '</div>' +
 
       // Address section
@@ -115,7 +115,7 @@
         '}' +
 
         '.foam-label-addr-line {' +
-          'font-size: 40px; line-height: 1.45; color: #000;' +
+          'font-size: 60px; line-height: 1.25; color: #000;' +
           'word-break: break-word;' +
         '}' +
 

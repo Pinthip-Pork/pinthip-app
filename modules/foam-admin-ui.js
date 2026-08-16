@@ -168,6 +168,7 @@
     return {
       name: String(value.name || value.customer || value.customer_name || value['ชื่อลูกค้า'] || '').trim(),
       phone: String(value.phone || value.tel || value.mobile || value.telephone || value['เบอร์โทร'] || value['โทรศัพท์'] || value['เบอร์โทรศัพท์'] || '').trim(),
+      lineName: String(value.lineName || value.line || value.line_id || value['ชื่อไลน์'] || value['LINE'] || value['Line'] || '').trim(),
       address: String(value.address || value['ที่อยู่'] || '').trim(),
       subdistrict: String(value.subdistrict || value['ตำบล'] || value['แขวง/ตำบล'] || '').trim(),
       district: String(value.district || value['อำเภอ'] || value['เขต/อำเภอ'] || '').trim(),
@@ -302,12 +303,16 @@
           '<input id="foamImportCustomerFile" type="file" accept=".csv,.xlsx,.xls" onchange="foamHandleImportFile(this.files && this.files[0])" style="flex:1; min-width:220px;">' +
         '</div>' +
       '</div>' +
+      '<div id="foamCustomerManagerList" style="max-height:420px; overflow-y:auto; border:1px solid #e9ecef; border-radius:12px; padding:8px; background:#fff; margin-bottom:12px;">' +
+        '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>' +
+      '</div>' +
       '<div style="background:#f8f9fa; border:1px solid #e9ecef; border-radius:12px; padding:12px; margin-bottom:12px; text-align:left;">' +
         '<div style="font-weight:bold; margin-bottom:10px;">➕ เพิ่มลูกค้าใหม่</div>' +
         '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
           '<input id="foamManualName" type="text" placeholder="ชื่อลูกค้า *">' +
           '<input id="foamManualPhone" type="text" placeholder="เบอร์โทรศัพท์">' +
         '</div>' +
+        '<input id="foamManualLineName" type="text" placeholder="ชื่อ LINE ลูกค้า (ไม่พิมพ์ลงป้าย)" style="margin-top:8px;">' +
         '<textarea id="foamManualAddress" rows="2" placeholder="ที่อยู่"></textarea>' +
         '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">' +
           '<input id="foamManualSubdistrict" type="text" placeholder="แขวง/ตำบล">' +
@@ -320,9 +325,6 @@
         '<input id="foamManualShipping" type="text" placeholder="ขนส่ง" style="margin-top:8px;">' +
         '<textarea id="foamManualNote" rows="2" placeholder="หมายเหตุ" style="margin-top:8px;"></textarea>' +
         '<button class="btn-fuel" onclick="foamSubmitManualCustomer()" style="margin-top:12px; width:100%;">💾 บันทึกลูกค้า</button>' +
-      '</div>' +
-      '<div id="foamCustomerManagerList" style="max-height:420px; overflow-y:auto; border:1px solid #e9ecef; border-radius:12px; padding:8px; background:#fff;">' +
-        '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>' +
       '</div>' +
       '<button class="btn-back" onclick="showFoamAdminView()" style="margin-top:16px;">⬅️ กลับ</button>';
 
@@ -356,6 +358,7 @@
             '<button class="btn-danger" onclick="foamDeleteCustomerFromManager(\'' + escape(customer.key || '') + '\')" style="padding:6px 8px; font-size:12px;">ลบ</button>' +
           '</div>' +
           (addr ? '<div style="font-size:12px; color:#555;">📍 ' + escape(addr) + '</div>' : '') +
+          (customer.lineName ? '<div style="font-size:12px; color:#16803c;">💬 LINE: ' + escape(customer.lineName) + '</div>' : '') +
           (customer.shipping ? '<div style="font-size:12px; color:#555;">🚚 ' + escape(customer.shipping) + '</div>' : '') +
           '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
             '<button class="btn-fuel" onclick="foamEditCustomerFromManager(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">✏️ แก้ไขข้อมูล</button>' +
@@ -381,6 +384,7 @@
     var payload = {
       name: document.getElementById('foamManualName') ? document.getElementById('foamManualName').value.trim() : '',
       phone: document.getElementById('foamManualPhone') ? document.getElementById('foamManualPhone').value.trim() : '',
+      lineName: document.getElementById('foamManualLineName') ? document.getElementById('foamManualLineName').value.trim() : '',
       address: document.getElementById('foamManualAddress') ? document.getElementById('foamManualAddress').value.trim() : '',
       subdistrict: document.getElementById('foamManualSubdistrict') ? document.getElementById('foamManualSubdistrict').value.trim() : '',
       district: document.getElementById('foamManualDistrict') ? document.getElementById('foamManualDistrict').value.trim() : '',
@@ -435,6 +439,7 @@
       var fields = [
         ['foamEditCustomerName', 'ชื่อลูกค้า *', customer.name],
         ['foamEditCustomerPhone', 'เบอร์โทรศัพท์', customer.phone],
+        ['foamEditCustomerLineName', 'ชื่อ LINE ลูกค้า (ไม่พิมพ์ลงป้าย)', customer.lineName],
         ['foamEditCustomerAddress', 'ที่อยู่', customer.address],
         ['foamEditCustomerSubdistrict', 'แขวง/ตำบล', customer.subdistrict],
         ['foamEditCustomerDistrict', 'เขต/อำเภอ', customer.district],
@@ -465,6 +470,7 @@
     var data = {
       name: document.getElementById('foamEditCustomerName')?.value.trim() || '',
       phone: document.getElementById('foamEditCustomerPhone')?.value.trim() || '',
+      lineName: document.getElementById('foamEditCustomerLineName')?.value.trim() || '',
       address: document.getElementById('foamEditCustomerAddress')?.value.trim() || '',
       subdistrict: document.getElementById('foamEditCustomerSubdistrict')?.value.trim() || '',
       district: document.getElementById('foamEditCustomerDistrict')?.value.trim() || '',

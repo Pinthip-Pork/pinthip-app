@@ -85,6 +85,7 @@
     var entry = {
       name: String(data.name || '').trim(),
       phone: String(data.phone || '').trim(),
+      lineName: String(data.lineName || '').trim(),
       address: String(data.address || '').trim(),
       province: String(data.province || '').trim(),
       district: String(data.district || '').trim(),
@@ -135,6 +136,7 @@
       note: String(data.note || '').trim(),
       updatedAt: new Date().toISOString()
     };
+    if (data.lineName !== undefined) update.lineName = String(data.lineName || '').trim();
     return getDb().ref(getCustomerPath() + '/' + key).update(update);
   }
 
