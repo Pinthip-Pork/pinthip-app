@@ -559,6 +559,7 @@
           '<div style="font-size:13px; color:#555; line-height:1.8;">' +
             (snapshotData.phone ? '📞 ' + escape(snapshotData.phone) + '<br>' : '') +
             (address ? '📍 ' + escape(address) + '<br>' : '') +
+            '<span id="foamAdminSelectedLineName" style="display:' + (snapshotData.lineName ? 'inline' : 'none') + '; color:#16803c;">💬 LINE: ' + escape(snapshotData.lineName || '') + '<br></span>' +
             (snapshotData.shipping ? '🚚 ' + escape(snapshotData.shipping) + '<br>' : '') +
             '📦 จำนวนลัง: <b>' + (request.boxCount || 1) + '</b><br>' +
             '👤 ผู้ส่ง: ' + escape(request.employeeName || '-') + '<br>' +
@@ -608,6 +609,18 @@
         '</div>';
 
       detail.innerHTML = html;
+
+      if (request.customerId && getCustomerRepo()) {
+        getCustomerRepo().getCustomer(request.customerId).then(function (customer) {
+          if (window.__FOAM_SELECTED_KEY__ !== requestKey) return;
+          var lineEl = document.getElementById('foamAdminSelectedLineName');
+          if (!lineEl || !customer || !customer.lineName) return;
+          lineEl.textContent = '💬 LINE: ' + customer.lineName;
+          lineEl.style.display = 'inline';
+        }).catch(function (err) {
+          console.warn('Load customer LINE name failed:', err);
+        });
+      }
     }).catch(function (err) {
       console.warn('foamAdminSelectRequest failed:', err);
     });

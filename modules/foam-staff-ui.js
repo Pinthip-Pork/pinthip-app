@@ -148,6 +148,7 @@
         customerSnapshot: {
           name: customer.name,
           phone: customer.phone,
+          lineName: customer.lineName || '',
           address: customer.address,
           province: customer.province,
           district: customer.district,
@@ -241,6 +242,7 @@
         customerSnapshot: {
           name: name,
           phone: phone,
+          lineName: '',
           address: address,
           shipping: shipping,
           note: note
