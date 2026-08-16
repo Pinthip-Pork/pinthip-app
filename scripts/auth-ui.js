@@ -56,6 +56,7 @@ async function handleLogin() {
     }
     if (typeof showAdminDashboard === 'function') showAdminDashboard();
     if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
+    if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
     return;
   } catch (adminError) {
     var errCode = adminError?.code || adminError?.details?.code || '';
