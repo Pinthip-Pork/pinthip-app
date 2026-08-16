@@ -51,6 +51,16 @@ exports.loginWithPin = onCall(async (request) => {
 
   const existingDevice = deviceSnapshot.val();
   if (existingDevice?.status === 'blocked') {
+    // Log blocked device attempt
+    const now = new Date().toISOString();
+    const monthKey = now.slice(0, 7);
+    await database.ref(`logs/device-access/${monthKey}`).push({
+      type: 'blocked_login_attempt',
+      deviceId,
+      deviceInfo,
+      empId,
+      timestamp: now
+    });
     throw new HttpsError('permission-denied', 'This device is blocked.');
   }
   if (existingDevice?.empId && String(existingDevice.empId) !== empId) {
@@ -105,6 +115,24 @@ exports.adminLogin = onCall(async (request) => {
   // Read admin config from the database
   const adminConfigSnapshot = await database.ref('settings/admin').once('value');
   let adminConfig = adminConfigSnapshot.val();
+
+  // Check if this device is blocked
+  const deviceSnapshot = await database.ref(`device_access/${deviceId}`).once('value');
+  const existingDevice = deviceSnapshot.val();
+  if (existingDevice?.status === 'blocked') {
+    // Log blocked device attempt
+    const now = new Date().toISOString();
+    const monthKey = now.slice(0, 7);
+    await database.ref(`logs/device-access/${monthKey}`).push({
+      type: 'blocked_login_attempt',
+      deviceId,
+      deviceInfo,
+      username,
+      role: 'admin',
+      timestamp: now
+    });
+    throw new HttpsError('permission-denied', 'This device is blocked. Contact another admin.');
+  }
 
   // If no admin config exists in DB, allow one-time setup from request
   if (!adminConfig) {

@@ -175,6 +175,7 @@ function initApp() {
           if (typeof startDevicePresence === 'function') {
             startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
           }
+          if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
           if (typeof showAdminDashboard === 'function') showAdminDashboard();
           if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
         } else {

@@ -53,7 +53,8 @@ function stopDevicePresence() {
 // ===== Device Access Guard =====
 function startDeviceAccessGuard() {
   stopDeviceAccessGuard();
-  if (!isDeviceAccessPilotEnabled() || !currentUser) return;
+  if (!isDeviceAccessPilotEnabled()) return;
+  if (!currentUser && !isAdmin) return;
   checkCurrentDeviceAccess();
   deviceAccessGuardInterval = window.setInterval(checkCurrentDeviceAccess, 30000);
 }
@@ -66,7 +67,8 @@ function stopDeviceAccessGuard() {
 }
 
 async function checkCurrentDeviceAccess() {
-  if (!isDeviceAccessPilotEnabled() || !currentUser) return;
+  if (!isDeviceAccessPilotEnabled()) return;
+  if (!currentUser && !isAdmin) return;
   try {
     var deviceId = window.PinThipSafe.utils.getDeviceId();
     var snapshot = await db.ref('device_access/' + deviceId + '/status').once('value');
@@ -118,12 +120,40 @@ async function checkDeviceAccess(foundUser) {
       lastSeenAt: now
     });
 
-    if (existing.status === 'active' || existing.status === 'approved') return { allowed: true, deviceId: deviceId };
-    if (existing.status === 'blocked') return { allowed: false, message: '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E16\u0E39\u0E01\u0E23\u0E30\u0E07\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D Admin' };
+    if (existing.status === 'active' || existing.status === 'approved') {
+      // Verify empId matches — prevent device sharing across employees
+      if (existing.empId && String(existing.empId) !== String(foundUser.empId)) {
+        logDeviceAccessEvent('mismatched_device', deviceId, foundUser.empId, foundUser.empName);
+        return { allowed: false, message: '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E16\u0E39\u0E01\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2D\u0E37\u0E48\u0E19 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D Admin' };
+      }
+      return { allowed: true, deviceId: deviceId };
+    }
+    if (existing.status === 'blocked') {
+      logDeviceAccessEvent('blocked_login_attempt', deviceId, foundUser.empId, foundUser.empName);
+      return { allowed: false, message: '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E16\u0E39\u0E01\u0E23\u0E30\u0E07\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D Admin' };
+    }
     return { allowed: false, message: '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E2D Admin \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E01\u0E48\u0E2D\u0E19\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19' };
   } catch (error) {
     console.warn('Device access check failed:', error);
     return { allowed: false, message: '\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07' };
+  }
+}
+
+function logDeviceAccessEvent(type, deviceId, empId, empName) {
+  if (!isDeviceAccessPilotEnabled()) return;
+  try {
+    var now = new Date().toISOString();
+    var monthKey = now.slice(0, 7);
+    db.ref('logs/device-access/' + monthKey).push({
+      type: type,
+      deviceId: deviceId,
+      empId: String(empId || ''),
+      empName: String(empName || ''),
+      deviceInfo: window.PinThipSafe.utils.getDeviceInfo(),
+      timestamp: now
+    });
+  } catch (e) {
+    console.warn('logDeviceAccessEvent failed:', e);
   }
 }
 
@@ -238,6 +268,7 @@ function setDeviceAutoApprove(enabled) {
     : '\u0E1B\u0E34\u0E14\u0E2D\u0E2D\u0E42\u0E15\u0E49 \u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E43\u0E2B\u0E21\u0E48\u0E08\u0E30\u0E15\u0E49\u0E2D\u0E07\u0E23\u0E2D Admin \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E43\u0E0A\u0E48\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48?';
   if (!window.confirm(message)) return;
   db.ref('settings/deviceAccessAutoApprove').set(Boolean(enabled)).then(function() {
+    logDeviceAccessEvent(enabled ? 'auto_approve_enabled' : 'auto_approve_disabled', 'settings', 'admin', 'Admin');
     showDeviceAccessManagement();
   });
 }
@@ -245,6 +276,7 @@ function setDeviceAutoApprove(enabled) {
 function setDeviceAccessStatus(deviceId, status) {
   if (!isAdmin) return;
   db.ref('device_access/' + deviceId).update({ status: status, updatedAt: new Date().toISOString() }).then(function() {
+    logDeviceAccessEvent('status_change_' + status, deviceId, 'admin', 'Admin');
     showDeviceAccessManagement();
   });
 }

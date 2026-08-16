@@ -54,6 +54,7 @@ async function handleLogin() {
     if (typeof startDevicePresence === 'function') {
       startDevicePresence('admin-' + deviceId, 'Admin', 'admin');
     }
+    if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
     if (typeof showAdminDashboard === 'function') showAdminDashboard();
     if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
     return;
