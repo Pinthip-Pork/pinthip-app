@@ -355,7 +355,7 @@
         html += '<div class="history-item" style="display:flex; flex-direction:column; gap:8px;">' +
           '<div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">' +
             '<div><b>' + escape(customer.name || '-') + '</b>' + (customer.phone ? ' | 📞 ' + escape(customer.phone) : '') + '</div>' +
-            '<button class="btn-danger" onclick="foamDeleteCustomerFromManager(\'' + escape(customer.key || '') + '\')" style="padding:6px 8px; font-size:12px;">ลบ</button>' +
+            '<button class="btn-danger" onclick="foamDeleteCustomerFromManager(\'' + escape(customer.key || '') + '\')" aria-label="ลบลูกค้า ' + escape(customer.name || '') + '" title="ลบลูกค้า" style="width:auto; min-width:0; margin:0; padding:4px 8px; font-size:11px; line-height:1.2; border-radius:999px; box-shadow:none;">🗑️ ลบ</button>' +
           '</div>' +
           (addr ? '<div style="font-size:12px; color:#555;">📍 ' + escape(addr) + '</div>' : '') +
           (customer.lineName ? '<div style="font-size:12px; color:#16803c;">💬 LINE: ' + escape(customer.lineName) + '</div>' : '') +
