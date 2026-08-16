@@ -18,6 +18,9 @@
     if (status) status.innerText = '';
     if (listBox) listBox.style.display = 'block';
 
+    const foamBtn = document.getElementById('foamLabelBtn');
+    if (foamBtn) foamBtn.style.display = 'block';
+
     const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
 
     Promise.all([
