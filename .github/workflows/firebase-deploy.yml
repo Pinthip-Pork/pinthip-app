@@ -30,4 +30,4 @@ jobs:
       - name: Deploy to Firebase
         run: firebase deploy --only functions --project pinthip-checkin
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
