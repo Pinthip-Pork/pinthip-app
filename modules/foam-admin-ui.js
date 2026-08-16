@@ -82,15 +82,18 @@
     var html = '' +
       '<div class="user-banner">📦 แอดมินตรวจสอบข้อมูลป้ายลังโฟม</div>' +
       '<div id="foamAdminLayout" style="display:grid; grid-template-columns: 1.1fr 1fr; gap:16px; align-items:start;">' +
-        '<div id="foamAdminQueue" style="min-width:0;">' +
-          '<div style="color:#666; text-align:center; padding:18px;">กำลังโหลดรายการแจ้งเตือน...</div>' +
+        '<div style="min-width:0;">' +
+          '<div style="display:flex; justify-content:space-between; gap:8px; align-items:center; margin-bottom:8px;">' +
+            '<b style="font-size:17px;">📋 รายการส่งลังโฟม</b>' +
+            '<button class="btn-blue" onclick="showFoamCustomerManager()" style="width:auto; margin:0; padding:7px 10px; font-size:13px; white-space:nowrap;">👥 จัดการลูกค้า</button>' +
+          '</div>' +
+          '<div id="foamAdminQueue" style="min-width:0;">' +
+            '<div style="color:#666; text-align:center; padding:18px;">กำลังโหลดรายการแจ้งเตือน...</div>' +
+          '</div>' +
         '</div>' +
         '<div id="foamAdminDetail" style="min-width:0;">' +
           '<div style="color:#666; text-align:center; padding:18px;">เลือกรายการจากซ้ายเพื่อดูรายละเอียด</div>' +
         '</div>' +
-      '</div>' +
-      '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;">' +
-        '<button class="btn-blue" onclick="showFoamCustomerManager()" style="flex:1; min-width:180px;">👥 จัดการลูกค้า</button>' +
       '</div>' +
       '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:16px;">⬅️ กลับหน้าแอดมิน</button>';
 
