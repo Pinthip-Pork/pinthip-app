@@ -530,6 +530,7 @@
           (canApprove ? '<button class="btn-fuel" onclick="foamAdminApproveSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">✅ อนุมัติ</button>' : '') +
           '<button class="btn-danger" onclick="foamAdminRejectSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">❌ ยกเลิก</button>' +
           '<button class="btn-purple" onclick="foamAdminPrintSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
+          '<button class="btn-danger" onclick="foamAdminDeleteSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px; background:#6c757d;">🗑️ ลบรายการ</button>' +
         '</div>';
 
       detail.innerHTML = html;
@@ -630,6 +631,23 @@
     });
   }
 
+  function foamAdminDeleteSelected(requestKey, dateStr) {
+    var repo = getDeliveryRepo();
+    if (!repo) return;
+
+    if (!window.confirm('ต้องการลบรายการส่งลังโฟมนี้ใช่หรือไม่?\n\nการลบจะไม่กระทบข้อมูลลูกค้า และไม่สามารถกู้คืนรายการนี้ได้')) return;
+
+    repo.deleteRequest(dateStr, requestKey).then(function () {
+      window.__FOAM_SELECTED_KEY__ = null;
+      var detail = document.getElementById('foamAdminDetail');
+      if (detail) detail.innerHTML = '<div style="color:#198754; text-align:center; padding:18px;">ลบรายการเรียบร้อยแล้ว</div>';
+      loadFoamAdminQueue();
+    }).catch(function (err) {
+      console.warn('Delete foam request failed:', err);
+      window.alert('ลบรายการไม่สำเร็จ กรุณาลองใหม่');
+    });
+  }
+
   function foamAdminPrintSelected(requestKey, dateStr) {
     var db = window.db;
     if (!db) return;
@@ -684,6 +702,7 @@
     foamAdminSaveSelected: foamAdminSaveSelected,
     foamAdminApproveSelected: foamAdminApproveSelected,
     foamAdminRejectSelected: foamAdminRejectSelected,
+    foamAdminDeleteSelected: foamAdminDeleteSelected,
     foamAdminPrintSelected: foamAdminPrintSelected
   };
 
@@ -699,5 +718,6 @@
   window.foamAdminSaveSelected = foamAdminSaveSelected;
   window.foamAdminApproveSelected = foamAdminApproveSelected;
   window.foamAdminRejectSelected = foamAdminRejectSelected;
+  window.foamAdminDeleteSelected = foamAdminDeleteSelected;
   window.foamAdminPrintSelected = foamAdminPrintSelected;
 })();
