@@ -167,7 +167,7 @@
     var value = raw || {};
     return {
       name: String(value.name || value.customer || value.customer_name || value['ชื่อลูกค้า'] || '').trim(),
-      phone: String(value.phone || value.tel || value.mobile || value.telephone || value['เบอร์โทร'] || value['โทรศัพท์'] || '').trim(),
+      phone: String(value.phone || value.tel || value.mobile || value.telephone || value['เบอร์โทร'] || value['โทรศัพท์'] || value['เบอร์โทรศัพท์'] || '').trim(),
       address: String(value.address || value['ที่อยู่'] || '').trim(),
       subdistrict: String(value.subdistrict || value['ตำบล'] || value['แขวง/ตำบล'] || '').trim(),
       district: String(value.district || value['อำเภอ'] || value['เขต/อำเภอ'] || '').trim(),
@@ -358,6 +358,7 @@
           (addr ? '<div style="font-size:12px; color:#555;">📍 ' + escape(addr) + '</div>' : '') +
           (customer.shipping ? '<div style="font-size:12px; color:#555;">🚚 ' + escape(customer.shipping) + '</div>' : '') +
           '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+            '<button class="btn-fuel" onclick="foamEditCustomerFromManager(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">✏️ แก้ไขข้อมูล</button>' +
             '<button class="btn-blue" onclick="foamUseCustomerForPrint(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
           '</div>' +
         '</div>';
@@ -418,6 +419,72 @@
     }).catch(function (err) {
       console.warn('Delete foam customer failed:', err);
       window.alert('ลบลูกค้าไม่สำเร็จ');
+    });
+  }
+
+  function foamEditCustomerFromManager(customerKey) {
+    var repo = getCustomerRepo();
+    if (!repo || !customerKey) return;
+
+    repo.getCustomer(customerKey).then(function (customer) {
+      if (!customer) {
+        window.alert('ไม่พบข้อมูลลูกค้า');
+        return;
+      }
+
+      var fields = [
+        ['foamEditCustomerName', 'ชื่อลูกค้า *', customer.name],
+        ['foamEditCustomerPhone', 'เบอร์โทรศัพท์', customer.phone],
+        ['foamEditCustomerAddress', 'ที่อยู่', customer.address],
+        ['foamEditCustomerSubdistrict', 'แขวง/ตำบล', customer.subdistrict],
+        ['foamEditCustomerDistrict', 'เขต/อำเภอ', customer.district],
+        ['foamEditCustomerProvince', 'จังหวัด', customer.province],
+        ['foamEditCustomerPostalCode', 'รหัสไปรษณีย์', customer.postalCode],
+        ['foamEditCustomerShipping', 'ขนส่ง', customer.shipping]
+      ];
+      var formHtml = '<div style="display:grid; gap:10px; text-align:left;">';
+      fields.forEach(function (field) {
+        formHtml += '<label style="font-weight:bold;">' + field[1] + '<input id="' + field[0] + '" type="text" value="' + escape(field[2] || '') + '" style="margin-top:4px;"></label>';
+      });
+      formHtml += '<label style="font-weight:bold;">หมายเหตุ<textarea id="foamEditCustomerNote" rows="3" style="margin-top:4px;">' + escape(customer.note || '') + '</textarea></label>';
+      formHtml += '</div>';
+
+      window.openWideModal('✏️ แก้ไขข้อมูลลูกค้า', formHtml,
+        '<button class="btn-back" onclick="closeModal()">ยกเลิก</button>' +
+        '<button class="btn-ok" onclick="foamSaveEditedCustomer(' + escape(JSON.stringify(customerKey)) + ')">💾 บันทึก</button>');
+    }).catch(function (err) {
+      console.warn('Load foam customer for edit failed:', err);
+      window.alert('โหลดข้อมูลลูกค้าไม่สำเร็จ');
+    });
+  }
+
+  function foamSaveEditedCustomer(customerKey) {
+    var repo = getCustomerRepo();
+    if (!repo || !customerKey) return;
+
+    var data = {
+      name: document.getElementById('foamEditCustomerName')?.value.trim() || '',
+      phone: document.getElementById('foamEditCustomerPhone')?.value.trim() || '',
+      address: document.getElementById('foamEditCustomerAddress')?.value.trim() || '',
+      subdistrict: document.getElementById('foamEditCustomerSubdistrict')?.value.trim() || '',
+      district: document.getElementById('foamEditCustomerDistrict')?.value.trim() || '',
+      province: document.getElementById('foamEditCustomerProvince')?.value.trim() || '',
+      postalCode: document.getElementById('foamEditCustomerPostalCode')?.value.trim() || '',
+      shipping: document.getElementById('foamEditCustomerShipping')?.value.trim() || '',
+      note: document.getElementById('foamEditCustomerNote')?.value.trim() || ''
+    };
+    if (!data.name) {
+      window.alert('กรุณากรอกชื่อลูกค้า');
+      return;
+    }
+
+    repo.updateCustomer(customerKey, data).then(function () {
+      window.closeModal();
+      foamCustomerManagerSearch();
+      window.showModal('✅ สำเร็จ', 'บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว', '', '<button class="btn-ok" onclick="closeModal()">ตกลง</button>');
+    }).catch(function (err) {
+      console.warn('Update foam customer failed:', err);
+      window.alert('บันทึกข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่');
     });
   }
 
@@ -697,6 +764,8 @@
     foamHandleImportFile: foamHandleImportFile,
     foamSubmitManualCustomer: foamSubmitManualCustomer,
     foamDeleteCustomerFromManager: foamDeleteCustomerFromManager,
+    foamEditCustomerFromManager: foamEditCustomerFromManager,
+    foamSaveEditedCustomer: foamSaveEditedCustomer,
     foamUseCustomerForPrint: foamUseCustomerForPrint,
     foamAdminSelectRequest: foamAdminSelectRequest,
     foamAdminSaveSelected: foamAdminSaveSelected,
@@ -713,6 +782,8 @@
   window.foamHandleImportFile = foamHandleImportFile;
   window.foamSubmitManualCustomer = foamSubmitManualCustomer;
   window.foamDeleteCustomerFromManager = foamDeleteCustomerFromManager;
+  window.foamEditCustomerFromManager = foamEditCustomerFromManager;
+  window.foamSaveEditedCustomer = foamSaveEditedCustomer;
   window.foamUseCustomerForPrint = foamUseCustomerForPrint;
   window.foamAdminSelectRequest = foamAdminSelectRequest;
   window.foamAdminSaveSelected = foamAdminSaveSelected;
