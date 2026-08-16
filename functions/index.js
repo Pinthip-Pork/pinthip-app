@@ -67,7 +67,7 @@ exports.loginWithPin = onCall(async (request) => {
     throw new HttpsError('permission-denied', 'This device is registered to another employee.');
   }
 
-  const autoApprove = autoApproveSnapshot.val() !== false;
+  const autoApprove = autoApproveSnapshot.val() === true;
   const status = existingDevice?.status || (autoApprove ? 'active' : 'pending');
   if (status === 'pending') {
     throw new HttpsError('permission-denied', 'This device is waiting for admin approval.');

@@ -196,6 +196,9 @@ button:disabled {
 .btn-blue {
   background: linear-gradient(135deg, #0d6efd, #3b71ca) !important;
 }
+.btn-green {
+  background: linear-gradient(135deg, #198754, #20c997) !important;
+}
 .btn-orange {
   background: linear-gradient(135deg, #fd7e14, #ff851b) !important;
 }

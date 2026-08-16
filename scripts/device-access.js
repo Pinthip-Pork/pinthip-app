@@ -9,7 +9,7 @@ var devicePresenceKey = null;
 var devicePresenceInterval = null;
 var deviceAccessGuardInterval = null;
 var deviceAccessEntriesCache = [];
-var deviceAccessAutoApproveCache = true;
+var deviceAccessAutoApproveCache = false;
 
 // ===== Feature Flags =====
 function isDeviceAccessPilotEnabled() {
@@ -219,7 +219,8 @@ function renderDeviceAccessManagement() {
   var html = '\u003Cdiv class=\"user-banner\"\u003E\u0E42\u0E2B\u0E21\u0E14\u0E17\u0E14\u0E25\u0E2D\u0E07: ' + modeLabel + '\u003Cbr\u003E' +
     '\u003Cbutton class=\"btn-blue\" style=\"width:auto; margin-top:8px; padding:7px 12px;\" onclick=\"setDeviceAutoApprove(' + (!deviceAccessAutoApproveCache) + ')\"\u003E' +
     (deviceAccessAutoApproveCache ? '\u0E1B\u0E34\u0E14\u0E2D\u0E2D\u0E42\u0E15\u0E49 \u0E43\u0E0A\u0E49\u0E01\u0E32\u0E23\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E40\u0E2D\u0E07' : '\u0E40\u0E1B\u0E34\u0E14\u0E2D\u0E2D\u0E42\u0E15\u0E49 \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E43\u0E2B\u0E21\u0E48\u0E17\u0E31\u0E19\u0E17\u0E35') +
-    '\u003C/button\u003E\u003C/div\u003E' +
+    '\u003C/button\u003E ' +
+    '\u003Cbutton class=\"btn-green\" style=\"width:auto; margin-top:8px; padding:7px 12px;\" onclick=\"showAddDeviceForm()\"\u003E\u2795 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u003C/button\u003E\u003C/div\u003E' +
     '\u003Cdiv style=\"display:flex; gap:8px; margin-bottom:10px;\"\u003E' +
     '\u003Cinput id=\"deviceAccessSearch\" value=\"' + safeText(search) + '\" oninput=\"renderDeviceAccessManagement()\" placeholder=\"\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E23\u0E37\u0E2D\u0E23\u0E2B\u0E31\u0E2A\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\" style=\"margin:0;\"\u003E' +
     '\u003Cselect id=\"deviceAccessFilter\" onchange=\"renderDeviceAccessManagement()\" style=\"width:auto; margin:0;\"\u003E' +
@@ -284,4 +285,79 @@ function setDeviceAccessStatus(deviceId, status) {
 function deleteDeviceAccess(deviceId) {
   if (!isAdmin || !window.confirm('\u0E25\u0E1A\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E48\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48? \u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E19\u0E35\u0E49\u0E08\u0E30\u0E16\u0E39\u0E01\u0E25\u0E07\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19\u0E43\u0E2B\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E21\u0E37\u0E48\u0E2D Login \u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07')) return;
   db.ref('device_access/' + deviceId).remove().then(function() { showDeviceAccessManagement(); });
+}
+
+// ===== Manual Add Device (Admin) =====
+function showAddDeviceForm() {
+  if (!isAdmin) return;
+  var mainContent = document.getElementById('mainContent');
+  if (!mainContent) return;
+
+  // Load employee list for dropdown
+  db.ref('employees').once('value').then(function(snapshot) {
+    var employees = snapshot.val() || {};
+    var empOptions = '';
+    Object.entries(employees).forEach(function(entry) {
+      var emp = entry[1];
+      if (!emp || !emp.empId) return;
+      empOptions += '\u003Coption value=\"' + safeText(emp.empId) + '\"\u003E' + safeText(emp.empId) + ' - ' + safeText(emp.empName || '-') + '\u003C/option\u003E';
+    });
+
+    var html = '\u003Cdiv class=\"user-banner\"\u003E\u2795 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E43\u0E2B\u0E21\u0E48\u0E14\u0E49\u0E27\u0E22\u0E15\u0E19\u0E40\u0E2D\u0E07\u003C/div\u003E' +
+      '\u003Cdiv style=\"background:#fff; border-radius:12px; padding:16px; margin-bottom:12px;\"\u003E' +
+      '\u003Clabel style=\"display:block; margin-bottom:4px; font-weight:bold;\"\u003E\u0E23\u0E2B\u0E31\u0E2A\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19 (Emp ID)\u003C/label\u003E' +
+      '\u003Cselect id=\"addDeviceEmpId\" style=\"width:100%; margin-bottom:12px;\"\u003E' +
+      '\u003Coption value=\"\"\u003E-- \u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19 --\u003C/option\u003E' +
+      empOptions +
+      '\u003C/select\u003E' +
+      '\u003Clabel style=\"display:block; margin-bottom:4px; font-weight:bold;\"\u003EDevice ID (\u0E40\u0E27\u0E49\u0E19\u0E27\u0E48\u0E32\u0E07\u0E2B\u0E32\u0E01\u0E44\u0E21\u0E48\u0E23\u0E30\u0E1A\u0E38 \u0E08\u0E30\u0E43\u0E0A\u0E49\u0E40\u0E1A\u0E23\u0E32\u0E27\u0E4C\u0E40\u0E0B\u0E2D\u0E23\u0E4C\u0E02\u0E2D\u0E07\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19)\u003C/label\u003E' +
+      '\u003Cinput id=\"addDeviceId\" placeholder=\"\u0E40\u0E0A\u0E48\u0E19 Chrome-Windows-abc123\" style=\"width:100%; margin-bottom:12px;\"\u003E' +
+      '\u003Clabel style=\"display:block; margin-bottom:4px; font-weight:bold;\"\u003E\u0E0A\u0E37\u0E48\u0E2D\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C (\u0E2D\u0E18\u0E34\u0E1A\u0E32\u0E22)\u003C/label\u003E' +
+      '\u003Cinput id=\"addDeviceInfo\" placeholder=\"\u0E40\u0E0A\u0E48\u0E19 \u0E42\u0E17\u0E23\u0E28\u0E31\u0E1E\u0E17\u0E4C\u0E41\u0E21\u0E48\u0E1A\u0E49\u0E32\u0E19\" style=\"width:100%; margin-bottom:16px;\"\u003E' +
+      '\u003Cdiv style=\"display:flex; gap:8px;\"\u003E' +
+      '\u003Cbutton class=\"btn-green\" style=\"flex:1; margin:0;\" onclick=\"addDeviceManually()\"\u003E\u2705 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u003C/button\u003E' +
+      '\u003Cbutton class=\"btn-back\" style=\"flex:1; margin:0;\" onclick=\"showDeviceAccessManagement()\"\u003E\u2B05\uFE0F \u0E01\u0E25\u0E31\u0E1A\u003C/button\u003E' +
+      '\u003C/div\u003E\u003C/div\u003E';
+    mainContent.innerHTML = html;
+  }).catch(function() {
+    mainContent.innerHTML = '\u003Cdiv class=\"no-data\"\u003E\u0E42\u0E2B\u0E25\u0E14\u0E23\u0E32\u0E22\u0E0A\u0E37\u0E48\u0E2D\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08\u003C/div\u003E\u003Cbutton class=\"btn-back\" onclick=\"showDeviceAccessManagement()\"\u003E\u2B05\uFE0F \u0E01\u0E25\u0E31\u0E1A\u003C/button\u003E';
+  });
+}
+
+function addDeviceManually() {
+  if (!isAdmin) return;
+  var empId = String(document.getElementById('addDeviceEmpId').value).trim();
+  var deviceId = String(document.getElementById('addDeviceId').value).trim();
+  var deviceInfo = String(document.getElementById('addDeviceInfo').value).trim();
+
+  if (!empId) { window.alert('\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19'); return; }
+  if (!deviceId) { window.alert('\u0E01\u0E23\u0E38\u0E13\u0E32\u0E23\u0E30\u0E1A\u0E38 Device ID'); return; }
+
+  // Look up employee name
+  db.ref('employees').once('value').then(function(snapshot) {
+    var employees = snapshot.val() || {};
+    var empName = '';
+    Object.entries(employees).forEach(function(entry) {
+      if (entry[1] && String(entry[1].empId) === empId) {
+        empName = String(entry[1].empName || '');
+      }
+    });
+
+    var now = new Date().toISOString();
+    db.ref('device_access/' + deviceId).set({
+      empId: empId,
+      empName: empName,
+      deviceInfo: deviceInfo || ('\u0E40\u0E1E\u0E34\u0E48\u0E21\u0E42\u0E14\u0E22 Admin - ' + now.slice(0, 10)),
+      status: 'active',
+      createdAt: now,
+      lastSeenAt: now,
+      role: 'employee'
+    }).then(function() {
+      logDeviceAccessEvent('manual_add', deviceId, empId, empName);
+      window.alert('\u2705 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08! \u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19 ' + empId + ' \u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19\u0E44\u0E14\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35');
+      showDeviceAccessManagement();
+    }).catch(function(err) {
+      window.alert('\u274C \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ' + err.message);
+    });
+  });
 }
