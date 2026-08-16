@@ -51,7 +51,7 @@
         addrLines.map(function (line) {
           return '<div class="foam-label-addr-line" style="font-size:' + addrFontSize + ';">' + line + '</div>';
         }).join('') +
-        (shipping ? '<div class="foam-label-shipping">🚚 ' + shipping + '</div>' : '') +
+        (shipping ? '<div class="foam-label-shipping">ขนส่ง: ' + shipping + '</div>' : '') +
       '</div>' +
 
       // Footer row
@@ -120,10 +120,8 @@
         '}' +
 
         '.foam-label-shipping {' +
-          'font-size: 28px; color: #0d6efd; font-weight: bold;' +
-          'margin-top: 12px; padding: 8px 16px;' +
-          'border: 2px dashed #0d6efd; display: inline-block;' +
-          'border-radius: 8px;' +
+          'font-size: 36px; line-height: 1.3; color: #000; font-weight: normal;' +
+          'margin-top: 14px;' +
         '}' +
 
         '.foam-label-footer {' +
