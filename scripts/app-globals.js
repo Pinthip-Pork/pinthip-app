@@ -177,6 +177,7 @@ function initApp() {
           }
           if (typeof showAdminDashboard === 'function') showAdminDashboard();
           if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
+          if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
         } else {
           console.warn('Admin Firebase Auth session expired');
           PinThipSafe.session.clearAuthState();
