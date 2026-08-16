@@ -9,12 +9,16 @@
     return window.db;
   }
 
+  function getCustomerPath() {
+    return 'foam_customers';
+  }
+
   /**
    * Fetch all customers from Firebase
    * @returns {Promise<Array<{key: string, name: string, phone: string, address: string, ...}>>}
    */
   function fetchAllCustomers() {
-    return getDb().ref('customers').once('value').then(function (snapshot) {
+    return getDb().ref(getCustomerPath()).once('value').then(function (snapshot) {
       var obj = snapshot.val() || {};
       return Object.keys(obj).map(function (k) {
         return Object.assign({ key: k }, obj[k]);
@@ -44,7 +48,7 @@
    * @returns {Promise<Object|null>}
    */
   function getCustomer(key) {
-    return getDb().ref('customers/' + key).once('value').then(function (snapshot) {
+    return getDb().ref(getCustomerPath() + '/' + key).once('value').then(function (snapshot) {
       var val = snapshot.val();
       return val ? Object.assign({ key: key }, val) : null;
     });
@@ -72,7 +76,7 @@
       updatedAt: now,
       createdBy: String(createdBy || '')
     };
-    var ref = getDb().ref('customers').push();
+    var ref = getDb().ref(getCustomerPath()).push();
     return new Promise(function (resolve, reject) {
       ref.set(entry, function (err) {
         if (err) return reject(err);
@@ -100,7 +104,7 @@
       note: String(data.note || '').trim(),
       updatedAt: new Date().toISOString()
     };
-    return getDb().ref('customers/' + key).update(update);
+    return getDb().ref(getCustomerPath() + '/' + key).update(update);
   }
 
   /**
@@ -109,11 +113,12 @@
    * @returns {Promise<void>}
    */
   function deleteCustomer(key) {
-    return getDb().ref('customers/' + key).remove();
+    return getDb().ref(getCustomerPath() + '/' + key).remove();
   }
 
   window.PinThipSafe = window.PinThipSafe || {};
   window.PinThipSafe.foamCustomerRepo = {
+    getCustomerPath: getCustomerPath,
     fetchAllCustomers: fetchAllCustomers,
     searchCustomers: searchCustomers,
     getCustomer: getCustomer,

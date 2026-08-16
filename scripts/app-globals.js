@@ -37,16 +37,21 @@ window.getLocalDateTimeString = getLocalDateTimeString;
 window.downloadCSV = downloadCSV;
 
 // ===== Pull-to-Refresh (touch events) =====
+function shouldIgnorePullRefreshTouch(target) {
+  if (!target || typeof target.closest !== 'function') return false;
+  return !!target.closest('#foamCustomerList, .drawer-menu, .modal-overlay, .modal-box');
+}
+
 (function() {
   var touchStartY = 0;
   window.addEventListener('touchstart', function(e) {
-    if (window.scrollY === 0) {
+    if (window.scrollY === 0 && !shouldIgnorePullRefreshTouch(e.target)) {
       touchStartY = e.touches[0].clientY;
     }
   }, { passive: true });
 
   window.addEventListener('touchmove', function(e) {
-    if (window.scrollY === 0) {
+    if (window.scrollY === 0 && !shouldIgnorePullRefreshTouch(e.target)) {
       var touchY = e.touches[0].clientY;
       var diff = touchY - touchStartY;
       var indicator = document.getElementById('pullRefreshIndicator');
@@ -59,7 +64,7 @@ window.downloadCSV = downloadCSV;
 
   window.addEventListener('touchend', function(e) {
     var indicator = document.getElementById('pullRefreshIndicator');
-    if (window.scrollY === 0 && indicator && indicator.style.top === '10px') {
+    if (window.scrollY === 0 && !shouldIgnorePullRefreshTouch(e.target) && indicator && indicator.style.top === '10px') {
       indicator.innerText = "\u23F3 \u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25...";
       setTimeout(function() {
         window.location.reload();

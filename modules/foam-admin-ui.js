@@ -85,6 +85,9 @@
           '<div style="color:#666; text-align:center; padding:18px;">เลือกรายการจากซ้ายเพื่อดูรายละเอียด</div>' +
         '</div>' +
       '</div>' +
+      '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;">' +
+        '<button class="btn-blue" onclick="showFoamCustomerManager()" style="flex:1; min-width:180px;">👥 จัดการลูกค้า</button>' +
+      '</div>' +
       '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:16px;">⬅️ กลับหน้าแอดมิน</button>';
 
     var mainContent = document.getElementById('mainContent');
@@ -153,6 +156,286 @@
       console.warn('loadFoamAdminQueue failed:', err);
       var queue = document.getElementById('foamAdminQueue');
       if (queue) queue.innerHTML = '<div style="color:#d9534f; padding:18px;">โหลดรายการไม่สำเร็จ กรุณารีเฟรช</div>';
+    });
+  }
+
+  function normalizeFoamCustomerRecord(raw) {
+    var value = raw || {};
+    return {
+      name: String(value.name || value.customer || value.customer_name || value['ชื่อลูกค้า'] || '').trim(),
+      phone: String(value.phone || value.tel || value.mobile || value.telephone || value['เบอร์โทร'] || value['โทรศัพท์'] || '').trim(),
+      address: String(value.address || value['ที่อยู่'] || '').trim(),
+      subdistrict: String(value.subdistrict || value['ตำบล'] || value['แขวง/ตำบล'] || '').trim(),
+      district: String(value.district || value['อำเภอ'] || value['เขต/อำเภอ'] || '').trim(),
+      province: String(value.province || value['จังหวัด'] || '').trim(),
+      postalCode: String(value.postalCode || value.postalcode || value['รหัสไปรษณีย์'] || '').trim(),
+      shipping: String(value.shipping || value['ขนส่ง'] || '').trim(),
+      note: String(value.note || value['หมายเหตุ'] || '').trim()
+    };
+  }
+
+  function parseFoamCsvText(text) {
+    var rows = []; var line = []; var current = ''; var inQuotes = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (ch === '"') {
+        if (inQuotes && text[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === ',' && !inQuotes) {
+        line.push(current);
+        current = '';
+      } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+        line.push(current);
+        if (line.some(function (cell) { return String(cell).trim() !== ''; })) {
+          rows.push(line);
+        }
+        line = [];
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    if (current.length > 0 || line.length > 0) {
+      line.push(current);
+      if (line.some(function (cell) { return String(cell).trim() !== ''; })) rows.push(line);
+    }
+    if (!rows.length) return [];
+
+    var header = rows[0].map(function (h) { return String(h || '').trim(); });
+    var dataRows = rows.slice(1);
+    return dataRows.map(function (row) {
+      var obj = {};
+      var maxLen = Math.max(header.length, row.length);
+      for (var j = 0; j < maxLen; j++) {
+        var key = header[j] || 'column_' + j;
+        obj[key] = row[j] || '';
+      }
+      return normalizeFoamCustomerRecord(obj);
+    }).filter(function (row) { return String(row.name || '').trim(); });
+  }
+
+  function foamHandleImportFile(file) {
+    if (!file) return;
+
+    var repo = getCustomerRepo();
+    if (!repo) {
+      window.alert('ระบบฐานข้อมูลลูกค้าไม่พร้อมใช้งาน');
+      return;
+    }
+
+    var isExcel = /\.(xlsx|xls)$/i.test(file.name || '');
+    var isCsv = /\.csv$/i.test(file.name || '');
+
+    function finishRows(rows) {
+      var records = Array.isArray(rows) ? rows : [];
+      if (!records.length) {
+        window.alert('ไม่พบข้อมูลลูกค้าในไฟล์ที่เลือก');
+        return;
+      }
+
+      var importer = Promise.resolve();
+      var created = 0;
+      records.forEach(function (record) {
+        importer = importer.then(function () {
+          return repo.addCustomer(record, 'admin').then(function () {
+            created += 1;
+          });
+        });
+      });
+
+      importer.then(function () {
+        window.showModal('📥 สำเร็จ', 'นำเข้าสู่ฐานข้อมูลลูกค้าแล้ว ' + created + ' รายการ', '<button class="btn-ok" onclick="closeModal(); showFoamCustomerManager();">ตกลง</button>');
+      }).catch(function (err) {
+        console.warn('Import foam customers failed:', err);
+        window.alert('นำเข้าข้อมูลไม่สำเร็จ กรุณาตรวจสอบรูปแบบไฟล์');
+      });
+    }
+
+    if (isCsv || !isExcel) {
+      file.text().then(function (text) {
+        finishRows(parseFoamCsvText(text));
+      }).catch(function (err) {
+        console.warn('Read CSV failed:', err);
+        window.alert('อ่านไฟล์ไม่สำเร็จ');
+      });
+      return;
+    }
+
+    if (window.XLSX && typeof window.XLSX.read === 'function') {
+      var reader = new FileReader();
+      reader.onload = function (event) {
+        try {
+          var workbook = window.XLSX.read(event.target.result, { type: 'array' });
+          var sheet = workbook.Sheets[workbook.SheetNames[0]];
+          var jsonRows = window.XLSX.utils.sheet_to_json(sheet, { defval: '' });
+          finishRows(jsonRows.map(function (row) { return normalizeFoamCustomerRecord(row); }).filter(function (row) { return String(row.name || '').trim(); }));
+        } catch (err) {
+          console.warn('Excel parse failed:', err);
+          window.alert('ไม่สามารถอ่านไฟล์ Excel ได้ กรุณาใช้ไฟล์ CSV หรือไฟล์ Excel ที่มีข้อมูลแบบตาราง');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    window.alert('โปรดอัปโหลดไฟล์ CSV หรือใช้ Excel ที่เปิดโดยมี XLSX.js ในหน้าเว็บ');
+  }
+
+  function showFoamCustomerManager() {
+    var html = '' +
+      '<div class="user-banner">👥 จัดการลูกค้าลังโฟม</div>' +
+      '<div style="display:grid; gap:12px; margin-bottom:16px;">' +
+        '<div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">' +
+          '<input id="foamCustomerManagerSearch" type="text" placeholder="ค้นหาชื่อหรือเบอร์ลูกค้า" style="flex:1; min-width:180px;" oninput="foamCustomerManagerSearch()">' +
+          '<button class="btn-blue" onclick="foamCustomerManagerSearch()">🔍 ค้นหา</button>' +
+        '</div>' +
+        '<div style="display:flex; flex-wrap:wrap; gap:8px;">' +
+          '<input id="foamImportCustomerFile" type="file" accept=".csv,.xlsx,.xls" onchange="foamHandleImportFile(this.files && this.files[0])" style="flex:1; min-width:220px;">' +
+        '</div>' +
+      '</div>' +
+      '<div style="background:#f8f9fa; border:1px solid #e9ecef; border-radius:12px; padding:12px; margin-bottom:12px; text-align:left;">' +
+        '<div style="font-weight:bold; margin-bottom:10px;">➕ เพิ่มลูกค้าใหม่</div>' +
+        '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+          '<input id="foamManualName" type="text" placeholder="ชื่อลูกค้า *">' +
+          '<input id="foamManualPhone" type="text" placeholder="เบอร์โทรศัพท์">' +
+        '</div>' +
+        '<textarea id="foamManualAddress" rows="2" placeholder="ที่อยู่"></textarea>' +
+        '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">' +
+          '<input id="foamManualSubdistrict" type="text" placeholder="แขวง/ตำบล">' +
+          '<input id="foamManualDistrict" type="text" placeholder="เขต/อำเภอ">' +
+        '</div>' +
+        '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">' +
+          '<input id="foamManualProvince" type="text" placeholder="จังหวัด">' +
+          '<input id="foamManualPostal" type="text" placeholder="รหัสไปรษณีย์">' +
+        '</div>' +
+        '<input id="foamManualShipping" type="text" placeholder="ขนส่ง" style="margin-top:8px;">' +
+        '<textarea id="foamManualNote" rows="2" placeholder="หมายเหตุ" style="margin-top:8px;"></textarea>' +
+        '<button class="btn-fuel" onclick="foamSubmitManualCustomer()" style="margin-top:12px; width:100%;">💾 บันทึกลูกค้า</button>' +
+      '</div>' +
+      '<div id="foamCustomerManagerList" style="max-height:420px; overflow-y:auto; border:1px solid #e9ecef; border-radius:12px; padding:8px; background:#fff;">' +
+        '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>' +
+      '</div>' +
+      '<button class="btn-back" onclick="showFoamAdminView()" style="margin-top:16px;">⬅️ กลับ</button>';
+
+    var mainContent = document.getElementById('mainContent');
+    if (mainContent) mainContent.innerHTML = html;
+    foamCustomerManagerSearch();
+  }
+
+  function foamCustomerManagerSearch() {
+    var query = document.getElementById('foamCustomerManagerSearch') ? document.getElementById('foamCustomerManagerSearch').value : '';
+    var repo = getCustomerRepo();
+    var list = document.getElementById('foamCustomerManagerList');
+    if (!repo || !list) return;
+
+    repo.searchCustomers(query).then(function (customers) {
+      customers.sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''), 'th');
+      });
+
+      if (!customers.length) {
+        list.innerHTML = '<div style="color:#888; text-align:center; padding:25px;">ไม่พบลูกค้า</div>';
+        return;
+      }
+
+      var html = '';
+      customers.forEach(function (customer) {
+        var addr = [customer.address, customer.subdistrict, customer.district, customer.province, customer.postalCode].filter(Boolean).join(' ');
+        html += '<div class="history-item" style="display:flex; flex-direction:column; gap:8px;">' +
+          '<div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">' +
+            '<div><b>' + escape(customer.name || '-') + '</b>' + (customer.phone ? ' | 📞 ' + escape(customer.phone) : '') + '</div>' +
+            '<button class="btn-danger" onclick="foamDeleteCustomerFromManager(\'' + escape(customer.key || '') + '\')" style="padding:6px 8px; font-size:12px;">ลบ</button>' +
+          '</div>' +
+          (addr ? '<div style="font-size:12px; color:#555;">📍 ' + escape(addr) + '</div>' : '') +
+          (customer.shipping ? '<div style="font-size:12px; color:#555;">🚚 ' + escape(customer.shipping) + '</div>' : '') +
+          '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+            '<button class="btn-blue" onclick="foamUseCustomerForPrint(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
+          '</div>' +
+        '</div>';
+      });
+      list.innerHTML = html;
+    }).catch(function (err) {
+      console.warn('foamCustomerManagerSearch failed:', err);
+      list.innerHTML = '<div style="color:#d9534f; text-align:center; padding:25px;">โหลดข้อมูลลูกค้าไม่สำเร็จ</div>';
+    });
+  }
+
+  function foamSubmitManualCustomer() {
+    var repo = getCustomerRepo();
+    if (!repo) {
+      window.alert('ระบบฐานข้อมูลลูกค้าไม่พร้อมใช้งาน');
+      return;
+    }
+
+    var payload = {
+      name: document.getElementById('foamManualName') ? document.getElementById('foamManualName').value.trim() : '',
+      phone: document.getElementById('foamManualPhone') ? document.getElementById('foamManualPhone').value.trim() : '',
+      address: document.getElementById('foamManualAddress') ? document.getElementById('foamManualAddress').value.trim() : '',
+      subdistrict: document.getElementById('foamManualSubdistrict') ? document.getElementById('foamManualSubdistrict').value.trim() : '',
+      district: document.getElementById('foamManualDistrict') ? document.getElementById('foamManualDistrict').value.trim() : '',
+      province: document.getElementById('foamManualProvince') ? document.getElementById('foamManualProvince').value.trim() : '',
+      postalCode: document.getElementById('foamManualPostal') ? document.getElementById('foamManualPostal').value.trim() : '',
+      shipping: document.getElementById('foamManualShipping') ? document.getElementById('foamManualShipping').value.trim() : '',
+      note: document.getElementById('foamManualNote') ? document.getElementById('foamManualNote').value.trim() : ''
+    };
+
+    if (!payload.name) {
+      window.alert('กรุณากรอกชื่อลูกค้า');
+      return;
+    }
+
+    repo.addCustomer(payload, 'admin').then(function () {
+      window.showModal('✅ สำเร็จ', 'เพิ่มลูกค้าลังโฟมเรียบร้อยแล้ว', '<button class="btn-ok" onclick="closeModal(); showFoamCustomerManager();">ตกลง</button>');
+    }).catch(function (err) {
+      console.warn('Add foam customer failed:', err);
+      window.alert('เพิ่มลูกค้าไม่สำเร็จ กรุณาลองใหม่');
+    });
+  }
+
+  function foamDeleteCustomerFromManager(customerKey) {
+    if (!customerKey || !window.confirm('ต้องการลบลูกค้ารายนี้ใช่หรือไม่?')) return;
+    var repo = getCustomerRepo();
+    if (!repo) return;
+
+    repo.deleteCustomer(customerKey).then(function () {
+      foamCustomerManagerSearch();
+    }).catch(function (err) {
+      console.warn('Delete foam customer failed:', err);
+      window.alert('ลบลูกค้าไม่สำเร็จ');
+    });
+  }
+
+  function foamUseCustomerForPrint(customerKey) {
+    var repo = getCustomerRepo();
+    if (!repo) return;
+
+    repo.getCustomer(customerKey).then(function (customer) {
+      if (!customer) {
+        window.alert('ไม่พบข้อมูลลูกค้า');
+        return;
+      }
+
+      var printApi = getPrintApi();
+      if (!printApi) {
+        window.alert('ระบบพิมพ์ป้ายยังไม่พร้อมใช้งาน');
+        return;
+      }
+
+      printApi.printMultipleLabels({
+        name: customer.name,
+        phone: customer.phone,
+        address: customer.address,
+        subdistrict: customer.subdistrict,
+        district: customer.district,
+        province: customer.province,
+        postalCode: customer.postalCode,
+        shipping: customer.shipping
+      }, 1);
     });
   }
 
@@ -380,6 +663,12 @@
   window.PinThipSafe.foamAdminUI = {
     showFoamAdminView: showFoamAdminView,
     loadFoamAdminQueue: loadFoamAdminQueue,
+    showFoamCustomerManager: showFoamCustomerManager,
+    foamCustomerManagerSearch: foamCustomerManagerSearch,
+    foamHandleImportFile: foamHandleImportFile,
+    foamSubmitManualCustomer: foamSubmitManualCustomer,
+    foamDeleteCustomerFromManager: foamDeleteCustomerFromManager,
+    foamUseCustomerForPrint: foamUseCustomerForPrint,
     foamAdminSelectRequest: foamAdminSelectRequest,
     foamAdminSaveSelected: foamAdminSaveSelected,
     foamAdminApproveSelected: foamAdminApproveSelected,
@@ -389,6 +678,12 @@
 
   window.showFoamAdminView = showFoamAdminView;
   window.loadFoamAdminQueue = loadFoamAdminQueue;
+  window.showFoamCustomerManager = showFoamCustomerManager;
+  window.foamCustomerManagerSearch = foamCustomerManagerSearch;
+  window.foamHandleImportFile = foamHandleImportFile;
+  window.foamSubmitManualCustomer = foamSubmitManualCustomer;
+  window.foamDeleteCustomerFromManager = foamDeleteCustomerFromManager;
+  window.foamUseCustomerForPrint = foamUseCustomerForPrint;
   window.foamAdminSelectRequest = foamAdminSelectRequest;
   window.foamAdminSaveSelected = foamAdminSaveSelected;
   window.foamAdminApproveSelected = foamAdminApproveSelected;

@@ -48,6 +48,10 @@
       ".read": "auth != null",
       ".write": "auth != null && auth.token.role === 'admin'"
     },
+    "foam_customers": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
     "foam_delivery_requests": {
       ".read": "auth != null",
       ".write": "auth != null",
