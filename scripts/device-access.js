@@ -158,6 +158,19 @@ function logDeviceAccessEvent(type, deviceId, empId, empName) {
 }
 
 // ===== Device Access Management (Admin UI) =====
+function updatePendingDevicesBadge() {
+  if (!isAdmin) return;
+  db.ref('device_access').once('value').then(function(snapshot) {
+    var devices = snapshot.val() || {};
+    var pendingCount = Object.values(devices).filter(function(d) { return d && d.status === 'pending'; }).length;
+    var badge = document.getElementById('pendingDevicesBadge');
+    if (badge) {
+      badge.textContent = pendingCount;
+      badge.style.display = pendingCount > 0 ? '' : 'none';
+    }
+  }).catch(function() {});
+}
+
 function showDeviceAccessManagement() {
   if (!isAdmin) return;
   document.getElementById('pageTitle').innerText = '\u0E2A\u0E16\u0E32\u0E19\u0E30\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19\u0E41\u0E25\u0E30\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C';
@@ -200,6 +213,7 @@ function renderDeviceAccessManagement() {
     }).length > 1;
     var matchSearch = !search || haystack.indexOf(search) !== -1;
     var matchFilter = filter === 'all' ||
+      (filter === 'pending' && device.status === 'pending') ||
       (filter === 'online' && device.online) ||
       (filter === 'blocked' && device.status === 'blocked') ||
       (filter === 'duplicate' && isDuplicate);
@@ -225,6 +239,7 @@ function renderDeviceAccessManagement() {
     '\u003Cinput id=\"deviceAccessSearch\" value=\"' + safeText(search) + '\" oninput=\"renderDeviceAccessManagement()\" placeholder=\"\u0E04\u0E49\u0E19\u0E2B\u0E32\u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E23\u0E37\u0E2D\u0E23\u0E2B\u0E31\u0E2A\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\" style=\"margin:0;\"\u003E' +
     '\u003Cselect id=\"deviceAccessFilter\" onchange=\"renderDeviceAccessManagement()\" style=\"width:auto; margin:0;\"\u003E' +
     '\u003Coption value=\"all\" ' + (filter === 'all' ? 'selected' : '') + '\u003E\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u003C/option\u003E' +
+    '\u003Coption value=\"pending\" ' + (filter === 'pending' ? 'selected' : '') + '\u003E\u23F3 \u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u003C/option\u003E' +
     '\u003Coption value=\"online\" ' + (filter === 'online' ? 'selected' : '') + '\u003E\u0E2D\u0E2D\u0E19\u0E44\u0E25\u0E19\u0E4C\u003C/option\u003E' +
     '\u003Coption value=\"duplicate\" ' + (filter === 'duplicate' ? 'selected' : '') + '\u003E\u0E21\u0E35\u0E2B\u0E25\u0E32\u0E22\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u003C/option\u003E' +
     '\u003Coption value=\"blocked\" ' + (filter === 'blocked' ? 'selected' : '') + '\u003E\u0E16\u0E39\u0E01\u0E23\u0E30\u0E07\u0E31\u0E1A\u003C/option\u003E' +
@@ -278,6 +293,7 @@ function setDeviceAccessStatus(deviceId, status) {
   if (!isAdmin) return;
   db.ref('device_access/' + deviceId).update({ status: status, updatedAt: new Date().toISOString() }).then(function() {
     logDeviceAccessEvent('status_change_' + status, deviceId, 'admin', 'Admin');
+    updatePendingDevicesBadge();
     showDeviceAccessManagement();
   });
 }

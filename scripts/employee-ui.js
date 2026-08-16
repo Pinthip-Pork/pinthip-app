@@ -546,6 +546,7 @@ function updateAdminBellBadgeCount() {
     fuelsBadge.innerText = pendingFuelsCache.length;
     fuelsBadge.style.display = pendingFuelsCache.length > 0 ? 'inline-block' : 'none';
   }
+  if (typeof updatePendingDevicesBadge === 'function') updatePendingDevicesBadge();
 
   ['dashboardLeavesBadge', 'quickLeavesBadge'].forEach(function(id) {
     var element = document.getElementById(id);

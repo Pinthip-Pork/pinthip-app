@@ -11,6 +11,7 @@
     if (mainCard) mainCard.classList.add('admin-wide');
     if (hamburgerBtn) hamburgerBtn.style.display = 'block';
     if (bellBtn) bellBtn.style.display = 'block';
+    if (typeof updatePendingDevicesBadge === 'function') updatePendingDevicesBadge();
 
     const t = (window.i18n && window.i18n[window.currentLang]) || { pageTitleAdminDashboard: 'Admin Dashboard' };
     if (pageTitle) pageTitle.innerText = t.pageTitleAdminDashboard;
