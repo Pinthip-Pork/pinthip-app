@@ -84,86 +84,101 @@
           const grandTotalPending = todayFuelPendingTotal + todayRepairPendingTotal;
 
           const html = `
-            <div class="user-banner">👑 ผู้ดูแลระบบ (Admin) | ข้อมูลสรุปประจำวันนี้: <b>${todayStr}</b></div>
+            <div class="admin-content">
+              <div class="admin-page-header">
+                <h2>📊 ภาพรวมระบบ</h2>
+                <span class="admin-date-badge">📅 ${todayStr}</span>
+              </div>
 
-            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #495057; color: #333; padding: 16px; border-radius: 10px; margin-bottom: 20px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-              <div style="font-size: 14px; font-weight: bold; color: #495057; margin-bottom: 10px; border-bottom: 1px solid #e9ecef; padding-bottom: 6px;">💵 สรุปค่าใช้จ่ายวันนี้ (${todayStr}):</div>
-              <div style="display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 6px;">
-                <span>• 💰 ค่าแรงพนักงานมาทำงานวันนี้ (${presentToday} คน):</span>
-                <b style="color: #333;">${todaySalaryTotal.toLocaleString()} บาท</b>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 6px;">
-                <span>• ⛽ ค่าน้ำมันรถส่งของ:</span>
-                <b style="color: #e67e22;">${todayFuelOnlyTotal.toLocaleString()} บาท${todayFuelPendingTotal > 0 ? ' <span style="color:#999; font-weight:normal;">(รอ ' + todayFuelPendingTotal.toLocaleString() + ')</span>' : ''}</b>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 10px;">
-                <span>• 🔧 ค่าซ่อมรถ / ค่าอะไหล่:</span>
-                <b style="color: #d9534f;">${todayRepairOnlyTotal.toLocaleString()} บาท${todayRepairPendingTotal > 0 ? ' <span style="color:#999; font-weight:normal;">(รอ ' + todayRepairPendingTotal.toLocaleString() + ')</span>' : ''}</b>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; color: #212529; border-top: 1px dashed #dee2e6; padding-top: 8px;">
-                <span>💰 รายการค่าใช้จ่ายวันนี้:</span>
-                <span style="color: #2c3e50;">${grandTotalToday.toLocaleString()} บาท</span>
-              </div>
-              ${grandTotalPending > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 13px; color: #888; margin-top: 4px;">
-                <span>⏳ รออนุมัติ:</span>
-                <span>${grandTotalPending.toLocaleString()} บาท</span>
-              </div>` : ''}
-            </div>
-
-            <div style="margin-bottom: 15px;">
-              <button class="btn-fuel" onclick="showAdminCommandCenter()" style="padding: 16px; font-size: 17px; background: linear-gradient(135deg, #0d6efd, #6f42c1) !important;">DASHBORD สถานะพนักงานปิ่นทิพย์</button>
-            </div>
-
-            <div class="dashboard-grid">
-              <div class="dashboard-box">
-                <div>
-                  <h3>📦 จัดการป้ายลังโฟม</h3>
-                  <p>จัดการลูกค้าลังโฟม</p>
+              <div class="summary-cards">
+                <div class="summary-card sc-emerald">
+                  <div class="summary-card-label">👥 พนักงานมาทำงานวันนี้</div>
+                  <div class="summary-card-value">${presentToday}</div>
+                  <div class="summary-card-sub">คน</div>
                 </div>
-                <div>
-                  <button class="btn-fuel" onclick="showFoamAdminView()">📦 จัดการป้ายลังโฟม</button>
-                  <button class="btn-history" onclick="showFoamCustomerManager()" style="margin-top:5px;">📦 จัดการลูกค้าลังโฟม</button>
+                <div class="summary-card sc-blue">
+                  <div class="summary-card-label">💰 ค่าแรงวันนี้</div>
+                  <div class="summary-card-value">${todaySalaryTotal.toLocaleString()}</div>
+                  <div class="summary-card-sub">บาท</div>
+                </div>
+                <div class="summary-card sc-amber">
+                  <div class="summary-card-label">⛽ ค่าน้ำมัน + ค่าซ่อม</div>
+                  <div class="summary-card-value">${todayFuelAndRepairTotal.toLocaleString()}</div>
+                  <div class="summary-card-sub">บาท${grandTotalPending > 0 ? ' (รออนุมัติ ' + grandTotalPending.toLocaleString() + ')' : ''}</div>
+                </div>
+                <div class="summary-card sc-red">
+                  <div class="summary-card-label">⏳ รออนุมัติเบิกจ่าย</div>
+                  <div class="summary-card-value">${pendingFuel}</div>
+                  <div class="summary-card-sub">รายการ</div>
                 </div>
               </div>
 
-              <div class="dashboard-box">
-                <div>
-                  <h3>⛽/🔧 การเบิกค่าน้ำมัน / ค่าซ่อมรถ</h3>
-                  <p>รออนุมัติ: <b style="color:#d9534f;">${pendingFuel}</b> รายการ</p>
+              <div class="total-bar">
+                <span class="total-bar-label">💵 รวมค่าใช้จ่ายวันนี้</span>
+                <span class="total-bar-value">${grandTotalToday.toLocaleString()} บาท</span>
+                ${grandTotalPending > 0 ? '<span class="total-bar-pending">⏳ รออนุมัติ: ' + grandTotalPending.toLocaleString() + ' บาท</span>' : ''}
+              </div>
+
+              <div class="view-switcher">
+                <button class="active" onclick="showAdminDashboard()">📊 แดชบอร์ด</button>
+                <button onclick="showAdminCommandCenter()">📋 สถานะพนักงาน</button>
+              </div>
+
+              <div class="menu-grid">
+                <div class="menu-card">
+                  <div>
+                    <div class="menu-card-icon">📦</div>
+                    <h3>จัดการป้ายลังโฟม</h3>
+                    <p>จัดการลูกค้าลังโฟมและป้ายลัง</p>
+                  </div>
+                  <div class="menu-card-actions">
+                    <button class="btn-admin-warning" onclick="showFoamAdminView()">📦 จัดการป้ายลังโฟม</button>
+                    <button class="btn-admin-slate" onclick="showFoamCustomerManager()">📦 จัดการลูกค้า</button>
+                  </div>
                 </div>
-                <div>
-                  <button class="btn-fuel" id="dashboardFuelsButton" onclick="showAdminFuelRequests()">⛽/🔧 ตรวจสอบ/อนุมัติเบิกจ่าย <span class="drawer-badge" id="dashboardFuelsBadge">0</span></button>
-                  <button class="btn-history" onclick="showAdminFuelHistory()" style="margin-top:5px;">📜 ประวัติ & จัดการเบิกจ่าย</button>
+
+                <div class="menu-card">
+                  <div>
+                    <div class="menu-card-icon">⛽</div>
+                    <h3>การเบิกค่าน้ำมัน / ค่าซ่อมรถ</h3>
+                    <p>รออนุมัติ: <b style="color:#ef4444;">${pendingFuel}</b> รายการ</p>
+                  </div>
+                  <div class="menu-card-actions">
+                    <button class="btn-admin-warning" id="dashboardFuelsButton" onclick="showAdminFuelRequests()">⛽ อนุมัติเบิกจ่าย <span class="drawer-badge" id="dashboardFuelsBadge">0</span></button>
+                    <button class="btn-admin-slate" onclick="showAdminFuelHistory()">📜 ประวัติเบิกจ่าย</button>
+                  </div>
+                </div>
+
+                <div class="menu-card">
+                  <div>
+                    <div class="menu-card-icon">🌴</div>
+                    <h3>ระบบลา & อนุมัติ</h3>
+                    <p>จัดการคำขอลาและตรวจสอบสถานะ</p>
+                  </div>
+                  <div class="menu-card-actions">
+                    <button class="btn-admin-warning" id="dashboardLeavesButton" onclick="showAdminLeaves()">🌴 อนุมัติใบลา <span class="drawer-badge" id="dashboardLeavesBadge">0</span></button>
+                    <button class="btn-admin-slate" onclick="showAdminLeaveHistory()">📜 ประวัติการลา</button>
+                  </div>
+                </div>
+
+                <div class="menu-card">
+                  <div>
+                    <div class="menu-card-icon">👥</div>
+                    <h3>พนักงาน & สถิติการทำงาน</h3>
+                    <p>มาทำงานวันนี้: <b style="color:#10b981;">${presentToday}</b> คน</p>
+                  </div>
+                  <div class="menu-card-actions">
+                    <button class="btn-admin-primary" onclick="showAdminAttendanceSummaryReport()">👥 สรุป ขาด ลา มาสาย</button>
+                    <button class="btn-admin-slate" onclick="showAdminLogsHistory()">📜 ลงเวลาย้อนหลัง</button>
+                  </div>
                 </div>
               </div>
 
-              <div class="dashboard-box">
-                <div>
-                  <h3>🌴 ระบบลา & อนุมัติ</h3>
-                  <p>จัดการคำขอลาและตรวจสอบสถานะ</p>
-                </div>
-                <div>
-                  <button class="btn-orange" id="dashboardLeavesButton" onclick="showAdminLeaves()">🌴 ตรวจสอบ/อนุมัติใบลา <span class="drawer-badge" id="dashboardLeavesBadge">0</span></button>
-                  <button class="btn-history" onclick="showAdminLeaveHistory()" style="margin-top:5px;">📜 ประวัติการลาทั้งหมด</button>
-                </div>
+              <div class="admin-bottom-actions">
+                <button class="btn-admin-success" onclick="showDailyPayroll()">💵 สรุปค่าแรงย้อนหลัง</button>
+                <button class="btn-admin-purple" onclick="showAnalyticsReport()">📈 สรุปค่าใช้จ่ายประจำเดือน</button>
+                <button class="btn-admin-purple" onclick="showEmpManagement()">⚙️ จัดการพนักงาน</button>
               </div>
-
-              <div class="dashboard-box">
-                <div>
-                  <h3>👥 พนักงาน & สถิติการทำงาน</h3>
-                  <p>มาทำงานวันนี้: <b style="color:#28a745;">${presentToday}</b> คน</p>
-                </div>
-                <div>
-                  <button class="btn-blue" onclick="showAdminAttendanceSummaryReport()">👥 สรุป ขาด ลา มาสาย (เลือกช่วงวัน)</button>
-                  <button class="btn-history" onclick="showAdminLogsHistory()" style="margin-top:5px;">📜 ดูการลงเวลาทำงานย้อนหลัง</button>
-                </div>
-              </div>
-            </div>
-
-            <div style="display:flex; gap:10px; margin-top:10px;">
-              <button class="btn-clock" onclick="showDailyPayroll()">💵 สรุปค่าแรงย้อนหลัง</button>
-              <button class="btn-purple" onclick="showAnalyticsReport()">📈 สรุปค่าใช้จ่ายประจำเดือน</button>
-              <button class="btn-purple" onclick="showEmpManagement()">⚙️ จัดการพนักงาน</button>
             </div>
           `;
           const mainContent = document.getElementById('mainContent');
@@ -194,35 +209,42 @@
     const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
 
     const html = `
-      <div class="user-banner" style="display:flex; justify-content:space-between; align-items:center;">
-        <span>DASHBORD Real-Time ประจำวันที่: <b>${todayStr}</b></span>
-        <button class="btn-blue" onclick="showAdminCommandCenter()" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">🔄 รีเฟรชข้อมูลสด</button>
-        <button class="btn-blue" onclick="showFoamAdminView()" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">📦 จัดการป้ายลังโฟม</button>
+      <div class="admin-content">
+        <div class="admin-page-header">
+          <h2>📋 สถานะพนักงานปิ่นทิพย์</h2>
+          <span class="admin-date-badge">📅 ${todayStr}</span>
+        </div>
+
+        <div class="view-switcher">
+          <button onclick="showAdminDashboard()">📊 แดชบอร์ด</button>
+          <button class="active" onclick="showAdminCommandCenter()">📋 สถานะพนักงาน</button>
+        </div>
+
+        <div class="cc-container">
+          <div class="cc-panel">
+            <h3>📊 สรุปวันนี้</h3>
+            <div id="ccSummaryStats" style="margin-bottom:12px;">กำลังโหลด...</div>
+
+            <h3 style="margin-top:16px;">⚡ เมนูด่วน</h3>
+            <button class="btn-admin-primary" onclick="openAdminQuickModal('job')">📦 จัดการจ๊อบส่งของ</button>
+            <button class="btn-admin-warning" onclick="openAdminQuickModal('fuel')">⛽ อนุมัติเบิกค่าน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="quickFuelsBadge">0</span></button>
+            <button class="btn-admin-warning" onclick="openAdminQuickModal('leave')">🌴 อนุมัติใบลา <span class="drawer-badge" id="quickLeavesBadge">0</span></button>
+            <button class="btn-admin-slate" onclick="showFoamAdminView()" style="margin-top:4px;">📦 จัดการป้ายลังโฟม</button>
+          </div>
+
+          <div class="cc-panel">
+            <h3>👥 สถานะพนักงาน (Live)</h3>
+            <div id="ccAttendanceList">กำลังโหลด...</div>
+          </div>
+
+          <div class="cc-panel">
+            <h3>🚚 ติดตามการส่งของ (Live)</h3>
+            <div id="ccDeliveryList">กำลังโหลด...</div>
+          </div>
+        </div>
+
+        <button class="btn-admin-slate" onclick="showAdminDashboard()" style="margin-top:16px; width:auto;">⬅️ กลับหน้าแดชบอร์ดหลัก</button>
       </div>
-
-      <div class="command-center-container">
-        <div class="command-column">
-          <h3>📊 สรุปพนักงานมาทำงานวันนี้</h3>
-          <div id="ccSummaryStats" style="margin-top:10px;">กำลังโหลด...</div>
-
-          <h3 style="margin-top:20px;">⚡ เมนูด่วนแอดมิน</h3>
-          <button class="btn-fuel" onclick="openAdminQuickModal('job')" style="font-size:13px; padding:10px;">📦 จัดการจ๊อบส่งของ</button>
-          <button class="btn-blue" onclick="openAdminQuickModal('fuel')" style="font-size:13px; padding:10px; margin-top:5px;">⛽/🔧 อนุมัติเบิกค่าน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="quickFuelsBadge">0</span></button>
-          <button class="btn-orange" onclick="openAdminQuickModal('leave')" style="font-size:13px; padding:10px; margin-top:5px;">🌴 อนุมัติใบลา <span class="drawer-badge" id="quickLeavesBadge">0</span></button>
-        </div>
-
-        <div class="command-column">
-          <h3>👥 สถานะพนักงานวันนี้ (Live)</h3>
-          <div id="ccAttendanceList" style="margin-top:10px;">กำลังโหลด...</div>
-        </div>
-
-        <div class="command-column">
-          <h3>🚚 ติดตามการส่งของ (Live Tracking)</h3>
-          <div id="ccDeliveryList" style="margin-top:10px;">กำลังโหลด...</div>
-        </div>
-      </div>
-
-      <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:20px;">⬅️ กลับหน้าแดสบอร์ดหลัก</button>
     `;
 
     const mainContent = document.getElementById('mainContent');
@@ -277,13 +299,13 @@
       const summaryContainer = document.getElementById('ccSummaryStats');
       if (summaryContainer) {
         summaryContainer.innerHTML = `
-          <div class="stats-card-container">
-            <div class="stat-box" style="background:#e8f5e9; color:#2e7d32;">มา<b>${totalPresentCount}</b></div>
-            <div class="stat-box" style="background:#fff3cd; color:#856404;">ลา<b>${leaveList.length}</b></div>
-            <div class="stat-box" style="background:#ffebee; color:#c62828;">ไม่มา<b>${absentList.length}</b></div>
+          <div class="cc-stats">
+            <div class="cc-stat cc-stat-green">มา<b>${totalPresentCount}</b></div>
+            <div class="cc-stat cc-stat-yellow">ลา<b>${leaveList.length}</b></div>
+            <div class="cc-stat cc-stat-red">ไม่มา<b>${absentList.length}</b></div>
           </div>
-          <div style="font-size:12px; color:#555; margin-top:5px;">• พนักงานทั้งหมด: ${allEmployees.length} คน</div>
-          <div style="font-size:12px; color:#555;">• เกณฑ์เวลามาสาย: หลัง ${globalLateTime} น.</div>
+          <div class="cc-meta">• พนักงานทั้งหมด: ${allEmployees.length} คน</div>
+          <div class="cc-meta">• เกณฑ์เวลามาสาย: หลัง ${globalLateTime} น.</div>
         `;
       }
 
@@ -291,16 +313,16 @@
       if (attContainer) {
         let htmlAtt = '';
         leaveList.forEach((item) => {
-          htmlAtt += `<div class="emp-tag-leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
+          htmlAtt += `<div class="cc-emp-tag leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
         });
         presentList.forEach((item) => {
-          htmlAtt += `<div class="emp-tag-present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
+          htmlAtt += `<div class="cc-emp-tag present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
         });
         lateList.forEach((item) => {
-          htmlAtt += `<div class="emp-tag-late"><span>⏰ ${item.emp.empName}</span><span><b style="color:#d9534f;">สาย ${item.present.time} น.</b></span></div>`;
+          htmlAtt += `<div class="cc-emp-tag late"><span>⏰ ${item.emp.empName}</span><span><b>สาย ${item.present.time} น.</b></span></div>`;
         });
         absentList.forEach((item) => {
-          htmlAtt += `<div class="emp-tag-absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
+          htmlAtt += `<div class="cc-emp-tag absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
         });
         attContainer.innerHTML = htmlAtt || '<div class="no-data">ไม่มีข้อมูลพนักงาน</div>';
       }
@@ -317,16 +339,16 @@
         jobList.forEach((j) => {
           const isCompleted = String(j.status).includes('สำเร็จ');
           const isOnTheWay = String(j.status).includes('กำลังเดินทาง');
-          const badgeColor = isCompleted ? '#28a745' : (isOnTheWay ? '#0d6efd' : '#e67e22');
-          const viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#0d6efd; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">🖼️ ดูรูปหลักฐาน</a>` : '';
+          const statusClass = isCompleted ? 'done' : (isOnTheWay ? 'ontheway' : 'pending');
+          const viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#2563eb; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">🖼️ ดูรูปหลักฐาน</a>` : '';
 
           htmlJob += `
-            <div class="history-item" style="border-left: 4px solid ${badgeColor}; margin-bottom:8px;">
+            <div class="cc-delivery-item ${statusClass}">
               <b>🚚 คนขับ: ${j.driverName}</b><br>
               🏬 ร้าน: <b>${j.customerName}</b><br>
-              สถานะ: <span style="color:${badgeColor}; font-weight:bold;">${j.status} (${j.deliveredTime})</span>
+              สถานะ: <b>${j.status} (${j.deliveredTime})</b>
               ${viewPhotoBtn}
-              <button class="btn-danger" style="width:auto; margin:8px 0 0; padding:6px 10px; font-size:12px;" onclick="adminDeleteDeliveryStatus('${j.key}')">🗑️ ลบรายการส่งของ</button>
+              <button class="btn-admin-danger" onclick="adminDeleteDeliveryStatus('${j.key}')">🗑️ ลบรายการส่งของ</button>
             </div>
           `;
         });
