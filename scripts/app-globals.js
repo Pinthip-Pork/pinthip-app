@@ -4,8 +4,8 @@
  */
 
 // ===== Firebase Init =====
-firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 firebase.initializeApp(window.PinThipSafe.config.firebaseConfig);
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 var db = firebase.database();
 window.db = db;
 
