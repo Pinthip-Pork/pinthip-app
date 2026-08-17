@@ -300,16 +300,183 @@
         var statusText = getDeliveryRepo().statusLabel(r.status);
         var statusColor = r.status === 'approved' || r.status === 'printed' || r.status === 'completed' ? '#28a745' :
                           r.status === 'cancelled' ? '#dc3545' : '#e67e22';
+        var canEdit = r.status === 'pending_review' || r.status === 'pending_duplicate_approval';
 
         listHtml += '<div class="history-item" style="border-left:4px solid ' + statusColor + ';">';
+        listHtml += '<div style="display:flex; justify-content:space-between; align-items:center;">';
+        listHtml += '<div style="flex:1;">';
         listHtml += '<b>🏬 ' + escape(cs.name || 'ไม่ระบุชื่อ') + '</b>';
         listHtml += ' | 📦 ' + r.boxCount + ' ลัง';
         listHtml += '<br>สถานะ: <span style="color:' + statusColor + '; font-weight:bold;">' + statusText + '</span>';
         if (cs.shipping) listHtml += ' | 🚚 ' + escape(cs.shipping);
         if (r.isDuplicate) listHtml += '<br><span style="color:#e67e22; font-size:12px;">⚠️ รายการซ้ำ</span>';
+        if (r.note) listHtml += '<br><span style="font-size:12px; color:#888;">📝 ' + escape(r.note) + '</span>';
+        listHtml += '</div>';
+        if (canEdit) {
+          listHtml += '<button class="btn-fuel" onclick="foamEditMyRequest(\'' + escape(r.key) + '\')" style="width:auto; margin:0; padding:6px 12px; font-size:12px; white-space:nowrap;">✏️ แก้ไข</button>';
+        }
+        listHtml += '</div>';
         listHtml += '</div>';
       });
       container.innerHTML = listHtml;
+    });
+  }
+
+  // ===== Edit My Request =====
+  function foamEditMyRequest(requestKey) {
+    getDeliveryRepo().fetchRequestsByDate().then(function (list) {
+      var req = list.find(function (r) { return r.key === requestKey; });
+      if (!req) {
+        window.alert('ไม่พบรายการนี้');
+        return;
+      }
+
+      var cs = req.customerSnapshot || {};
+
+      var html = '<div class="user-banner">✏️ แก้ไขรายการส่งลังโฟม</div>';
+
+      html += '<div style="background:#f8f9fa; border-radius:10px; padding:14px; margin-bottom:12px; text-align:left;">';
+      html += '<b>🏬 เดิม: ' + escape(cs.name || 'ไม่ระบุชื่อ') + '</b><br>';
+      html += '📦 ' + req.boxCount + ' ลัง | 🚚 ' + escape(cs.shipping || '-') + '<br>';
+      html += 'สถานะ: ' + getDeliveryRepo().statusLabel(req.status);
+      html += '</div>';
+
+      html += '<label style="display:block; text-align:left; font-weight:bold; margin-bottom:4px;">🔍 ค้นหาลูกค้าใหม่:</label>';
+      html += '<input type="text" id="foamEditSearchInput" placeholder="🔍 ค้นหาชื่อหรือเบอร์โทร..." style="margin-bottom:8px;" oninput="foamEditSearchCustomers()">';
+      html += '<div id="foamEditCustomerList" style="max-height:200px; overflow-y:auto; margin-bottom:12px; border:1px solid #dee2e6; border-radius:8px;">';
+      html += '<div style="color:#888; text-align:center; padding:10px;">พิมพ์เพื่อค้นหาลูกค้า...</div>';
+      html += '</div>';
+
+      html += '<label style="display:block; text-align:left; font-weight:bold; margin-bottom:4px;">จำนวนลัง:</label>';
+      html += '<select id="foamEditBoxCount" style="font-weight:bold;">';
+      for (var i = 1; i <= 10; i++) {
+        html += '<option value="' + i + '"' + (i === req.boxCount ? ' selected' : '') + '>' + i + ' ลัง</option>';
+      }
+      html += '</select>';
+
+      html += '<label style="display:block; text-align:left; font-weight:bold; margin-top:10px; margin-bottom:4px;">🚚 ขนส่ง:</label>';
+      html += '<input type="text" id="foamEditShipping" value="' + escape(cs.shipping || '') + '" placeholder="ระบุขนส่ง">';
+
+      html += '<label style="display:block; text-align:left; font-weight:bold; margin-top:10px; margin-bottom:4px;">📝 หมายเหตุ:</label>';
+      html += '<textarea id="foamEditNote" rows="2" placeholder="หมายเหตุเพิ่มเติม">' + escape(req.note || '') + '</textarea>';
+
+      html += '<input type="hidden" id="foamEditRequestKey" value="' + escape(requestKey) + '">';
+      html += '<input type="hidden" id="foamEditCustomerId" value="' + escape(req.customerId || '') + '">';
+      html += '<input type="hidden" id="foamEditCustomerName" value="' + escape(cs.name || '') + '">';
+
+      html += '<button class="btn-fuel" onclick="foamSaveEditRequest()" style="margin-top:12px; font-size:16px; padding:14px;">💾 บันทึกการแก้ไข</button>';
+      html += '<button class="btn-back" onclick="showFoamMyTodayRequests()">⬅️ กลับ</button>';
+
+      document.getElementById('mainContent').innerHTML = html;
+    });
+  }
+
+  function foamEditSearchCustomers() {
+    var input = document.getElementById('foamEditSearchInput');
+    var query = input ? input.value : '';
+    var container = document.getElementById('foamEditCustomerList');
+    if (!container) return;
+
+    if (!query) {
+      container.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">พิมพ์เพื่อค้นหาลูกค้า...</div>';
+      return;
+    }
+
+    getRepo().searchCustomers(query).then(function (customers) {
+      if (customers.length === 0) {
+        container.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">ไม่พบลูกค้า</div>';
+        return;
+      }
+
+      customers.sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''), 'th');
+      });
+
+      var listHtml = '';
+      customers.forEach(function (c) {
+        var addr = [c.address, c.subdistrict, c.district, c.province, c.postalCode]
+          .filter(Boolean).join(' ');
+        listHtml += '<div class="history-item" style="cursor:pointer; border-left:4px solid #0d6efd; padding:8px 12px;" onclick="foamEditSelectCustomer(\'' + escape(c.key) + '\', \'' + escape(c.name || '') + '\')">';
+        listHtml += '<b>🏬 ' + escape(c.name) + '</b>';
+        if (c.phone) listHtml += ' | 📞 ' + escape(c.phone);
+        if (addr) listHtml += '<br><span style="font-size:11px; color:#555;">📍 ' + escape(addr) + '</span>';
+        listHtml += '</div>';
+      });
+      container.innerHTML = listHtml;
+    });
+  }
+
+  function foamEditSelectCustomer(customerKey, customerName) {
+    document.getElementById('foamEditCustomerId').value = customerKey;
+    document.getElementById('foamEditCustomerName').value = customerName;
+    document.getElementById('foamEditSearchInput').value = customerName;
+    document.getElementById('foamEditCustomerList').innerHTML = '<div style="color:#28a745; text-align:center; padding:10px; font-weight:bold;">✅ เลือก: ' + escape(customerName) + '</div>';
+  }
+
+  function foamSaveEditRequest() {
+    var requestKey = document.getElementById('foamEditRequestKey')?.value;
+    var customerId = document.getElementById('foamEditCustomerId')?.value;
+    var customerName = document.getElementById('foamEditCustomerName')?.value;
+    var boxCount = Number(document.getElementById('foamEditBoxCount')?.value) || 1;
+    var shipping = document.getElementById('foamEditShipping')?.value.trim() || '';
+    var note = document.getElementById('foamEditNote')?.value.trim() || '';
+
+    if (!requestKey) {
+      window.alert('ไม่พบรหัสรายการ');
+      return;
+    }
+
+    var todayStr = getDeliveryRepo().fetchRequestsByDate ? undefined : undefined;
+    // Use the delivery repo's getTodayStr indirectly
+    var dateStr = (window.PinThipSafe && window.PinThipSafe.utils && window.PinThipSafe.utils.getLocalDateTimeString)
+      ? window.PinThipSafe.utils.getLocalDateTimeString()
+      : new Date().toISOString().slice(0, 10);
+
+    // Fetch customer snapshot if customer changed
+    var updatePromise;
+    if (customerId) {
+      updatePromise = getRepo().getCustomer(customerId).then(function (customer) {
+        var cs = customer ? {
+          name: customer.name || customerName,
+          phone: customer.phone || '',
+          lineName: customer.lineName || '',
+          address: customer.address || '',
+          province: customer.province || '',
+          district: customer.district || '',
+          subdistrict: customer.subdistrict || '',
+          postalCode: customer.postalCode || '',
+          shipping: shipping || customer.shipping || '',
+          note: note
+        } : {
+          name: customerName,
+          phone: '',
+          lineName: '',
+          address: '',
+          shipping: shipping,
+          note: note
+        };
+        return getDeliveryRepo().updateRequest(dateStr, requestKey, {
+          customerId: customerId,
+          customerSnapshot: cs,
+          boxCount: boxCount,
+          shipping: shipping,
+          note: note
+        });
+      });
+    } else {
+      updatePromise = getDeliveryRepo().updateRequest(dateStr, requestKey, {
+        boxCount: boxCount,
+        shipping: shipping,
+        note: note
+      });
+    }
+
+    updatePromise.then(function () {
+      window.showModal('✅ สำเร็จ', 'แก้ไขรายการเรียบร้อย',
+        '<button class="btn-ok" onclick="closeModal(); showFoamMyTodayRequests();">ตกลง</button>');
+    }).catch(function (err) {
+      console.warn('Edit request failed:', err);
+      window.alert('แก้ไขไม่สำเร็จ กรุณาลองใหม่');
     });
   }
 
@@ -322,7 +489,11 @@
     foamSubmitDelivery: foamSubmitDelivery,
     showFoamNewCustomerForm: showFoamNewCustomerForm,
     foamSubmitNewCustomer: foamSubmitNewCustomer,
-    showFoamMyTodayRequests: showFoamMyTodayRequests
+    showFoamMyTodayRequests: showFoamMyTodayRequests,
+    foamEditMyRequest: foamEditMyRequest,
+    foamEditSearchCustomers: foamEditSearchCustomers,
+    foamEditSelectCustomer: foamEditSelectCustomer,
+    foamSaveEditRequest: foamSaveEditRequest
   };
 
   window.showFoamStaffView = showFoamStaffView;
@@ -332,4 +503,8 @@
   window.showFoamNewCustomerForm = showFoamNewCustomerForm;
   window.foamSubmitNewCustomer = foamSubmitNewCustomer;
   window.showFoamMyTodayRequests = showFoamMyTodayRequests;
+  window.foamEditMyRequest = foamEditMyRequest;
+  window.foamEditSearchCustomers = foamEditSearchCustomers;
+  window.foamEditSelectCustomer = foamEditSelectCustomer;
+  window.foamSaveEditRequest = foamSaveEditRequest;
 })();
