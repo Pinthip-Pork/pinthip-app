@@ -142,7 +142,7 @@
               </div>
 
               <div class="admin-page-header">
-                <h2>📊 ภาพรวมระบบรายวัน</h2>
+                <h2>📊 ภาพรวมรายจ่ายรายวัน</h2>
                 <p>ข้อมูลสรุปประจำวันที่ <b>${todayStr}</b></p>
               </div>
 
@@ -191,7 +191,7 @@
                     </div>
                     <div class="menu-card-actions">
                       <button class="btn-admin btn-admin-primary" onclick="showFoamAdminView()">📦 พิมพ์ป้ายลังโฟม</button>
-                      <button class="btn-admin btn-admin-outline" onclick="showFoamCustomerManager()">👥 รายชื่อลูกค้า</button>
+                      <button class="btn-admin btn-admin-outline" onclick="showFoamCustomerManager()">👥 รายชื่อลูกค้าลังโฟม</button>
                     </div>
                   </div>
 
