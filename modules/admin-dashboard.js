@@ -265,10 +265,21 @@
                 <button class="btn-admin btn-admin-outline" onclick="showEmpManagement()">⚙️ จัดการพนักงาน</button>
               </div>
 
+              <div class="admin-section" id="adminHolidayCalendarSection">
+                <div class="admin-section-title">
+                  <span class="section-icon" style="background:#fff7ed; color:#f59e0b;">🗓️</span>
+                  ปฏิทินวันหยุด / วันพระ
+                </div>
+                <div id="adminHolidayCalendarRoot">กำลังโหลดปฏิทิน...</div>
+              </div>
+
             </div>
           `;
           const mainContent = document.getElementById('mainContent');
           if (mainContent) mainContent.innerHTML = html;
+          if (typeof window.renderAdminHolidayCalendar === 'function') {
+            window.renderAdminHolidayCalendar();
+          }
           if (typeof window.updateAdminBellBadgeCount === 'function') window.updateAdminBellBadgeCount();
           if (typeof window.loadTodayListRealtime === 'function') {
             window.loadTodayListRealtime();
