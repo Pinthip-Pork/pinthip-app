@@ -111,16 +111,17 @@
                 </div>
               </div>
 
-              <div class="dashboard-box">
+                            <div class="dashboard-box">
                 <div>
-                  <h3>👥 พนักงาน & สถิติการทำงาน</h3>
-                  <p>มาทำงานวันนี้: <b style="color:#28a745;">${presentToday}</b> คน</p>
+                  <h3>⛽/🔧 การเบิกค่าน้ำมัน / ค่าซ่อมรถ</h3>
+                  <p>รออนุมัติ: <b style="color:#d9534f;">${pendingFuel}</b> รายการ</p>
                 </div>
                 <div>
-                  <button class="btn-blue" onclick="showAdminAttendanceSummaryReport()">👥 สรุป ขาด ลา มาสาย (เลือกช่วงวัน)</button>
-                  <button class="btn-history" onclick="showAdminLogsHistory()" style="margin-top:5px;">📜 ดูการลงเวลาทำงานย้อนหลัง</button>
+                  <button class="btn-fuel" id="dashboardFuelsButton" onclick="showAdminFuelRequests()">⛽/🔧 ตรวจสอบ/อนุมัติเบิกจ่าย <span class="drawer-badge" id="dashboardFuelsBadge">0</span></button>
+                  <button class="btn-history" onclick="showAdminFuelHistory()" style="margin-top:5px;">📜 ประวัติ & จัดการเบิกจ่าย</button>
                 </div>
               </div>
+            </div>
 
               <div class="dashboard-box">
                 <div>
@@ -133,17 +134,16 @@
                 </div>
               </div>
 
-              <div class="dashboard-box">
+                            <div class="dashboard-box">
                 <div>
-                  <h3>⛽/🔧 การเบิกค่าน้ำมัน / ค่าซ่อมรถ</h3>
-                  <p>รออนุมัติ: <b style="color:#d9534f;">${pendingFuel}</b> รายการ</p>
+                  <h3>👥 พนักงาน & สถิติการทำงาน</h3>
+                  <p>มาทำงานวันนี้: <b style="color:#28a745;">${presentToday}</b> คน</p>
                 </div>
                 <div>
-                  <button class="btn-fuel" id="dashboardFuelsButton" onclick="showAdminFuelRequests()">⛽/🔧 ตรวจสอบ/อนุมัติเบิกจ่าย <span class="drawer-badge" id="dashboardFuelsBadge">0</span></button>
-                  <button class="btn-history" onclick="showAdminFuelHistory()" style="margin-top:5px;">📜 ประวัติ & จัดการเบิกจ่าย</button>
+                  <button class="btn-blue" onclick="showAdminAttendanceSummaryReport()">👥 สรุป ขาด ลา มาสาย (เลือกช่วงวัน)</button>
+                  <button class="btn-history" onclick="showAdminLogsHistory()" style="margin-top:5px;">📜 ดูการลงเวลาทำงานย้อนหลัง</button>
                 </div>
               </div>
-            </div>
 
             <div style="display:flex; gap:10px; margin-top:10px;">
               <button class="btn-clock" onclick="showDailyPayroll()">💵 สรุปค่าแรงย้อนหลัง</button>
