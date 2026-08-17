@@ -777,6 +777,27 @@ button:disabled {
   gap: 14px;
 }
 
+.admin-topbar-logo {
+  display: none;
+  font-size: 18px;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.admin-topbar-logo span {
+  font-weight: 400;
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.card.admin-wide .admin-topbar-logo {
+  display: block;
+}
+
 .card.admin-wide .hamburger-btn {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.15);
@@ -835,10 +856,7 @@ button:disabled {
 }
 
 .card.admin-wide .top-bar h1 {
-  color: #f1f5f9;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  display: none;
 }
 
 /* ---- Admin Content Area ---- */
