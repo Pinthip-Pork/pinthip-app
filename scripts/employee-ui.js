@@ -474,8 +474,11 @@ function handleLogout() {
 var pendingLeavesCache = [];
 var pendingFuelsCache = [];
 var pendingFoamCache = [];
+var notifiedFoamKeys = {};
 var isInitialLoadLeaves = true;
+var notifiedLeavesKeys = {};
 var isInitialLoadFuels = true;
+var notifiedFuelsKeys = {};
 var isInitialLoadFoam = true;
 var myPendingJobsCache = [];
 var isInitialLoadEmpJobs = true;
@@ -487,19 +490,25 @@ function startAdminNotificationListener() {
     var obj = snap.val() || {};
     pendingFoamCache = [];
     var newPendingFoamCount = 0;
+    var hasNewFoamItem = false;
 
     Object.keys(obj).forEach(function(dateKey) {
       var group = obj[dateKey] || {};
       Object.keys(group).forEach(function(k) {
         var item = group[k];
         if (String(item.status || '').indexOf('pending') !== -1 || String(item.status || '').indexOf('รอ') !== -1) {
+          var compositeKey = dateKey + '/' + k;
           pendingFoamCache.push({ key: k, dateKey: dateKey, ...item });
           newPendingFoamCount++;
+          if (!notifiedFoamKeys[compositeKey]) {
+            hasNewFoamItem = true;
+            notifiedFoamKeys[compositeKey] = true;
+          }
         }
       });
     });
 
-    if (!isInitialLoadFoam && newPendingFoamCount > 0) {
+    if (!isInitialLoadFoam && hasNewFoamItem) {
       if (typeof playNotificationAlert === 'function') playNotificationAlert('มีรายการป้ายลังโฟมรออนุมัติ');
       if (typeof showDesktopNotification === 'function') showDesktopNotification('มีรายการป้ายลังโฟม', 'รายการส่งลังโฟมใหม่รอแอดมินตรวจสอบ');
       showModal('🔔 มีรายการป้ายลังโฟม', 'มีรายการส่งลังโฟมใหม่ที่ต้องตรวจสอบ', '<button class="btn-ok" onclick="closeModal(); showFoamAdminView();">ตกลง</button>');
@@ -513,15 +522,20 @@ function startAdminNotificationListener() {
     var obj = snap.val() || {};
     pendingLeavesCache = [];
     var newPendingCount = 0;
+    var hasNewLeave = false;
 
     Object.keys(obj).forEach(function(k) {
       if (String(obj[k].status || '').indexOf('\u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34') !== -1) {
         pendingLeavesCache.push({ key: k, ...obj[k] });
         newPendingCount++;
+        if (!notifiedLeavesKeys[k]) {
+          hasNewLeave = true;
+          notifiedLeavesKeys[k] = true;
+        }
       }
     });
 
-    if (!isInitialLoadLeaves && newPendingCount > 0) {
+    if (!isInitialLoadLeaves && hasNewLeave) {
       if (typeof playNotificationAlert === 'function') playNotificationAlert('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E43\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A');
       if (typeof showDesktopNotification === 'function') showDesktopNotification('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E43\u0E2B\u0E21\u0E48', '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E08\u0E32\u0E01\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19');
       showModal("\uD83D\uDD14 \u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E04\u0E33\u0E02\u0E2D\u0E43\u0E2B\u0E21\u0E48", "\u0E21\u0E35\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E21\u0E32\u0E43\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E43\u0E1A\u0E25\u0E32", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E15\u0E01\u0E25\u0E07\u003C/button\u003E');
@@ -534,15 +548,20 @@ function startAdminNotificationListener() {
     var obj = snap.val() || {};
     pendingFuelsCache = [];
     var newFuelPendingCount = 0;
+    var hasNewFuel = false;
 
     Object.keys(obj).forEach(function(k) {
       if (String(obj[k].status || '').indexOf('\u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34') !== -1) {
         pendingFuelsCache.push({ key: k, ...obj[k] });
         newFuelPendingCount++;
+        if (!notifiedFuelsKeys[k]) {
+          hasNewFuel = true;
+          notifiedFuelsKeys[k] = true;
+        }
       }
     });
 
-    if (!isInitialLoadFuels && newFuelPendingCount > 0) {
+    if (!isInitialLoadFuels && hasNewFuel) {
       if (typeof playNotificationAlert === 'function') playNotificationAlert('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E43\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A');
       if (typeof showDesktopNotification === 'function') showDesktopNotification('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22\u0E43\u0E2B\u0E21\u0E48', '\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E23\u0E16');
       showModal("\uD83D\uDD14 \u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22\u0E43\u0E2B\u0E21\u0E48", "\u0E21\u0E35\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E04\u0E48\u0E32\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19/\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E23\u0E16\u0E21\u0E32\u0E43\u0E2B\u0E21\u0E48", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E15\u0E01\u0E25\u0E07\u003C/button\u003E');
