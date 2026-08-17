@@ -574,6 +574,14 @@ button:disabled {
   flex-direction: column;
 }
 
+.modal-box.modal-medium {
+  max-width: 500px !important;
+  width: 92% !important;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .modal-body-scroll {
   overflow-y: auto;
   max-height: calc(75vh - 80px);

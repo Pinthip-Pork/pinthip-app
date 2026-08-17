@@ -648,7 +648,7 @@ function showNotificationModal() {
 }
 
 function showAdminNotificationModal() {
-  var html = '\u003Cdiv style=\"max-height: 350px; overflow-y: auto;\"\u003E';
+  var html = '\u003Cdiv style=\"max-height: 55vh; overflow-y: auto; font-size: 15px; line-height: 1.6;\"\u003E';
 
   if (pendingLeavesCache.length === 0 && pendingFuelsCache.length === 0 && pendingFoamCache.length === 0) {
     html += '\u003Cdiv style=\"text-align:center; color:#888; padding:20px;\"\u003E\uD83C\uDF89 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E04\u0E33\u0E02\u0E2D\u0E17\u0E35\u0E48\u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E43\u0E19\u0E02\u0E13\u0E30\u0E19\u0E35\u0E49\u003C/div\u003E';
@@ -696,6 +696,7 @@ function showAdminNotificationModal() {
 
   html += '\u003C/div\u003E';
   showModal("\uD83D\uDD14 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34", "", html, '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u003C/button\u003E');
+  document.getElementById('modalBoxContainer').classList.add('modal-medium');
 }
 
 function showEmployeeNotificationModal() {

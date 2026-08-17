@@ -128,7 +128,7 @@ function showModal(title, text, customHtml, btnsHtml) {
 }
 
 function closeModal() {
-  document.getElementById('modalBoxContainer').classList.remove('modal-wide');
+  document.getElementById('modalBoxContainer').classList.remove('modal-wide', 'modal-medium');
   document.getElementById('customModal').style.display = 'none';
 }
 
