@@ -16,7 +16,7 @@
     const t = (window.i18n && window.i18n[window.currentLang]) || { pageTitleAdminDashboard: 'Admin Dashboard' };
     if (pageTitle) pageTitle.innerText = t.pageTitleAdminDashboard;
     if (status) status.innerText = '';
-    if (listBox) listBox.style.display = 'block';
+    if (listBox) listBox.style.display = 'none';
 
     const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
 
