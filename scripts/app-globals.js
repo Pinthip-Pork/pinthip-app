@@ -189,12 +189,40 @@ window.PinThipSafe.requireFirebaseAuth = requireFirebaseAuth;
 // ===== Init App =====
 function initApp() {
   var isInitialAuthState = true;
+
+  // Proactive token refresh every 45 minutes to keep Firebase Auth session alive
+  // (Firebase custom tokens have a 1-hour TTL; refreshing before expiry prevents silent logout)
+  setInterval(function() {
+    var cu = firebase.auth().currentUser;
+    if (cu) {
+      cu.getIdToken(true).catch(function(e) {
+        console.warn('Proactive token refresh failed:', e);
+      });
+    }
+  }, 45 * 60 * 1000);
+
   firebase.auth().onIdTokenChanged(function(firebaseUser) {
     if (!isInitialAuthState) {
       if (!firebaseUser) {
-        console.warn('Firebase Auth session ended');
-        resetExpiredAuthSession();
-        if (typeof showLoginForm === 'function') showLoginForm();
+        console.warn('Firebase Auth session dropped \u2014 attempting token refresh...');
+        // Try to force a token refresh before clearing the session.
+        // This handles transient failures and iOS PWA IndexedDB issues:
+        // firebase.auth().currentUser may still be in memory even when
+        // onIdTokenChanged fires with null, so we try to recover first.
+        var curUser = firebase.auth().currentUser;
+        if (curUser) {
+          curUser.getIdToken(true).then(function() {
+            console.log('Session recovered after token refresh.');
+          }).catch(function(err) {
+            console.warn('Token refresh recovery failed:', err);
+            resetExpiredAuthSession();
+            if (typeof showLoginForm === 'function') showLoginForm();
+          });
+        } else {
+          console.warn('Firebase Auth session ended (no currentUser).');
+          resetExpiredAuthSession();
+          if (typeof showLoginForm === 'function') showLoginForm();
+        }
       }
       return;
     }
