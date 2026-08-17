@@ -54,45 +54,60 @@
       let pendingFuel = 0;
       let todayFuelOnlyTotal = 0;
       let todayRepairOnlyTotal = 0;
+      let todayFuelPendingTotal = 0;
+      let todayRepairPendingTotal = 0;
 
       Object.values(fuelObj).forEach((f) => {
         const statusStr = String(f.status || '');
         const reqType = f.requestType || 'เบิกค่าน้ำมัน';
         if (statusStr.includes('รออนุมัติ')) pendingFuel++;
-        if (f.date === todayStr && statusStr.includes('อนุมัติแล้ว')) {
+        if (f.date === todayStr) {
           const amt = Number(f.amount || 0);
-          if (reqType.includes('ซ่อม')) {
-            todayRepairOnlyTotal += amt;
-          } else {
-            todayFuelOnlyTotal += amt;
+          if (statusStr.includes('อนุมัติแล้ว')) {
+            if (reqType.includes('ซ่อม')) {
+              todayRepairOnlyTotal += amt;
+            } else {
+              todayFuelOnlyTotal += amt;
+            }
+          } else if (statusStr.includes('รออนุมัติ')) {
+            if (reqType.includes('ซ่อม')) {
+              todayRepairPendingTotal += amt;
+            } else {
+              todayFuelPendingTotal += amt;
+            }
           }
         }
       });
 
           const todayFuelAndRepairTotal = todayFuelOnlyTotal + todayRepairOnlyTotal;
           const grandTotalToday = todaySalaryTotal + todayFuelAndRepairTotal;
+          const grandTotalPending = todayFuelPendingTotal + todayRepairPendingTotal;
 
           const html = `
             <div class="user-banner">👑 ผู้ดูแลระบบ (Admin) | ข้อมูลสรุปประจำวันนี้: <b>${todayStr}</b></div>
 
             <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #495057; color: #333; padding: 16px; border-radius: 10px; margin-bottom: 20px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-              <div style="font-size: 14px; font-weight: bold; color: #495057; margin-bottom: 10px; border-bottom: 1px solid #e9ecef; padding-bottom: 6px;">💵 สรุปค่าใช้จ่ายรวมวันนี้ (${todayStr}):</div>
+              <div style="font-size: 14px; font-weight: bold; color: #495057; margin-bottom: 10px; border-bottom: 1px solid #e9ecef; padding-bottom: 6px;">💵 สรุปค่าใช้จ่ายวันนี้ (${todayStr}):</div>
               <div style="display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 6px;">
-                <span>• ค่าแรงพนักงานมาทำงานวันนี้ (${presentToday} คน):</span>
+                <span>• 💰 ค่าแรงพนักงานมาทำงานวันนี้ (${presentToday} คน):</span>
                 <b style="color: #333;">${todaySalaryTotal.toLocaleString()} บาท</b>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 6px;">
-                <span>• ⛽ ค่าน้ำมันรถส่งของ (อนุมัติแล้ว):</span>
-                <b style="color: #e67e22;">${todayFuelOnlyTotal.toLocaleString()} บาท</b>
+                <span>• ⛽ ค่าน้ำมันรถส่งของ:</span>
+                <b style="color: #e67e22;">${todayFuelOnlyTotal.toLocaleString()} บาท${todayFuelPendingTotal > 0 ? ' <span style="color:#999; font-weight:normal;">(รอ ' + todayFuelPendingTotal.toLocaleString() + ')</span>' : ''}</b>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 10px;">
-                <span>• 🔧 ค่าซ่อมรถ / ค่าอะไหล่ (อนุมัติแล้ว):</span>
-                <b style="color: #d9534f;">${todayRepairOnlyTotal.toLocaleString()} บาท</b>
+                <span>• 🔧 ค่าซ่อมรถ / ค่าอะไหล่:</span>
+                <b style="color: #d9534f;">${todayRepairOnlyTotal.toLocaleString()} บาท${todayRepairPendingTotal > 0 ? ' <span style="color:#999; font-weight:normal;">(รอ ' + todayRepairPendingTotal.toLocaleString() + ')</span>' : ''}</b>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; color: #212529; border-top: 1px dashed #dee2e6; padding-top: 8px;">
-                <span>💰 รวมจ่ายออกวันนี้ทั้งหมด:</span>
+                <span>💰 รายการค่าใช้จ่ายวันนี้:</span>
                 <span style="color: #2c3e50;">${grandTotalToday.toLocaleString()} บาท</span>
               </div>
+              ${grandTotalPending > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 13px; color: #888; margin-top: 4px;">
+                <span>⏳ รออนุมัติ:</span>
+                <span>${grandTotalPending.toLocaleString()} บาท</span>
+              </div>` : ''}
             </div>
 
             <div style="margin-bottom: 15px;">
