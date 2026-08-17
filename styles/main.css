@@ -831,28 +831,32 @@ button:disabled {
 }
 
 .card.admin-wide .lang-switcher {
-  display: flex;
-  gap: 4px;
-  background: rgba(0,0,0,0.2);
-  padding: 3px;
-  border-radius: 8px;
+  display: none !important;
 }
 
-.card.admin-wide .lang-btn {
-  background: transparent;
-  border: none !important;
-  color: rgba(255,255,255,0.7);
-  padding: 5px 10px;
-  font-size: 12px;
-  border-radius: 6px;
+.admin-home-btn {
+  display: none;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #f1f5f9;
+  font-size: 13px;
   font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.card.admin-wide .lang-btn.active {
-  background: white;
-  color: #0f172a;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+.admin-home-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.card.admin-wide .admin-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .card.admin-wide .top-bar h1 {
