@@ -24,8 +24,9 @@
       window.db.ref('employees').once('value'),
       window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, todayStr, todayStr),
       window.db.ref('leaves').once('value'),
-      window.db.ref('fuel_requests').once('value')
-    ]).then(([empSnap, logsObj, leaveSnap, fuelSnap]) => {
+      window.db.ref('fuel_requests').once('value'),
+      window.db.ref('settings/globalLateTime').once('value')
+    ]).then(([empSnap, logsObj, leaveSnap, fuelSnap, settingsSnap]) => {
       const employeesObj = empSnap.val() || {};
       const leavesObj = leaveSnap.val() || {};
       const fuelObj = fuelSnap.val() || {};
@@ -83,8 +84,54 @@
           const grandTotalToday = todaySalaryTotal + todayFuelAndRepairTotal;
           const grandTotalPending = todayFuelPendingTotal + todayRepairPendingTotal;
 
-          const html = `
-            <div class="admin-content">
+      // ---- Attendance breakdown for emp-list-container ----
+      const globalLateTime = settingsSnap.val() || '08:00';
+      const allEmployees = Object.values(employeesObj);
+      const checkedInList = Object.values(logsObj).filter((log) => log.date === todayStr && log.type === 'เข้างาน');
+      const approvedLeavesToday = Object.values(leavesObj).filter(
+        (leave) => String(leave.status || '').includes('อนุมัติแล้ว') && leave.startDate <= todayStr && leave.endDate >= todayStr
+      );
+
+      const leaveList = [];
+      const presentList = [];
+      const lateList = [];
+      const absentList = [];
+
+      allEmployees.forEach((emp) => {
+        const present = checkedInList.find((item) => String(item.empId) === String(emp.empId));
+        const leave = approvedLeavesToday.find((item) => String(item.empId) === String(emp.empId));
+
+        if (leave) {
+          leaveList.push({ emp, leave });
+        } else if (present) {
+          if (present.time > globalLateTime) {
+            lateList.push({ emp, present });
+          } else {
+            presentList.push({ emp, present });
+          }
+        } else {
+          absentList.push({ emp });
+        }
+      });
+
+      // Sort by time ascending (earliest first)
+      presentList.sort((a, b) => (a.present.time || '').localeCompare(b.present.time || ''));
+      lateList.sort((a, b) => (a.present.time || '').localeCompare(b.present.time || ''));
+
+      // Build emp-tag HTML
+      let empTagsHtml = '';
+      presentList.forEach((item) => {
+        empTagsHtml += `<div class="emp-tag present"><span class="emp-tag-name">🟢 ${item.emp.empName}</span><span class="emp-tag-meta">${item.present.time} น.</span></div>`;
+      });
+      lateList.forEach((item) => {
+        empTagsHtml += `<div class="emp-tag late"><span class="emp-tag-name">⏰ ${item.emp.empName}</span><span class="emp-tag-meta">สาย ${item.present.time} น.</span></div>`;
+      });
+      leaveList.forEach((item) => {
+        empTagsHtml += `<div class="emp-tag leave"><span class="emp-tag-name">🌴 ${item.emp.empName}</span><span class="emp-tag-meta">${item.leave.leaveType}</span></div>`;
+      });
+      absentList.forEach((item) => {
+        empTagsHtml += `<div class="emp-tag absent"><span class="emp-tag-name">🔴 ${item.emp.empName}</span><span class="emp-tag-meta">ยังไม่ลงเวลา</span></div>`;
+      });
 
               <div class="view-switcher">
                 <button class="active" onclick="showAdminDashboard()">📊 Dashboard หลัก</button>
@@ -196,6 +243,16 @@
                     </div>
                   </div>
 
+                </div>
+              </div>
+
+              <div class="admin-section">
+                <div class="admin-section-title">
+                  <span class="section-icon" style="background:#f1f5f9; color:#475569;">🟢</span>
+                  สถานะพนักงานวันนี้ (Live Overview)
+                </div>
+                <div class="emp-list-container">
+                  ${empTagsHtml || '<div class="no-data">ไม่มีข้อมูลพนักงาน</div>'}
                 </div>
               </div>
 
