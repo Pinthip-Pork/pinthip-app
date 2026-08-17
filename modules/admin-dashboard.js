@@ -100,7 +100,7 @@
             </div>
 
             <div class="dashboard-grid">
-                <div class="dashboard-box">
+              <div class="dashboard-box">
                 <div>
                   <h3>📦 จัดการป้ายลังโฟม</h3>
                   <p>จัดการลูกค้าลังโฟม</p>
@@ -111,7 +111,7 @@
                 </div>
               </div>
 
-                            <div class="dashboard-box">
+              <div class="dashboard-box">
                 <div>
                   <h3>⛽/🔧 การเบิกค่าน้ำมัน / ค่าซ่อมรถ</h3>
                   <p>รออนุมัติ: <b style="color:#d9534f;">${pendingFuel}</b> รายการ</p>
@@ -121,7 +121,6 @@
                   <button class="btn-history" onclick="showAdminFuelHistory()" style="margin-top:5px;">📜 ประวัติ & จัดการเบิกจ่าย</button>
                 </div>
               </div>
-            </div>
 
               <div class="dashboard-box">
                 <div>
@@ -134,7 +133,7 @@
                 </div>
               </div>
 
-                            <div class="dashboard-box">
+              <div class="dashboard-box">
                 <div>
                   <h3>👥 พนักงาน & สถิติการทำงาน</h3>
                   <p>มาทำงานวันนี้: <b style="color:#28a745;">${presentToday}</b> คน</p>
@@ -144,6 +143,7 @@
                   <button class="btn-history" onclick="showAdminLogsHistory()" style="margin-top:5px;">📜 ดูการลงเวลาทำงานย้อนหลัง</button>
                 </div>
               </div>
+            </div>
 
             <div style="display:flex; gap:10px; margin-top:10px;">
               <button class="btn-clock" onclick="showDailyPayroll()">💵 สรุปค่าแรงย้อนหลัง</button>
