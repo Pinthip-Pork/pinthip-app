@@ -100,14 +100,14 @@
             </div>
 
             <div class="dashboard-grid">
-              <div class="dashboard-box">
+                <div class="dashboard-box">
                 <div>
-                  <h3>📦 จัดการจ๊อบส่งหมูสด</h3>
-                  <p>มอบหมายงานส่งของ & ดูประวัติย้อนหลัง</p>
+                  <h3>📦 จัดการป้ายลังโฟม</h3>
+                  <p>จัดการลูกค้าลังโฟม</p>
                 </div>
                 <div>
-                  <button class="btn-fuel" onclick="showAdminJobAssignPanel()">📦 มอบหมายจ๊อบส่งของวันนี้</button>
-                  <button class="btn-history" onclick="showAdminDeliveryHistory()" style="margin-top:5px;">📜 ประวัติการส่งของย้อนหลัง</button>
+                  <button class="btn-fuel" onclick="showFoamAdminView()">📦 จัดการป้ายลังโฟม</button>
+                  <button class="btn-history" onclick="showFoamCustomerManager()" style="margin-top:5px;">📦 จัดการลูกค้าลังโฟม</button>
                 </div>
               </div>
 
