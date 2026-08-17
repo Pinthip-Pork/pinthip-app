@@ -38,7 +38,7 @@
   };
 
   const deviceAccessPilot = {
-    enabled: Boolean(window.__PINTHIP_DEVICE_ACCESS__?.enabled || runtimeAdminCredentials.deviceAccessPilotEnabled || true),
+    enabled: Boolean(window.__PINTHIP_DEVICE_ACCESS__?.enabled || runtimeAdminCredentials.deviceAccessPilotEnabled),
     customAuthEnabled: Boolean(window.__PINTHIP_DEVICE_ACCESS__?.customAuthEnabled !== false)
   };
 

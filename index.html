@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <!-- สำหรับ iOS (iPhone/iPad) -->
   <link rel="apple-touch-icon" href="icon-192.png">
   <!-- เรียกใช้งาน Manifest (เปลี่ยนเลขเวอร์ชันตรงนี้ทุกครั้งที่อัปเดตโค้ด) -->
   <link rel="manifest" href="manifest.json?v=20260817-1">
   <meta name="theme-color" content="#16a34a">
+  <title>ปิ่นทิพย์ เช็กอิน</title>
 
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -147,7 +149,16 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js').catch(function (error) {
+        navigator.serviceWorker.register('./sw.js').then(function (reg) {
+          reg.addEventListener('updatefound', function () {
+            var newWorker = reg.installing;
+            newWorker.addEventListener('statechange', function () {
+              if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                window.location.reload();
+              }
+            });
+          });
+        }).catch(function (error) {
           console.warn('Service worker registration failed:', error);
         });
       });
