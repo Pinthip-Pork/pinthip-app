@@ -34,7 +34,7 @@
   };
 
   const sessionSettings = {
-    adminSessionTtlMinutes: 60 * 8
+    adminSessionTtlMinutes: 60 * 24 * 30
   };
 
   const deviceAccessPilot = {

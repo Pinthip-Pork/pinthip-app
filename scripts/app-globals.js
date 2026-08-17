@@ -4,6 +4,7 @@
  */
 
 // ===== Firebase Init =====
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 firebase.initializeApp(window.PinThipSafe.config.firebaseConfig);
 var db = firebase.database();
 window.db = db;
@@ -188,7 +189,7 @@ window.PinThipSafe.requireFirebaseAuth = requireFirebaseAuth;
 // ===== Init App =====
 function initApp() {
   var isInitialAuthState = true;
-  firebase.auth().onAuthStateChanged(function(firebaseUser) {
+  firebase.auth().onIdTokenChanged(function(firebaseUser) {
     if (!isInitialAuthState) {
       if (!firebaseUser) {
         console.warn('Firebase Auth session ended');
