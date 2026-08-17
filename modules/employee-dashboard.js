@@ -17,7 +17,6 @@
     const userId = escape(currentUser?.empId || '');
     const foamExtras = currentUser?.canSendFoamLabels ? `
       <button class="btn-fuel" onclick="showFoamStaffView()">📦 ส่งลังโฟม</button>
-      <button class="btn-history" onclick="showFoamMyTodayRequests()">📋 รายการส่งลังโฟมวันนี้</button>
     ` : '';
 
     const driverExtras = currentUser?.isDriver ? `

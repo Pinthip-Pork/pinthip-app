@@ -39,6 +39,8 @@
     html += '<button class="btn-blue" onclick="showFoamNewCustomerForm()" style="width:auto; margin:0; padding:10px 14px; white-space:nowrap;">➕ ลูกค้าใหม่</button>';
     html += '</div>';
 
+    html += '<button class="btn-history" onclick="showFoamMyTodayRequests()" style="width:100%; margin-bottom:12px; padding:10px;">📋 รายการส่งลังโฟมของฉันวันนี้</button>';
+
     html += '<div id="foamCustomerList" style="max-height:400px; overflow-y:auto; margin-bottom:12px;">';
     html += '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>';
     html += '</div>';
