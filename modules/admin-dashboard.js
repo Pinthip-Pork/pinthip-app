@@ -133,6 +133,9 @@
         empTagsHtml += `<div class="emp-tag absent"><span class="emp-tag-name">🔴 ${item.emp.empName}</span><span class="emp-tag-meta">ยังไม่ลงเวลา</span></div>`;
       });
 
+          const html = `
+            <div class="admin-content">
+
               <div class="view-switcher">
                 <button class="active" onclick="showAdminDashboard()">📊 Dashboard หลัก</button>
                 <button onclick="showAdminCommandCenter()">🖥️ Command Center</button>
