@@ -32,12 +32,20 @@
     var line3 = [province, postalCode].filter(Boolean).join(' ');
     if (line3) addrLines.push(line3);
 
-    // Auto-scale font based on content length
+    // Auto-scale font based on content length (name only)
     var nameLen = name.length;
     var nameFontSize = nameLen > 30 ? '36px' : nameLen > 20 ? '48px' : '60px';
 
-    var addrLen = addrLines.join(' ').length;
-    var addrFontSize = addrLen > 130 ? '36px' : addrLen > 90 ? '44px' : addrLen > 60 ? '52px' : addrLen > 35 ? '60px' : '72px';
+    // Address: per-line auto-shrink from 52px down until fits in one line
+    function calcAddrFontSize(line) {
+      var maxWidth = 900; // approximate px width on A4 landscape
+      var size = 52;
+      while (size > 28) {
+        if (line.length * size * 0.85 <= maxWidth) break;
+        size -= 2;
+      }
+      return size + 'px';
+    }
 
     return '<div class="foam-label-page">' +
       // Header row
@@ -49,7 +57,7 @@
       // Address section
       '<div class="foam-label-address">' +
         addrLines.map(function (line) {
-          return '<div class="foam-label-addr-line" style="font-size:' + addrFontSize + ';">' + line + '</div>';
+          return '<div class="foam-label-addr-line" style="font-size:' + calcAddrFontSize(line) + ';">' + line + '</div>';
         }).join('') +
         (shipping ? '<div class="foam-label-shipping">ขนส่ง: ' + shipping + '</div>' : '') +
       '</div>' +
@@ -121,7 +129,7 @@
         '}' +
 
         '.foam-label-shipping {' +
-          'font-size: 36px; line-height: 1.3; color: #000; font-weight: bold;' +
+          'font-size: 42px; line-height: 1.3; color: #000; font-weight: bold;' +
           'text-align: center; margin-top: 14px;' +
         '}' +
 
