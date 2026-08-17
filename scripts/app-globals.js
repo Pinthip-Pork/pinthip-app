@@ -40,38 +40,105 @@ window.downloadCSV = downloadCSV;
 // ===== Pull-to-Refresh (touch events) =====
 function shouldIgnorePullRefreshTouch(target) {
   if (!target || typeof target.closest !== 'function') return false;
-  return !!target.closest('#foamCustomerList, .drawer-menu, .modal-overlay, .modal-box');
+  // Ignore inside modals, drawer, list containers, foam customer list
+  if (target.closest('#foamCustomerList, .drawer-menu, .modal-overlay, .modal-box, .list-box')) return true;
+  // Ignore form elements to avoid accidental refresh when typing / scrolling within them
+  if (target.closest('input, textarea, select, [contenteditable]')) return true;
+  // Ignore scrollable containers (elements with overflow auto/scroll that aren't the body)
+  var scrollable = target.closest('[style*="overflow"], [class*="scroll"], .list-box, .scroll-container');
+  if (scrollable && scrollable.scrollHeight > scrollable.clientHeight + 20) return true;
+  return false;
 }
 
 (function() {
   var touchStartY = 0;
+  var touchStartX = 0;
+  var isPulling = false;
+  var PULL_THRESHOLD = 80;     // pixels to pull before trigger
+  var SNAP_TOP = '12px';       // where indicator rests when ready to refresh
+  var HIDDEN_TOP = '-50px';    // hidden position
+  var indicator = document.getElementById('pullRefreshIndicator');
+
+  if (!indicator) return;
+
+  // Helper: show/hide indicator and update text
+  function resetIndicator(immediate) {
+    isPulling = false;
+    indicator.style.top = HIDDEN_TOP;
+    if (immediate) indicator.style.transition = 'none';
+    else indicator.style.transition = '';
+  }
+
   window.addEventListener('touchstart', function(e) {
-    if (window.scrollY === 0 && !shouldIgnorePullRefreshTouch(e.target)) {
-      touchStartY = e.touches[0].clientY;
-    }
+    if (window.scrollY > 2) return;
+    if (shouldIgnorePullRefreshTouch(e.target)) return;
+    var touch = e.touches[0];
+    touchStartY = touch.clientY;
+    touchStartX = touch.clientX;
+    isPulling = false;
   }, { passive: true });
 
   window.addEventListener('touchmove', function(e) {
-    if (window.scrollY === 0 && !shouldIgnorePullRefreshTouch(e.target)) {
-      var touchY = e.touches[0].clientY;
-      var diff = touchY - touchStartY;
-      var indicator = document.getElementById('pullRefreshIndicator');
-      if (diff > 70 && indicator) {
-        indicator.style.top = '10px';
-        indicator.innerText = "\uD83D\uDD04 \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E21\u0E37\u0E2D\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A...";
-      }
+    if (window.scrollY > 2) {
+      if (isPulling) resetIndicator();
+      return;
+    }
+    if (shouldIgnorePullRefreshTouch(e.target)) {
+      if (isPulling) resetIndicator();
+      return;
+    }
+
+    var touch = e.touches[0];
+    var diffY = touch.clientY - touchStartY;
+    var diffX = Math.abs(touch.clientX - touchStartX);
+
+    // Only activate if pulling downward (diffY > 0) and not swiping sideways
+    if (diffY <= 0 || diffX > diffY * 1.5) {
+      if (isPulling) resetIndicator();
+      return;
+    }
+
+    isPulling = true;
+
+    // Smooth follow: move indicator proportionally to finger
+    var offset = Math.min(diffY * 0.5, 80);  // dampened follow, max 80px extra
+    var currentTop = -50 + offset;
+    indicator.style.transition = 'none';
+    indicator.style.top = currentTop + 'px';
+
+    if (diffY >= PULL_THRESHOLD) {
+      indicator.innerText = '\uD83D\uDD04 \u0E1B\u0E25\u0E48\u0E2D\u0E22\u0E21\u0E37\u0E2D\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A...';
+    } else {
+      indicator.innerText = '\u2B07\uFE0F \u0E14\u0E36\u0E07\u0E25\u0E07\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A';
     }
   }, { passive: true });
 
   window.addEventListener('touchend', function(e) {
-    var indicator = document.getElementById('pullRefreshIndicator');
-    if (window.scrollY === 0 && !shouldIgnorePullRefreshTouch(e.target) && indicator && indicator.style.top === '10px') {
-      indicator.innerText = "\u23F3 \u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25...";
+    if (!isPulling) return;
+
+    var touch = e.changedTouches[0];
+    var diffY = touch.clientY - touchStartY;
+
+    if (diffY >= PULL_THRESHOLD) {
+      // Trigger refresh
+      indicator.innerText = '\u23F3 \u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E35\u0E40\u0E1F\u0E23\u0E0A\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25...';
+      indicator.style.transition = '';
+      indicator.style.top = SNAP_TOP;
       setTimeout(function() {
         window.location.reload();
-      }, 500);
-    } else if (indicator) {
-      indicator.style.top = '-45px';
+      }, 400);
+    } else {
+      // Snap back
+      resetIndicator();
+    }
+
+    isPulling = false;
+  }, { passive: true });
+
+  // On window resize or orientation change, reset indicator if stuck
+  window.addEventListener('resize', function() {
+    if (indicator.style.top !== HIDDEN_TOP && !isPulling) {
+      resetIndicator(true);
     }
   });
 })();

@@ -14,6 +14,9 @@ body {
   align-items: center;
   box-sizing: border-box;
   background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  /* Suppress native pull-to-refresh on Chrome & iOS Safari */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .card {
@@ -27,6 +30,9 @@ body {
   position: relative;
   box-sizing: border-box;
   text-align: center;
+  /* Ensure scroll events work for our custom pull-to-refresh */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .card.admin-wide {
@@ -728,17 +734,24 @@ button:disabled {
 
 /* ---- Pull-to-Refresh ---- */
 #pullRefreshIndicator {
-  position: absolute;
-  top: -45px;
+  position: fixed;
+  top: -50px;
   left: 0;
   width: 100%;
   text-align: center;
+  padding: 14px 0;
   font-size: 13px;
   color: #fff;
   font-weight: bold;
-  transition: top 0.2s ease;
-  z-index: 9999;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: top 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  z-index: 99999;
   pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  will-change: top;
 }
 
 /* =============================================
