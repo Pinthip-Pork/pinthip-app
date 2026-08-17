@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pinthip-cache-v20260817-1';
+const CACHE_NAME = 'pinthip-cache-v20260817-2';
 const APP_ASSETS = [
   './',
   './index.html',

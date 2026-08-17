@@ -85,100 +85,127 @@
 
           const html = `
             <div class="admin-content">
+
+              <div class="view-switcher">
+                <button class="active" onclick="showAdminDashboard()">📊 Dashboard หลัก</button>
+                <button onclick="showAdminCommandCenter()">🖥️ Command Center</button>
+              </div>
+
               <div class="admin-page-header">
-                <h2>📊 ภาพรวมระบบ</h2>
-                <span class="admin-date-badge">📅 ${todayStr}</span>
+                <h2>📊 ภาพรวมระบบรายวัน</h2>
+                <p>ข้อมูลสรุปประจำวันที่ <b>${todayStr}</b></p>
               </div>
 
               <div class="summary-cards">
-                <div class="summary-card sc-emerald">
-                  <div class="summary-card-label">👥 พนักงานมาทำงานวันนี้</div>
+                <div class="summary-card success">
+                  <div class="summary-card-label">พนักงานมาทำงาน</div>
                   <div class="summary-card-value">${presentToday}</div>
                   <div class="summary-card-sub">คน</div>
                 </div>
-                <div class="summary-card sc-blue">
-                  <div class="summary-card-label">💰 ค่าแรงวันนี้</div>
+                <div class="summary-card warning">
+                  <div class="summary-card-label">ค่าแรงวันนี้</div>
                   <div class="summary-card-value">${todaySalaryTotal.toLocaleString()}</div>
                   <div class="summary-card-sub">บาท</div>
                 </div>
-                <div class="summary-card sc-amber">
-                  <div class="summary-card-label">⛽ ค่าน้ำมัน + ค่าซ่อม</div>
+                <div class="summary-card accent">
+                  <div class="summary-card-label">ค่าน้ำมัน + ซ่อม</div>
                   <div class="summary-card-value">${todayFuelAndRepairTotal.toLocaleString()}</div>
                   <div class="summary-card-sub">บาท${grandTotalPending > 0 ? ' (รออนุมัติ ' + grandTotalPending.toLocaleString() + ')' : ''}</div>
                 </div>
-                <div class="summary-card sc-red">
-                  <div class="summary-card-label">⏳ รออนุมัติเบิกจ่าย</div>
+                <div class="summary-card danger">
+                  <div class="summary-card-label">รายการรออนุมัติ</div>
                   <div class="summary-card-value">${pendingFuel}</div>
-                  <div class="summary-card-sub">รายการ</div>
+                  <div class="summary-card-sub">เบิกจ่าย + ใบลา</div>
                 </div>
               </div>
 
               <div class="total-bar">
-                <span class="total-bar-label">💵 รวมค่าใช้จ่ายวันนี้</span>
+                <span class="total-bar-label">💰 ค่าใช้จ่ายรวมสุทธิวันนี้</span>
                 <span class="total-bar-value">${grandTotalToday.toLocaleString()} บาท</span>
-                ${grandTotalPending > 0 ? '<span class="total-bar-pending">⏳ รออนุมัติ: ' + grandTotalPending.toLocaleString() + ' บาท</span>' : ''}
               </div>
 
-              <div class="view-switcher">
-                <button class="active" onclick="showAdminDashboard()">📊 แดชบอร์ด</button>
-                <button onclick="showAdminCommandCenter()">📋 สถานะพนักงาน</button>
-              </div>
-
-              <div class="menu-grid">
-                <div class="menu-card">
-                  <div>
-                    <div class="menu-card-icon">📦</div>
-                    <h3>จัดการป้ายลังโฟม</h3>
-                    <p>จัดการลูกค้าลังโฟมและป้ายลัง</p>
-                  </div>
-                  <div class="menu-card-actions">
-                    <button class="btn-admin-warning" onclick="showFoamAdminView()">📦 จัดการป้ายลังโฟม</button>
-                    <button class="btn-admin-slate" onclick="showFoamCustomerManager()">📦 จัดการลูกค้า</button>
-                  </div>
+              <div class="admin-section">
+                <div class="admin-section-title">
+                  <span class="section-icon" style="background:#eff6ff; color:#2563eb;">📋</span>
+                  เมนูจัดการระบบหลัก
                 </div>
+                <div class="menu-grid">
 
-                <div class="menu-card">
-                  <div>
-                    <div class="menu-card-icon">⛽</div>
-                    <h3>การเบิกค่าน้ำมัน / ค่าซ่อมรถ</h3>
-                    <p>รออนุมัติ: <b style="color:#ef4444;">${pendingFuel}</b> รายการ</p>
+                  <div class="menu-card">
+                    <div class="menu-card-header">
+                      <div class="menu-card-icon blue">📦</div>
+                      <div>
+                        <div class="menu-card-title">จัดการป้ายลังโฟม</div>
+                        <div class="menu-card-desc">ออกและพิมพ์ป้ายพัสดุสำหรับขนส่ง</div>
+                      </div>
+                    </div>
+                    <div class="menu-card-actions">
+                      <button class="btn-admin btn-admin-primary" onclick="showFoamAdminView()">📦 พิมพ์ป้ายลังโฟม</button>
+                      <button class="btn-admin btn-admin-outline" onclick="showFoamCustomerManager()">👥 รายชื่อลูกค้า</button>
+                    </div>
                   </div>
-                  <div class="menu-card-actions">
-                    <button class="btn-admin-warning" id="dashboardFuelsButton" onclick="showAdminFuelRequests()">⛽ อนุมัติเบิกจ่าย <span class="drawer-badge" id="dashboardFuelsBadge">0</span></button>
-                    <button class="btn-admin-slate" onclick="showAdminFuelHistory()">📜 ประวัติเบิกจ่าย</button>
-                  </div>
-                </div>
 
-                <div class="menu-card">
-                  <div>
-                    <div class="menu-card-icon">🌴</div>
-                    <h3>ระบบลา & อนุมัติ</h3>
-                    <p>จัดการคำขอลาและตรวจสอบสถานะ</p>
+                  <div class="menu-card">
+                    <div class="menu-card-header">
+                      <div class="menu-card-icon orange">⛽</div>
+                      <div>
+                        <div class="menu-card-title">
+                          เบิกค่าน้ำมัน & ค่าซ่อม
+                          ${pendingFuel > 0 ? '<span class="menu-card-badge">' + pendingFuel + '</span>' : ''}
+                        </div>
+                        <div class="menu-card-desc">ตรวจสอบสลิปและอนุมัติการเบิกจ่าย</div>
+                      </div>
+                    </div>
+                    <div class="menu-card-actions">
+                      <button class="btn-admin btn-admin-warning" id="dashboardFuelsButton" onclick="showAdminFuelRequests()">
+                        ⛽ อนุมัติเบิกจ่าย <span class="drawer-badge" id="dashboardFuelsBadge">0</span>
+                      </button>
+                      <button class="btn-admin btn-admin-outline" onclick="showAdminFuelHistory()">📜 ประวัติเบิก</button>
+                    </div>
                   </div>
-                  <div class="menu-card-actions">
-                    <button class="btn-admin-warning" id="dashboardLeavesButton" onclick="showAdminLeaves()">🌴 อนุมัติใบลา <span class="drawer-badge" id="dashboardLeavesBadge">0</span></button>
-                    <button class="btn-admin-slate" onclick="showAdminLeaveHistory()">📜 ประวัติการลา</button>
-                  </div>
-                </div>
 
-                <div class="menu-card">
-                  <div>
-                    <div class="menu-card-icon">👥</div>
-                    <h3>พนักงาน & สถิติการทำงาน</h3>
-                    <p>มาทำงานวันนี้: <b style="color:#10b981;">${presentToday}</b> คน</p>
+                  <div class="menu-card">
+                    <div class="menu-card-header">
+                      <div class="menu-card-icon green">🌴</div>
+                      <div>
+                        <div class="menu-card-title">
+                          ระบบลา & อนุมัติ
+                        </div>
+                        <div class="menu-card-desc">จัดการคำขอลาป่วย ลากิจ พักร้อน</div>
+                      </div>
+                    </div>
+                    <div class="menu-card-actions">
+                      <button class="btn-admin btn-admin-success" id="dashboardLeavesButton" onclick="showAdminLeaves()">
+                        🌴 อนุมัติใบลา <span class="drawer-badge" id="dashboardLeavesBadge">0</span>
+                      </button>
+                      <button class="btn-admin btn-admin-outline" onclick="showAdminLeaveHistory()">📜 ประวัติการลา</button>
+                    </div>
                   </div>
-                  <div class="menu-card-actions">
-                    <button class="btn-admin-primary" onclick="showAdminAttendanceSummaryReport()">👥 สรุป ขาด ลา มาสาย</button>
-                    <button class="btn-admin-slate" onclick="showAdminLogsHistory()">📜 ลงเวลาย้อนหลัง</button>
+
+                  <div class="menu-card">
+                    <div class="menu-card-header">
+                      <div class="menu-card-icon purple">👥</div>
+                      <div>
+                        <div class="menu-card-title">สถิติพนักงาน</div>
+                        <div class="menu-card-desc">เช็คชื่อ มาทำงานวันนี้: <b>${presentToday} คน</b></div>
+                      </div>
+                    </div>
+                    <div class="menu-card-actions">
+                      <button class="btn-admin btn-admin-accent" onclick="showAdminAttendanceSummaryReport()">📊 สรุป ขาด ลา มาสาย</button>
+                      <button class="btn-admin btn-admin-outline" onclick="showAdminLogsHistory()">📜 ลงเวลาย้อนหลัง</button>
+                    </div>
                   </div>
+
                 </div>
               </div>
 
               <div class="admin-bottom-actions">
-                <button class="btn-admin-success" onclick="showDailyPayroll()">💵 สรุปค่าแรงย้อนหลัง</button>
-                <button class="btn-admin-purple" onclick="showAnalyticsReport()">📈 สรุปค่าใช้จ่ายประจำเดือน</button>
-                <button class="btn-admin-purple" onclick="showEmpManagement()">⚙️ จัดการพนักงาน</button>
+                <button class="btn-admin btn-admin-accent" onclick="showAdminCommandCenter()">🖥️ สลับไป Command Center</button>
+                <button class="btn-admin btn-admin-outline" onclick="showDailyPayroll()">💵 สรุปค่าแรงย้อนหลัง</button>
+                <button class="btn-admin btn-admin-outline" onclick="showAnalyticsReport()">📈 สรุปค่าใช้จ่ายประจำเดือน</button>
+                <button class="btn-admin btn-admin-outline" onclick="showEmpManagement()">⚙️ จัดการพนักงาน</button>
               </div>
+
             </div>
           `;
           const mainContent = document.getElementById('mainContent');
@@ -210,40 +237,58 @@
 
     const html = `
       <div class="admin-content">
-        <div class="admin-page-header">
-          <h2>📋 สถานะพนักงานปิ่นทิพย์</h2>
-          <span class="admin-date-badge">📅 ${todayStr}</span>
-        </div>
 
         <div class="view-switcher">
-          <button onclick="showAdminDashboard()">📊 แดชบอร์ด</button>
-          <button class="active" onclick="showAdminCommandCenter()">📋 สถานะพนักงาน</button>
+          <button onclick="showAdminDashboard()">📊 Dashboard หลัก</button>
+          <button class="active" onclick="showAdminCommandCenter()">🖥️ Command Center</button>
         </div>
 
-        <div class="cc-container">
-          <div class="cc-panel">
-            <h3>📊 สรุปวันนี้</h3>
-            <div id="ccSummaryStats" style="margin-bottom:12px;">กำลังโหลด...</div>
-
-            <h3 style="margin-top:16px;">⚡ เมนูด่วน</h3>
-            <button class="btn-admin-primary" onclick="openAdminQuickModal('job')">📦 จัดการจ๊อบส่งของ</button>
-            <button class="btn-admin-warning" onclick="openAdminQuickModal('fuel')">⛽ อนุมัติเบิกค่าน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="quickFuelsBadge">0</span></button>
-            <button class="btn-admin-warning" onclick="openAdminQuickModal('leave')">🌴 อนุมัติใบลา <span class="drawer-badge" id="quickLeavesBadge">0</span></button>
-            <button class="btn-admin-slate" onclick="showFoamAdminView()" style="margin-top:4px;">📦 จัดการป้ายลังโฟม</button>
+        <div class="admin-page-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2>🖥️ Command Center (Live Operations)</h2>
+            <p>หน้าจอติดตามสถานะปฏิบัติการเรียลไทม์</p>
           </div>
-
-          <div class="cc-panel">
-            <h3>👥 สถานะพนักงาน (Live)</h3>
-            <div id="ccAttendanceList">กำลังโหลด...</div>
-          </div>
-
-          <div class="cc-panel">
-            <h3>🚚 ติดตามการส่งของ (Live)</h3>
-            <div id="ccDeliveryList">กำลังโหลด...</div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-refresh" onclick="showAdminCommandCenter()">🔄 รีเฟรชข้อมูล</button>
+            <button class="btn-admin btn-admin-accent btn-admin-sm" onclick="showFoamAdminView()">📦 ป้ายลังโฟม</button>
           </div>
         </div>
 
-        <button class="btn-admin-slate" onclick="showAdminDashboard()" style="margin-top:16px; width:auto;">⬅️ กลับหน้าแดชบอร์ดหลัก</button>
+        <div class="cc-grid">
+
+          <div class="cc-panel">
+            <div class="cc-panel-header">📊 สรุปภาพรวมวันนี้</div>
+            <div class="cc-panel-body">
+              <div id="ccSummaryStats">กำลังโหลด...</div>
+              <div class="cc-quick-label" style="margin-top:12px;">⚡ ทางลัดด่วน</div>
+              <div class="cc-quick-actions">
+                <button class="btn-admin btn-admin-accent btn-admin-sm" onclick="openAdminQuickModal('job')">📦 จัดการจ๊อบส่งของ</button>
+                <button class="btn-admin btn-admin-warning btn-admin-sm" onclick="openAdminQuickModal('fuel')">
+                  ⛽ อนุมัติเบิกจ่าย <span class="drawer-badge" id="quickFuelsBadge">0</span>
+                </button>
+                <button class="btn-admin btn-admin-success btn-admin-sm" onclick="openAdminQuickModal('leave')">
+                  🌴 อนุมัติใบลา <span class="drawer-badge" id="quickLeavesBadge">0</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="cc-panel">
+            <div class="cc-panel-header">👥 สถานะพนักงานแบบเรียลไทม์</div>
+            <div class="cc-panel-body" id="ccAttendanceList">กำลังโหลด...</div>
+          </div>
+
+          <div class="cc-panel">
+            <div class="cc-panel-header">🚚 ติดตามการจัดส่ง (Live Tracking)</div>
+            <div class="cc-panel-body" id="ccDeliveryList">กำลังโหลด...</div>
+          </div>
+
+        </div>
+
+        <button class="btn-admin btn-admin-outline" onclick="showAdminDashboard()" style="margin-top:20px; width:auto;">
+          ⬅️ กลับหน้าแดชบอร์ดหลัก
+        </button>
+
       </div>
     `;
 
@@ -299,13 +344,15 @@
       const summaryContainer = document.getElementById('ccSummaryStats');
       if (summaryContainer) {
         summaryContainer.innerHTML = `
-          <div class="cc-stats">
-            <div class="cc-stat cc-stat-green">มา<b>${totalPresentCount}</b></div>
-            <div class="cc-stat cc-stat-yellow">ลา<b>${leaveList.length}</b></div>
-            <div class="cc-stat cc-stat-red">ไม่มา<b>${absentList.length}</b></div>
+          <div class="cc-stat-pills">
+            <div class="cc-stat-pill present"><b>${presentList.length}</b>มาทำงาน</div>
+            <div class="cc-stat-pill late"><b>${lateList.length}</b>มาสาย</div>
+            <div class="cc-stat-pill leave"><b>${leaveList.length}</b>ลา</div>
+            <div class="cc-stat-pill absent"><b>${absentList.length}</b>ขาด</div>
           </div>
-          <div class="cc-meta">• พนักงานทั้งหมด: ${allEmployees.length} คน</div>
-          <div class="cc-meta">• เกณฑ์เวลามาสาย: หลัง ${globalLateTime} น.</div>
+          <div style="font-size:11px; color:#94a3b8; text-align:center; margin-bottom:4px;">
+            พนักงานทั้งหมด ${allEmployees.length} คน (ตัดรอบ ${globalLateTime} น.)
+          </div>
         `;
       }
 
@@ -313,16 +360,16 @@
       if (attContainer) {
         let htmlAtt = '';
         leaveList.forEach((item) => {
-          htmlAtt += `<div class="cc-emp-tag leave"><span>🌴 ${item.emp.empName}</span><span><b>${item.leave.leaveType}</b></span></div>`;
+          htmlAtt += `<div class="emp-tag leave"><span class="emp-tag-name">🌴 ${item.emp.empName}</span><span class="emp-tag-meta">${item.leave.leaveType}</span></div>`;
         });
         presentList.forEach((item) => {
-          htmlAtt += `<div class="cc-emp-tag present"><span>🟢 ${item.emp.empName}</span><span><b>${item.present.time} น.</b></span></div>`;
+          htmlAtt += `<div class="emp-tag present"><span class="emp-tag-name">🟢 ${item.emp.empName}</span><span class="emp-tag-meta">${item.present.time} น.</span></div>`;
         });
         lateList.forEach((item) => {
-          htmlAtt += `<div class="cc-emp-tag late"><span>⏰ ${item.emp.empName}</span><span><b>สาย ${item.present.time} น.</b></span></div>`;
+          htmlAtt += `<div class="emp-tag late"><span class="emp-tag-name">⏰ ${item.emp.empName}</span><span class="emp-tag-meta">สาย ${item.present.time} น.</span></div>`;
         });
         absentList.forEach((item) => {
-          htmlAtt += `<div class="cc-emp-tag absent"><span>🔴 ${item.emp.empName}</span><span style="font-size:11px;">ยังไม่ได้ลงเวลา</span></div>`;
+          htmlAtt += `<div class="emp-tag absent"><span class="emp-tag-name">🔴 ${item.emp.empName}</span><span class="emp-tag-meta">ยังไม่ลงเวลา</span></div>`;
         });
         attContainer.innerHTML = htmlAtt || '<div class="no-data">ไม่มีข้อมูลพนักงาน</div>';
       }
@@ -339,16 +386,20 @@
         jobList.forEach((j) => {
           const isCompleted = String(j.status).includes('สำเร็จ');
           const isOnTheWay = String(j.status).includes('กำลังเดินทาง');
-          const statusClass = isCompleted ? 'done' : (isOnTheWay ? 'ontheway' : 'pending');
-          const viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#2563eb; font-size:11px; text-decoration:underline; display:block; margin-top:2px;">🖼️ ดูรูปหลักฐาน</a>` : '';
+          const statusLabel = isCompleted ? 'done' : (isOnTheWay ? 'ongoing' : 'pending');
+          const statusText = isCompleted ? 'สำเร็จ' : (isOnTheWay ? 'กำลังเดินทาง' : 'รอดำเนินการ');
+          const viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#2563eb; font-size:11px; text-decoration:underline; display:block; margin-top:4px;">🖼️ ดูรูปหลักฐาน</a>` : '';
 
           htmlJob += `
-            <div class="cc-delivery-item ${statusClass}">
-              <b>🚚 คนขับ: ${j.driverName}</b><br>
-              🏬 ร้าน: <b>${j.customerName}</b><br>
-              สถานะ: <b>${j.status} (${j.deliveredTime})</b>
+            <div class="cc-delivery-card">
+              <div class="driver">🚚 ${j.driverName}</div>
+              <div style="color:#475569; margin-bottom:4px;">🏬 ${j.customerName}</div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="status-badge ${statusLabel}">${statusText}</span>
+                <span style="font-size:11px; color:#94a3b8;">${j.deliveredTime || '-'}</span>
+              </div>
               ${viewPhotoBtn}
-              <button class="btn-admin-danger" onclick="adminDeleteDeliveryStatus('${j.key}')">🗑️ ลบรายการส่งของ</button>
+              <button class="btn-admin btn-admin-danger btn-admin-sm" onclick="adminDeleteDeliveryStatus('${j.key}')" style="margin-top:6px;">🗑️ ลบ</button>
             </div>
           `;
         });
