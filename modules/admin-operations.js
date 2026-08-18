@@ -325,7 +325,8 @@
         optionsHtml += '<option value="รถส่วนกลาง">รถส่วนกลาง</option>';
       } else {
         platesList.forEach((p) => {
-          optionsHtml += `<option value="${p}">${p}</option>`;
+          const safePlate = window.PinThipSafe.safeText(p);
+          optionsHtml += `<option value="${safePlate}">${safePlate}</option>`;
         });
       }
 
@@ -443,14 +444,18 @@
         html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายที่รออนุมัติในขณะนี้</div>';
       } else {
         pendingList.reverse().forEach((item) => {
-          const badgeType = item.requestType || '⛽ เบิกค่าน้ำมัน';
-          const plateText = item.carPlate ? `🚗 ทะเบียน: <b>${item.carPlate}</b>` : '';
+          const badgeType = window.PinThipSafe.safeText(item.requestType || '⛽ เบิกค่าน้ำมัน');
+          const safeEmpName = window.PinThipSafe.safeText(item.empName);
+          const safeEmpId = window.PinThipSafe.safeText(item.empId);
+          const safeCarPlate = window.PinThipSafe.safeText(item.carPlate);
+          const safeRoute = window.PinThipSafe.safeText(item.route || '-');
+          const plateText = item.carPlate ? `🚗 ทะเบียน: <b>${safeCarPlate}</b>` : '';
           html += `
             <div class="history-item">
-              <b>👤 ${item.empName} (${item.empId})</b> [${badgeType}] ⏳<br>
+              <b>👤 ${safeEmpName} (${safeEmpId})</b> [${badgeType}] ⏳<br>
               ${plateText}<br>
-              📍 รายละเอียด: <b>${item.route || '-'}</b><br>
-              📅 วันที่ขอ: ${item.date} <br><br>
+              📍 รายละเอียด: <b>${safeRoute}</b><br>
+              📅 วันที่ขอ: ${window.PinThipSafe.safeText(item.date)} <br><br>
               <div style="text-align:left; font-size:13px; font-weight:bold; margin-bottom:3px;">💵 กำหนดจำนวนเงินอนุมัติ (บาท):</div>
               <input type="number" id="fuelAmount_${item.key}" value="${item.amount || ''}" placeholder="ระบุยอดเงินที่ให้เบิก" style="margin-bottom:8px;">
               <div style="display:flex; gap:8px; align-items:center;">
@@ -563,10 +568,11 @@
 
       let html = '';
       list.forEach((item) => {
+        const safePlate = window.PinThipSafe.safeText(item.plate);
         html += `
           <span style="background: white; border: 1px solid #ced4da; padding: 4px 10px; border-radius: 6px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
-            🚗 ${item.plate}
-            <span onclick="deleteCarPlate('${item.key}')" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 15px;" title="ลบ">&times;</span>
+            🚗 ${safePlate}
+            <span onclick="deleteCarPlate('${window.PinThipSafe.safeText(item.key)}')" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 15px;" title="ลบ">&times;</span>
           </span>
         `;
       });
@@ -655,18 +661,22 @@
       } else {
         currentFuelFilteredList.slice().reverse().forEach((item) => {
           const statusBadge = String(item.status || '').includes('อนุมัติแล้ว') ? '🟢 อนุมัติแล้ว' : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รออนุมัติ');
-          const badgeType = item.requestType || '⛽ เบิกค่าน้ำมัน';
-          const plateText = item.carPlate ? `🚗 ทะเบียน: ${item.carPlate} | ` : '';
+          const badgeType = window.PinThipSafe.safeText(item.requestType || '⛽ เบิกค่าน้ำมัน');
+          const safeEmpName = window.PinThipSafe.safeText(item.empName);
+          const safeEmpId = window.PinThipSafe.safeText(item.empId);
+          const safeCarPlate = window.PinThipSafe.safeText(item.carPlate || '');
+          const safeRoute = window.PinThipSafe.safeText(item.route || '-');
+          const plateText = item.carPlate ? `🚗 ทะเบียน: ${safeCarPlate} | ` : '';
           const typeColor = badgeType.includes('ซ่อม') ? '#d9534f' : '#e67e22';
 
           html += `
             <div class="history-item">
-              <b>👤 ${item.empName} (${item.empId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b><br>
-              ${plateText}📍 รายละเอียด: ${item.route || '-'} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
-              📅 วันที่: ${item.date}<br>
+              <b>👤 ${safeEmpName} (${safeEmpId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b><br>
+              ${plateText}📍 รายละเอียด: ${safeRoute} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
+              📅 วันที่: ${window.PinThipSafe.safeText(item.date)}<br>
               <div style="margin-top:8px; display:flex; gap:6px;">
-                <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${item.key}', '${item.carPlate || ''}', '${item.route || ''}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
-                <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${item.key}', '${item.empName}')">🗑️ ลบ</button>
+                <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${window.PinThipSafe.safeText(item.key)}', '${safeCarPlate}', '${safeRoute}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
+                <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${window.PinThipSafe.safeText(item.key)}', '${safeEmpName}')">🗑️ ลบ</button>
               </div>
             </div>
           `;
@@ -711,6 +721,7 @@
 
     let chartHtml = '';
     plates.forEach((plate) => {
+      const safePlate = window.PinThipSafe.safeText(plate);
       const fAmt = carData[plate].fuel;
       const rAmt = carData[plate].repair;
       const total = fAmt + rAmt;
@@ -718,7 +729,7 @@
       chartHtml += `
         <div style="margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; color: #495057;">
-            <span>🚗 <b>${plate}</b> (⛽ ค่าน้ำมัน: <b style="color:#e67e22;">${fAmt.toLocaleString()} ฿</b> | 🔧 ค่าซ่อม: <b style="color:#d9534f;">${rAmt.toLocaleString()} ฿</b>)</span>
+            <span>🚗 <b>${safePlate}</b> (⛽ ค่าน้ำมัน: <b style="color:#e67e22;">${fAmt.toLocaleString()} ฿</b> | 🔧 ค่าซ่อม: <b style="color:#d9534f;">${rAmt.toLocaleString()} ฿</b>)</span>
             <span style="font-weight: bold; color: #2c3e50;">รวม ${total.toLocaleString()} บาท</span>
           </div>
           <div style="background: #e9ecef; border-radius: 6px; height: 10px; width: 100%; overflow: hidden; display: flex;">
@@ -867,11 +878,14 @@
         html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการใบลาที่รออนุมัติในขณะนี้</div>';
       } else {
         pendingList.reverse().forEach((item) => {
+          const safeEmpName = window.PinThipSafe.safeText(item.empName);
+          const safeLeaveType = window.PinThipSafe.safeText(item.leaveType);
+          const safeReason = window.PinThipSafe.safeText(item.reason);
           html += `
             <div class="history-item" style="background:#fff3cd;">
-              <b>👤 ${item.empName}</b> (${item.leaveType}) ⏳<br>
-              📅 ${item.startDate} ถึง ${item.endDate}<br>
-              💬 เหตุผล: ${item.reason}<br><br>
+              <b>👤 ${safeEmpName}</b> (${safeLeaveType}) ⏳<br>
+              📅 ${window.PinThipSafe.safeText(item.startDate)} ถึง ${window.PinThipSafe.safeText(item.endDate)}<br>
+              💬 เหตุผล: ${safeReason}<br><br>
               <div style="display:flex; gap:8px;">
                 <select id="leaveStatus_${item.key}" style="margin:0; padding:8px; font-weight:bold;">
                   <option value="อนุมัติแล้ว 🟢">🟢 อนุมัติ</option>
@@ -976,11 +990,15 @@
       } else {
         currentLeaveFilteredList.slice().reverse().forEach((item) => {
           const statusStr = item.status || 'รออนุมัติ ⏳';
+          const safeEmpName = window.PinThipSafe.safeText(item.empName);
+          const safeEmpId = window.PinThipSafe.safeText(item.empId);
+          const safeLeaveType = window.PinThipSafe.safeText(item.leaveType);
+          const safeReason = window.PinThipSafe.safeText(item.reason);
           html += `
             <div class="history-item">
-              <b>👤 ${item.empName} (${item.empId})</b> | ประเภท: <b>${item.leaveType}</b><br>
-              📅 วันที่ลา: ${item.startDate} ถึง ${item.endDate}<br>
-              💬 เหตุผล: ${item.reason}<br><br>
+              <b>👤 ${safeEmpName} (${safeEmpId})</b> | ประเภท: <b>${safeLeaveType}</b><br>
+              📅 วันที่ลา: ${window.PinThipSafe.safeText(item.startDate)} ถึง ${window.PinThipSafe.safeText(item.endDate)}<br>
+              💬 เหตุผล: ${safeReason}<br><br>
               <div style="display:flex; gap:8px; align-items:center;">
                 <select id="editLeaveStatus_${item.key}" style="margin:0; padding:6px; font-size:13px; font-weight:bold;">
                   <option value="อนุมัติแล้ว 🟢" ${statusStr.includes('อนุมัติแล้ว') ? 'selected' : ''}>🟢 อนุมัติแล้ว</option>
@@ -1129,9 +1147,9 @@
         currentLogFilteredList.slice().reverse().forEach((item) => {
           html += `
             <div class="history-item">
-              📅 วันที่: ${item.date} | ⏰ เวลา: ${item.time} น.<br>
-              <b>👤 ${item.empName} (${item.empId})</b> (${item.type})<br>
-              📍 สถานที่: ${item.nearestLocation || '-'}
+              📅 วันที่: ${window.PinThipSafe.safeText(item.date)} | ⏰ เวลา: ${window.PinThipSafe.safeText(item.time)} น.<br>
+              <b>👤 ${window.PinThipSafe.safeText(item.empName)} (${window.PinThipSafe.safeText(item.empId)})</b> (${window.PinThipSafe.safeText(item.type)})<br>
+              📍 สถานที่: ${window.PinThipSafe.safeText(item.nearestLocation || '-')}
             </div>
           `;
         });
@@ -1295,7 +1313,7 @@
             html += '<div style="color:#888; margin-bottom:15px;">ไม่มีพนักงานสแกนเข้างานในช่วงเวลานี้</div>';
           } else {
             presentList.slice().reverse().forEach((p) => {
-              html += `<div class="history-item">📅 ${p.date} | <b>${p.name} (${p.id})</b> - เวลา ${p.time} น. | ค่าแรง: <b style="color:#28a745;">${p.rate} บาท</b></div>`;
+              html += `<div class="history-item">📅 ${window.PinThipSafe.safeText(p.date)} | <b>${window.PinThipSafe.safeText(p.name)} (${window.PinThipSafe.safeText(p.id)})</b> - เวลา ${window.PinThipSafe.safeText(p.time)} น. | ค่าแรง: <b style="color:#28a745;">${p.rate} บาท</b></div>`;
             });
           }
 
@@ -1304,7 +1322,7 @@
             html += '<div style="color:#888; margin-bottom:10px;">ไม่มีการเบิกค่าน้ำมันในช่วงเวลานี้</div>';
           } else {
             fuelList.slice().reverse().forEach((f) => {
-              html += `<div class="history-item">📅 ${f.date} | <b>${f.name}</b> [${f.type}] (ทะเบียน: ${f.plate})<br>รายละเอียด: ${f.route} | อนุมัติจ่าย: <b style="color:#e67e22;">${f.amount} บาท</b></div>`;
+              html += `<div class="history-item">📅 ${window.PinThipSafe.safeText(f.date)} | <b>${window.PinThipSafe.safeText(f.name)}</b> [${window.PinThipSafe.safeText(f.type)}] (ทะเบียน: ${window.PinThipSafe.safeText(f.plate)})<br>รายละเอียด: ${window.PinThipSafe.safeText(f.route)} | อนุมัติจ่าย: <b style="color:#e67e22;">${f.amount} บาท</b></div>`;
             });
           }
 
@@ -1313,7 +1331,7 @@
             html += '<div style="color:#888;">ไม่มีการเบิกค่าซ่อมรถในช่วงเวลานี้</div>';
           } else {
             repairList.slice().reverse().forEach((r) => {
-              html += `<div class="history-item">📅 ${r.date} | <b>${r.name}</b> [${r.type}] (ทะเบียน: ${r.plate})<br>รายละเอียด: ${r.route} | อนุมัติจ่าย: <b style="color:#d9534f;">${r.amount} บาท</b></div>`;
+              html += `<div class="history-item">📅 ${window.PinThipSafe.safeText(r.date)} | <b>${window.PinThipSafe.safeText(r.name)}</b> [${window.PinThipSafe.safeText(r.type)}] (ทะเบียน: ${window.PinThipSafe.safeText(r.plate)})<br>รายละเอียด: ${window.PinThipSafe.safeText(r.route)} | อนุมัติจ่าย: <b style="color:#d9534f;">${r.amount} บาท</b></div>`;
             });
           }
 
@@ -1508,15 +1526,17 @@
           empList.forEach((emp) => {
             const driverBadge = emp.isDriver ? '🚚 <b style="color:#e67e22;">พนักงานขับรถ</b>' : '👤 พนักงานทั่วไป';
             const foamBadge = emp.canSendFoamLabels ? ' 📦 <b style="color:#0d6efd;">ส่งลังโฟม</b>' : '';
+            const safeEmpName = window.PinThipSafe.safeText(emp.empName);
+            const safeEmpId = window.PinThipSafe.safeText(emp.empId);
             html += `
               <div class="history-item" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <b>👤 ${emp.empName}</b> (${emp.empId})<br>
+                  <b>👤 ${safeEmpName}</b> (${safeEmpId})<br>
                   🔑 PIN: ${emp.pin ? '••••' : '—'} | ค่าแรง: ${emp.dailyRate || 0} บาท | ${driverBadge}${foamBadge}
                 </div>
                 <div style="display:flex; gap:5px;">
-                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditEmpModal('${emp.key}', '${emp.empId}', '${emp.empName}', '', '${emp.dailyRate || 0}', ${emp.isDriver || false}, ${emp.canSendFoamLabels || false})">✏️</button>
-                  <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteEmp('${emp.key}', '${emp.empName}')">🗑️</button>
+                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditEmpModal('${window.PinThipSafe.safeText(emp.key)}', '${safeEmpId}', '${safeEmpName}', '', '${emp.dailyRate || 0}', ${emp.isDriver || false}, ${emp.canSendFoamLabels || false})">✏️</button>
+                  <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteEmp('${window.PinThipSafe.safeText(emp.key)}', '${safeEmpName}')">🗑️</button>
                 </div>
               </div>
             `;

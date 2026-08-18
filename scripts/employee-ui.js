@@ -48,8 +48,8 @@ function showClockInForm() {
   document.getElementById('pageTitle').innerText = t.pageTitleClockIn;
   document.getElementById('listBox').style.display = "none";
 
-  var html = '\u003Cdiv class=\"user-banner\"\u003E' + currentUser.empName + ' (' + currentUser.empId + ')\u003C/div\u003E' +
-    '\u003Cselect id=\"clockType\"\u003E' +
+      var html = '\u003Cdiv class=\"user-banner\"\u003E' + safeText(currentUser.empName) + ' (' + safeText(currentUser.empId) + ')\u003C/div\u003E' +
+        '\u003Cselect id=\"clockType\"\u003E' +
     '\u003Coption value=\"\u0E40\u0E02\u0E49\u0E32\u0E07\u0E32\u0E19\"\u003E' + t.optIn + '\u003C/option\u003E' +
     '\u003C/select\u003E' +
     '\u003Cbutton id=\"btnSubmitClock\" onclick=\"executeClockIn(\'\')\"\u003E' + t.btnSubmitClockIn + '\u003C/button\u003E' +
@@ -174,8 +174,8 @@ function showLeaveForm() {
   document.getElementById('listBox').style.display = "none";
   var today = getLocalDateTimeString();
 
-  var html = '\u003Cdiv class=\"user-banner\"\u003E' + currentUser.empName + ' (' + currentUser.empId + ')\u003C/div\u003E' +
-    '\u003Cselect id=\"leaveType\"\u003E' +
+      var html = '\u003Cdiv class=\"user-banner\"\u003E' + safeText(currentUser.empName) + ' (' + safeText(currentUser.empId) + ')\u003C/div\u003E' +
+        '\u003Cselect id=\"leaveType\"\u003E' +
     '\u003Coption value=\"\u0E25\u0E32\u0E1B\u0E48\u0E27\u0E22\"\u003E' + t.optSick + '\u003C/option\u003E' +
     '\u003Coption value=\"\u0E25\u0E32\u0E01\u0E34\u0E08\"\u003E' + t.optPersonal + '\u003C/option\u003E' +
     '\u003Coption value=\"\u0E25\u0E32\u0E1E\u0E31\u0E01\u0E23\u0E49\u0E2D\u0E19\"\u003E' + t.optVacation + '\u003C/option\u003E' +
@@ -254,7 +254,7 @@ function showMyAttendance() {
 
     document.getElementById('status').innerHTML = "";
 
-    var html = '\u003Cdiv class=\"user-banner\"\u003E\uD83D\uDC64 ' + currentUser.empName + ' (' + currentUser.empId + ')\u003C/div\u003E' +
+    var html = '\u003Cdiv class=\"user-banner\"\u003E\uD83D\uDC64 ' + safeText(currentUser.empName) + ' (' + safeText(currentUser.empId) + ')\u003C/div\u003E' +
       '\u003Cdiv style=\"display: flex; gap: 8px; margin-bottom: 15px;\"\u003E' +
       '\u003Cdiv class=\"stat-box\" style=\"background:#e8f5e9; color:#2e7d32; padding: 12px; border-radius: 10px; flex:1;\"\u003E\u0E21\u0E32\u0E17\u0E33\u0E07\u0E32\u0E19\u0E23\u0E27\u0E21\u003Cbr\u003E\u003Cb style=\"font-size:20px;\"\u003E' + presentDays + '\u003C/b\u003E \u0E27\u0E31\u0E19\u003C/div\u003E' +
       '\u003Cdiv class=\"stat-box\" style=\"background:#fff3cd; color:#856404; padding: 12px; border-radius: 10px; flex:1;\"\u003E\u0E21\u0E32\u0E2A\u0E32\u0E22\u003Cbr\u003E\u003Cb style=\"font-size:20px;\"\u003E' + lateRecords.length + '\u003C/b\u003E \u0E04\u0E23\u0E31\u0E49\u0E07\u003C/div\u003E' +
@@ -272,9 +272,9 @@ function showMyAttendance() {
 
       leaveRecords.slice().reverse().forEach(function(item) {
         html += '\u003Cdiv class=\"history-item\" style=\"background: #e2e3e5; border-left: 4px solid #6c757d;\"\u003E' +
-          '\uD83C\uDF34 \u003Cb\u003E' + item.leaveType + '\u003C/b\u003E (' + item.status + ')\u003Cbr\u003E' +
-          '\uD83D\uDCC5 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + item.startDate + ' \u0E16\u0E36\u0E07 ' + item.endDate + '\u003Cbr\u003E' +
-          '\uD83D\uDCAC \u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25: ' + item.reason + '\u003C/div\u003E';
+          '\uD83C\uDF34 \u003Cb\u003E' + safeText(item.leaveType) + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E' +
+          '\uD83D\uDCC5 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + safeText(item.startDate) + ' \u0E16\u0E36\u0E07 ' + safeText(item.endDate) + '\u003Cbr\u003E' +
+          '\uD83D\uDCAC \u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25: ' + safeText(item.reason) + '\u003C/div\u003E';
       });
     } else {
       html += '\u003Cdiv style=\"color: #28a745; background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 15px; font-weight: bold;\"\u003E\uD83C\uDF89 \u0E22\u0E2D\u0E14\u0E40\u0E22\u0E35\u0E48\u0E22\u0E21! \u0E04\u0E38\u0E13\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E21\u0E32\u0E2A\u0E32\u0E22\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E25\u0E32\u0E40\u0E25\u0E22\u003C/div\u003E';
@@ -306,22 +306,22 @@ function showHistory() {
       return String(item.empId) === String(currentUser.empId);
     });
 
-    var html = '\u003Cdiv class=\"user-banner\"\u003E' + currentUser.empName + '\u003C/div\u003E';
+    var html = '\u003Cdiv class=\"user-banner\"\u003E' + safeText(currentUser.empName) + '\u003C/div\u003E';
     html += '\u003Cb\u003E\uD83C\uDF34 \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E25\u0E32:\u003C/b\u003E';
     if (myLeaves.length === 0) html += '\u003Cdiv style=\"color:#888; font-size:12px;\"\u003E\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E25\u0E32\u003C/div\u003E';
     myLeaves.forEach(function(item) {
-      html += '\u003Cdiv class=\"history-item\"\u003E\u003Cb\u003E' + item.leaveType + '\u003C/b\u003E (' + item.status + ')\u003Cbr\u003E\uD83D\uDCC5 ' + item.startDate + ' \u0E16\u0E36\u0E07 ' + item.endDate + '\u003C/div\u003E';
+      html += '\u003Cdiv class=\"history-item\"\u003E\u003Cb\u003E' + safeText(item.leaveType) + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E\uD83D\uDCC5 ' + safeText(item.startDate) + ' \u0E16\u0E36\u0E07 ' + safeText(item.endDate) + '\u003C/div\u003E';
     });
 
     if (currentUser.isDriver) {
       html += '\u003Cbr\u003E\u003Cb\u003E\u26FD/\uD83D\uDD27 \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E40\u0E1A\u0E34\u0E01\u0E04\u0E48\u0E32\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19 / \u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21:\u003C/b\u003E';
       if (myFuels.length === 0) html += '\u003Cdiv style=\"color:#888; font-size:12px;\"\u003E\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22\u003C/div\u003E';
       myFuels.forEach(function(item) {
-        var typeLabel = item.requestType || '\u0E40\u0E1A\u0E34\u0E01\u0E04\u0E48\u0E32\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19';
-        var plateInfo = item.carPlate ? ' (\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19: ' + item.carPlate + ')' : '';
+        var typeLabel = safeText(item.requestType || '\u0E40\u0E1A\u0E34\u0E01\u0E04\u0E48\u0E32\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19');
+        var plateInfo = item.carPlate ? ' (\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19: ' + safeText(item.carPlate) + ')' : '';
         var amtDisplay = item.amount > 0 ? item.amount + ' \u0E1A\u0E32\u0E17' : '\u0E23\u0E2D\u0E41\u0E2D\u0E14\u0E21\u0E34\u0E19\u0E01\u0E33\u0E2B\u0E19\u0E14';
-        var routeInfo = item.route && item.route !== '-' ? '\u003Cbr\u003E\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14: ' + item.route : '';
-        html += '\u003Cdiv class=\"history-item\"\u003E[' + typeLabel + ']' + plateInfo + routeInfo + ' | \u003Cb\u003E\u0E22\u0E2D\u0E14: ' + amtDisplay + '\u003C/b\u003E (' + item.status + ')\u003Cbr\u003E\uD83D\uDCC5 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + item.date + '\u003C/div\u003E';
+        var routeInfo = item.route && item.route !== '-' ? '\u003Cbr\u003E\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14: ' + safeText(item.route) : '';
+        html += '\u003Cdiv class=\"history-item\"\u003E[' + typeLabel + ']' + plateInfo + routeInfo + ' | \u003Cb\u003E\u0E22\u0E2D\u0E14: ' + amtDisplay + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E\uD83D\uDCC5 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + safeText(item.date) + '\u003C/div\u003E';
       });
     }
 
@@ -384,16 +384,16 @@ function loadTodayListRealtime() {
 
     var html = '';
     leaveList.forEach(function(item) {
-      html += '\u003Cdiv class=\"emp-tag-leave\"\u003E\u003Cspan\u003E\uD83C\uDF34 ' + item.emp.empName + '\u003C/span\u003E\u003Cspan\u003E\u003Cb\u003E' + item.leave.leaveType + '\u003C/b\u003E\u003C/span\u003E\u003C/div\u003E';
+      html += '\u003Cdiv class=\"emp-tag-leave\"\u003E\u003Cspan\u003E\uD83C\uDF34 ' + safeText(item.emp.empName) + '\u003C/span\u003E\u003Cspan\u003E\u003Cb\u003E' + safeText(item.leave.leaveType) + '\u003C/b\u003E\u003C/span\u003E\u003C/div\u003E';
     });
     presentList.forEach(function(item) {
-      html += '\u003Cdiv class=\"emp-tag-present\"\u003E\u003Cspan\u003E\uD83D\uDFE2 ' + item.emp.empName + '\u003C/span\u003E\u003Cspan\u003E\u003Cb\u003E' + item.present.time + ' \u0E19.\u003C/b\u003E\u003C/span\u003E\u003C/div\u003E';
+      html += '\u003Cdiv class=\"emp-tag-present\"\u003E\u003Cspan\u003E\uD83D\uDFE2 ' + safeText(item.emp.empName) + '\u003C/span\u003E\u003Cspan\u003E\u003Cb\u003E' + safeText(item.present.time) + ' \u0E19.\u003C/b\u003E\u003C/span\u003E\u003C/div\u003E';
     });
     lateList.forEach(function(item) {
-      html += '\u003Cdiv class=\"emp-tag-late\"\u003E\u003Cspan\u003E\u23F0 ' + item.emp.empName + '\u003C/span\u003E\u003Cspan\u003E\u003Cb style=\"color:#d9534f;\"\u003E\u0E2A\u0E32\u0E22 ' + item.present.time + ' \u0E19.\u003C/b\u003E\u003C/span\u003E\u003C/div\u003E';
+      html += '\u003Cdiv class=\"emp-tag-late\"\u003E\u003Cspan\u003E\u23F0 ' + safeText(item.emp.empName) + '\u003C/span\u003E\u003Cspan\u003E\u003Cb style=\"color:#d9534f;\"\u003E\u0E2A\u0E32\u0E22 ' + safeText(item.present.time) + ' \u0E19.\u003C/b\u003E\u003C/span\u003E\u003C/div\u003E';
     });
     absentList.forEach(function(item) {
-      html += '\u003Cdiv class=\"emp-tag-absent\"\u003E\u003Cspan\u003E\uD83D\uDD34 ' + item.emp.empName + '\u003C/span\u003E\u003Cspan style=\"font-size:11px;\"\u003E\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E25\u0E07\u0E40\u0E27\u0E25\u0E32\u003C/span\u003E\u003C/div\u003E';
+      html += '\u003Cdiv class=\"emp-tag-absent\"\u003E\u003Cspan\u003E\uD83D\uDD34 ' + safeText(item.emp.empName) + '\u003C/span\u003E\u003Cspan style=\"font-size:11px;\"\u003E\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E25\u0E07\u0E40\u0E27\u0E25\u0E32\u003C/span\u003E\u003C/div\u003E';
     });
 
     var totalPresentCount = presentList.length + lateList.length;
@@ -743,8 +743,8 @@ function showEmployeeNotificationModal() {
     html += '\u003Cdiv style=\"font-weight:bold; color:#e67e22; margin-bottom:8px;\"\u003E\uD83D\uDCE6 \u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E1B\u0E2A\u0E48\u0E07 (' + myPendingJobsCache.length + ' \u0E23\u0E49\u0E32\u0E19):\u003C/div\u003E';
     myPendingJobsCache.forEach(function(item) {
       html += '\u003Cdiv class=\"history-item\" style=\"cursor:pointer; background:#fff3cd;\" onclick=\"closeModal(); showDriverMyJobsView();\"\u003E' +
-        '\uD83C\uDFEC \u003Cb\u003E\u0E23\u0E49\u0E32\u0E19: ' + item.customerName + '\u003C/b\u003E\u003Cbr\u003E' +
-        '\u0E2A\u0E16\u0E32\u0E19\u0E30: \u003Cspan style=\"color:#e67e22; font-weight:bold;\"\u003E' + item.status + '\u003C/span\u003E\u003Cbr\u003E' +
+        '\uD83C\uDFEC \u003Cb\u003E\u0E23\u0E49\u0E32\u0E19: ' + safeText(item.customerName) + '\u003C/b\u003E\u003Cbr\u003E' +
+        '\u0E2A\u0E16\u0E32\u0E19\u0E30: \u003Cspan style=\"color:#e67e22; font-weight:bold;\"\u003E' + safeText(item.status) + '\u003C/span\u003E\u003Cbr\u003E' +
         '\u003Cspan style=\"font-size:11px; color:#555;\"\u003E(\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07)\u003C/span\u003E\u003C/div\u003E';
     });
   }

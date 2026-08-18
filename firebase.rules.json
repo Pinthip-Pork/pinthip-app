@@ -1,7 +1,7 @@
 {
   "rules": {
     "settings": {
-      ".read": "auth != null && auth.token.role === 'admin'",
+      ".read": "auth != null",
       ".write": "auth != null && auth.token.role === 'admin'",
       "admin": {
         ".read": "auth != null && auth.token.role === 'admin'",
@@ -14,10 +14,9 @@
     },
     "employees": {
       ".read": "auth != null",
-      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'employee')",
+      ".write": "auth != null && auth.token.role === 'admin'",
       ".indexOn": ["empId"],
       "$empId": {
-        ".validate": "newData.hasChildren(['empId', 'empName'])",
         "pin": {
           ".read": false,
           ".write": "auth != null && auth.token.role === 'admin'"
@@ -25,31 +24,51 @@
       }
     },
     "logs": {
-      ".read": "auth != null && auth.token.role === 'admin'",
-      ".write": "auth != null && auth.token.role === 'admin'"
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$month": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$logId": {
+          ".read": "auth != null",
+          ".write": "auth != null && (auth.token.role === 'admin' || (!data.exists() && newData.child('empId').val() === auth.token.empId))"
+        }
+      }
     },
     "leaves": {
-      ".read": "auth != null && auth.token.role === 'admin'",
-      ".write": "auth != null && auth.token.role === 'admin'"
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$leaveId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.token.role === 'admin' || (!data.exists() && newData.child('empId').val() === auth.token.empId))"
+      }
     },
     "fuel_requests": {
-      ".read": "auth != null && auth.token.role === 'admin'",
-      ".write": "auth != null && auth.token.role === 'admin'"
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$requestId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.token.role === 'admin' || (!data.exists() && newData.child('empId').val() === auth.token.empId))"
+      }
     },
     "device_access": {
-      ".read": "auth != null && auth.token.role === 'admin'",
-      ".write": false,
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$deviceId": {
-        ".read": "auth != null && (auth.token.role === 'admin' || data.child('uid').val() === auth.uid)",
-        ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid || auth.token.role === 'admin')"
+        ".read": "auth != null && (auth.token.role === 'admin' || data.child('empId').val() === auth.token.empId || data.child('uid').val() === auth.uid)",
+        ".write": "auth != null && (auth.token.role === 'admin' || !data.exists() || data.child('empId').val() === auth.token.empId)"
       }
     },
     "delivery_jobs": {
-      ".read": "auth != null && auth.token.role === 'admin'",
-      ".write": "auth != null && auth.token.role === 'admin'",
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$date": {
-        ".read": "auth != null && auth.token.role === 'admin'",
-        ".write": "auth != null && auth.token.role === 'admin'"
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$jobId": {
+          ".read": "auth != null && (auth.token.role === 'admin' || data.child('driverId').val() === auth.token.empId)",
+          ".write": "auth != null && (auth.token.role === 'admin' || newData.child('driverId').val() === auth.token.empId)"
+        }
       }
     },
     "customers": {
@@ -57,22 +76,22 @@
       ".write": "auth != null && auth.token.role === 'admin'"
     },
     "foam_customers": {
-      ".read": "auth != null && auth.token.role === 'admin'",
-      ".write": "auth != null && auth.token.role === 'admin'",
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$customerId": {
-        ".read": "auth != null && auth.token.role === 'admin'",
-        ".write": "auth != null && auth.token.role === 'admin'"
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.token.role === 'admin' || !data.exists())"
       }
     },
     "foam_delivery_requests": {
-      ".read": "auth != null && auth.token.role === 'admin'",
-      ".write": "auth != null && auth.token.role === 'admin'",
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$date": {
-        ".read": "auth != null && auth.token.role === 'admin'",
-        ".write": "auth != null && auth.token.role === 'admin'",
+        ".read": "auth != null",
+        ".write": "auth != null",
         "$requestId": {
-          ".read": "auth != null && auth.token.role === 'admin'",
-          ".write": "auth != null && auth.token.role === 'admin'"
+          ".read": "auth != null && (auth.token.role === 'admin' || data.child('employeeId').val() === auth.token.empId)",
+          ".write": "auth != null && (auth.token.role === 'admin' || (!data.exists() && newData.child('employeeId').val() === auth.token.empId) || data.child('employeeId').val() === auth.token.empId)"
         }
       }
     },
@@ -82,14 +101,14 @@
     },
     "locations": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": "auth != null && auth.token.role === 'admin'"
     },
     "car_plates": {
       ".read": "auth != null && auth.token.role === 'admin'",
       ".write": "auth != null && auth.token.role === 'admin'"
     },
     "holidays": {
-      ".read": "auth != null && auth.token.role === 'admin'",
+      ".read": "auth != null",
       ".write": "auth != null && auth.token.role === 'admin'"
     },
     "login_attempts": {

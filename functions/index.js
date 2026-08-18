@@ -9,29 +9,55 @@ const crypto = require('crypto');
 initializeApp();
 
 // ===== PIN Hashing =====
-// Format: "sha256$<salt>$<hash>" — salt is random per user
+// New format: "scrypt$<salt>$<hash>" — salt is random per user
+// scrypt is a memory-hard KDF (slows brute-force significantly vs SHA-256)
+const SCRYPT_PARAMS = {
+  keyLength: 64,
+  N: 16384,        // CPU/memory cost
+  r: 8,            // block size
+  p: 1             // parallelization
+};
+
 function hashPin(pin, salt) {
   const saltStr = salt || crypto.randomBytes(16).toString('hex');
-  const hash = crypto.createHash('sha256').update(`${saltStr}:${String(pin).trim()}`).digest('hex');
-  return `sha256$${saltStr}$${hash}`;
+  const hash = crypto.scryptSync(String(pin).trim(), saltStr, SCRYPT_PARAMS.keyLength, {
+    N: SCRYPT_PARAMS.N,
+    r: SCRYPT_PARAMS.r,
+    p: SCRYPT_PARAMS.p
+  }).toString('hex');
+  return `scrypt$${saltStr}$${hash}`;
 }
 
 function verifyPin(inputPin, storedHash) {
   if (!storedHash || typeof storedHash !== 'string') return false;
   const parts = String(storedHash).split('$');
-  if (parts.length !== 3 || parts[0] !== 'sha256') return false;
-  const [, salt, expectedHash] = parts;
-  const inputHash = crypto.createHash('sha256').update(`${salt}:${String(inputPin).trim()}`).digest('hex');
-  // Timing-safe comparison
-  const a = Buffer.from(expectedHash, 'hex');
-  const b = Buffer.from(inputHash, 'hex');
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  if (parts.length !== 3) return false;
+  const [algo, salt, expectedHash] = parts;
+  const inputPinStr = String(inputPin).trim();
+
+  let inputBuffer;
+  if (algo === 'sha256') {
+    // Legacy format (pre-scrypt) — still supported for backward compatibility
+    inputBuffer = Buffer.from(crypto.createHash('sha256').update(`${salt}:${inputPinStr}`).digest('hex'), 'hex');
+  } else if (algo === 'scrypt') {
+    // New scrypt format
+    inputBuffer = crypto.scryptSync(inputPinStr, salt, SCRYPT_PARAMS.keyLength, {
+      N: SCRYPT_PARAMS.N,
+      r: SCRYPT_PARAMS.r,
+      p: SCRYPT_PARAMS.p
+    });
+  } else {
+    return false;
+  }
+
+  const expectedBuffer = Buffer.from(expectedHash, 'hex');
+  if (expectedBuffer.length !== inputBuffer.length) return false;
+  return crypto.timingSafeEqual(expectedBuffer, inputBuffer);
 }
 
 function isPlainPin(value) {
-  // Plain PIN is a short numeric/alpha string without the "sha256$" prefix
-  return typeof value === 'string' && !String(value).startsWith('sha256$');
+  // Plain PIN is a short numeric/alpha string without the "scrypt$" prefix
+  return typeof value === 'string' && !String(value).startsWith('scrypt$') && !String(value).startsWith('sha256$');
 }
 
 // ===== Rate Limiting =====
