@@ -1,4 +1,5 @@
 {
+  "projectId": "pinthip-checkin",
   "functions": {
     "source": "functions",
     "runtime": "nodejs22"
