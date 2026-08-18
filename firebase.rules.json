@@ -63,18 +63,6 @@
         ".write": "auth != null && (auth.token.role === 'admin' || !data.exists() || data.child('empId').val() === auth.token.empId)"
       }
     },
-    "delivery_jobs": {
-      ".read": "auth != null",
-      ".write": "auth != null",
-      "$date": {
-        ".read": "auth != null",
-        ".write": "auth != null",
-        "$jobId": {
-          ".read": "auth != null && (auth.token.role === 'admin' || data.child('driverId').val() === auth.token.empId)",
-          ".write": "auth != null && (auth.token.role === 'admin' || newData.child('driverId').val() === auth.token.empId)"
-        }
-      }
-    },
     "customers": {
       ".read": "auth != null && auth.token.role === 'admin'",
       ".write": "auth != null && auth.token.role === 'admin'"
@@ -98,10 +86,6 @@
           ".write": "auth != null && (auth.token.role === 'admin' || (!data.exists() && newData.child('employeeId').val() === auth.token.empId) || data.child('employeeId').val() === auth.token.empId)"
         }
       }
-    },
-    "routes_preset": {
-      ".read": "auth != null && auth.token.role === 'admin'",
-      ".write": "auth != null && auth.token.role === 'admin'"
     },
     "locations": {
       ".read": "auth != null",

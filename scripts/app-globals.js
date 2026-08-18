@@ -324,7 +324,6 @@ async function recoverFirebaseSession() {
       }
       if (typeof showDashboard === 'function') showDashboard();
       if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
-      if (typeof startEmployeeNotificationListener === 'function') startEmployeeNotificationListener();
 
       console.log('Employee session recovered successfully.');
       return true;
@@ -426,7 +425,6 @@ function initApp() {
           }
           if (typeof showDashboard === 'function') showDashboard();
           if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
-          if (typeof startEmployeeNotificationListener === 'function') startEmployeeNotificationListener();
         } else {
           // Employee session stored but Firebase Auth not yet ready — try to recover
           console.warn('Employee Firebase Auth session expired, attempting recovery...');

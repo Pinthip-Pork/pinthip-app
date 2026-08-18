@@ -119,7 +119,6 @@ async function handleLogin() {
       }
       if (typeof showDashboard === 'function') showDashboard();
       if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
-      if (typeof startEmployeeNotificationListener === 'function') startEmployeeNotificationListener();
     } else {
       setStatusText('status', '\u274C \u0E23\u0E2B\u0E31\u0E2A\u0E40\u0E02\u0E49\u0E32\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19 \u0E2B\u0E23\u0E37\u0E2D PIN \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07!');
     }
@@ -169,7 +168,6 @@ async function handleCustomAuthLogin(inputId, inputPin) {
       }
       if (typeof showDashboard === 'function') showDashboard();
       if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
-      if (typeof startEmployeeNotificationListener === 'function') startEmployeeNotificationListener();
     });
   } catch (error) {
     console.warn('Custom auth login failed:', error);

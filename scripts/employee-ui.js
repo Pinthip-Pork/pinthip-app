@@ -1,5 +1,5 @@
-/**
- * employee-ui.js — Employee dashboard, clock-in, leave, history, logout
+﻿/**
+ * employee-ui.js โ€” Employee dashboard, clock-in, leave, history, logout
  * Also includes admin notification listeners (startAdminNotificationListener, etc.)
  * Extracted from index.html inline script
  * Dependencies: app-globals.js, notification.js, device-access.js
@@ -496,8 +496,6 @@ var notifiedLeavesKeys = {};
 var isInitialLoadFuels = true;
 var notifiedFuelsKeys = {};
 var isInitialLoadFoam = true;
-var myPendingJobsCache = [];
-var isInitialLoadEmpJobs = true;
 
 function startAdminNotificationListener() {
   document.getElementById('bellBtn').style.display = 'block';
@@ -512,7 +510,7 @@ function startAdminNotificationListener() {
       var group = obj[dateKey] || {};
       Object.keys(group).forEach(function(k) {
         var item = group[k];
-        if (String(item.status || '').indexOf('pending') !== -1 || String(item.status || '').indexOf('รอ') !== -1) {
+        if (String(item.status || '').indexOf('pending') !== -1 || String(item.status || '').indexOf('เธฃเธญ') !== -1) {
           var compositeKey = dateKey + '/' + k;
           pendingFoamCache.push({ key: k, dateKey: dateKey, ...item });
           newPendingFoamCount++;
@@ -525,9 +523,9 @@ function startAdminNotificationListener() {
     });
 
     if (!isInitialLoadFoam && hasNewFoamItem) {
-      if (typeof playNotificationAlert === 'function') playNotificationAlert('มีรายการป้ายลังโฟมรออนุมัติ');
-      if (typeof showDesktopNotification === 'function') showDesktopNotification('มีรายการป้ายลังโฟม', 'รายการส่งลังโฟมใหม่รอแอดมินตรวจสอบ');
-      showModal('🔔 มีรายการป้ายลังโฟม', 'มีรายการส่งลังโฟมใหม่ที่ต้องตรวจสอบ', '<button class="btn-ok" onclick="closeModal(); showFoamAdminView();">ตกลง</button>');
+      if (typeof playNotificationAlert === 'function') playNotificationAlert('เธกเธตเธฃเธฒเธขเธเธฒเธฃเธเนเธฒเธขเธฅเธฑเธเนเธเธกเธฃเธญเธญเธเธธเธกเธฑเธ•เธด');
+      if (typeof showDesktopNotification === 'function') showDesktopNotification('เธกเธตเธฃเธฒเธขเธเธฒเธฃเธเนเธฒเธขเธฅเธฑเธเนเธเธก', 'เธฃเธฒเธขเธเธฒเธฃเธชเนเธเธฅเธฑเธเนเธเธกเนเธซเธกเนเธฃเธญเนเธญเธ”เธกเธดเธเธ•เธฃเธงเธเธชเธญเธ');
+      showModal('๐”” เธกเธตเธฃเธฒเธขเธเธฒเธฃเธเนเธฒเธขเธฅเธฑเธเนเธเธก', 'เธกเธตเธฃเธฒเธขเธเธฒเธฃเธชเนเธเธฅเธฑเธเนเธเธกเนเธซเธกเนเธ—เธตเนเธ•เนเธญเธเธ•เธฃเธงเธเธชเธญเธ', '<button class="btn-ok" onclick="closeModal(); showFoamAdminView();">เธ•เธเธฅเธ</button>');
     }
 
     isInitialLoadFoam = false;
@@ -632,53 +630,10 @@ function updateAdminBellBadgeCount() {
   });
 }
 
-function startEmployeeNotificationListener() {
-  if (!currentUser) return;
-  var todayStr = getLocalDateTimeString();
-
-  var bellBtn = document.getElementById('bellBtn');
-  if (bellBtn) bellBtn.style.display = 'block';
-
-  db.ref('delivery_jobs/' + todayStr).on('value', function(snap) {
-    var obj = snap.val() || {};
-    myPendingJobsCache = [];
-    var myNewJobsCount = 0;
-
-    Object.keys(obj).forEach(function(k) {
-      var j = obj[k];
-      if (String(j.driverId) === String(currentUser.empId) && String(j.status || '').indexOf('\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08') === -1) {
-        myPendingJobsCache.push({ key: k, ...j });
-        myNewJobsCount++;
-      }
-    });
-
-    if (!isInitialLoadEmpJobs && myNewJobsCount > 0) {
-      if (typeof playNotificationAlert === 'function') playNotificationAlert('\u0E21\u0E35\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E07\u0E32\u0E19\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13');
-      if (typeof showDesktopNotification === 'function') showDesktopNotification('\u0E21\u0E35\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48', '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13');
-      showModal("\uD83D\uDCE6 \u0E21\u0E35\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48!", "\u0E04\u0E38\u0E13\u0E44\u0E14\u0E49\u0E23\u0E31\u0E1A\u0E21\u0E2D\u0E1A\u0E2B\u0E21\u0E32\u0E22\u0E08\u0E4A\u0E2D\u0E1A\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49 (" + myNewJobsCount + " \u0E23\u0E49\u0E32\u0E19)\n\u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E17\u0E35\u0E48\u0E01\u0E23\u0E30\u0E14\u0E34\u0E48\u0E07\u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal(); showDriverMyJobsView();\"\u003E\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E07\u0E32\u0E19\u0E02\u0E2D\u0E07\u0E09\u0E31\u0E19\u003C/button\u003E');
-    }
-    isInitialLoadEmpJobs = false;
-    updateEmployeeBellBadgeCount();
-  });
-}
-
-function updateEmployeeBellBadgeCount() {
-  var badge = document.getElementById('bellBadge');
-  if (badge) {
-    if (myPendingJobsCache.length > 0) {
-      badge.innerText = myPendingJobsCache.length;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
-  }
-}
 
 function showNotificationModal() {
   if (isAdmin) {
     showAdminNotificationModal();
-  } else {
-    showEmployeeNotificationModal();
   }
 }
 
@@ -720,7 +675,6 @@ function showAdminNotificationModal() {
       html += '\u003Cdiv style=\"font-weight:bold; color:#0d6efd; margin-top:10px; margin-bottom:5px;\"\u003E\uD83D\uDCE6 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E1B\u0E49\u0E33\u0E22\u0E19\u0E25\u0E39\u0E1D\u0E4C\u0E21\u0E4C\u0E2D\u0E2D\u0E19 (' + pendingFoamCache.length + '):\u003C/div\u003E';
       pendingFoamCache.forEach(function(item) {
         var custName = safeText((item.customerSnapshot && item.customerSnapshot.name) || 'ลูกค้าใหม่');
-        var shipping = safeText((item.customerSnapshot && item.customerSnapshot.shipping) || item.shipping || '');
         html += '\u003Cdiv class=\"history-item\" style=\"cursor:pointer; background:#eaf3ff;\" onclick=\"closeModal(); showFoamAdminView();\"\u003E' +
           '\u003Cb\u003E\uD83C\uDFEC ' + custName + '\u003C/b\u003E\u003Cbr\u003E' +
           '\uD83D\uDCE6 \u0E2D\u0E32\u0E23\u0E39\u0E07\u0E40\u0E25\u0E37\u0E2D: ' + (item.boxCount || 1) + '\u003Cbr\u003E' +
@@ -732,23 +686,4 @@ function showAdminNotificationModal() {
   html += '\u003C/div\u003E';
   showModal("\uD83D\uDD14 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E23\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34", "", html, '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u003C/button\u003E');
   document.getElementById('modalBoxContainer').classList.add('modal-medium');
-}
-
-function showEmployeeNotificationModal() {
-  var html = '\u003Cdiv style=\"max-height: 350px; overflow-y: auto;\"\u003E';
-
-  if (myPendingJobsCache.length === 0) {
-    html += '\u003Cdiv style=\"text-align:center; color:#888; padding:20px;\"\u003E\uD83C\uDF89 \u0E44\u0E21\u0E48\u0E21\u0E35\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E04\u0E49\u0E32\u0E07\u0E2A\u0E48\u0E07\u0E43\u0E19\u0E02\u0E13\u0E30\u0E19\u0E35\u0E49\u003C/div\u003E';
-  } else {
-    html += '\u003Cdiv style=\"font-weight:bold; color:#e67e22; margin-bottom:8px;\"\u003E\uD83D\uDCE6 \u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E17\u0E35\u0E48\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E1B\u0E2A\u0E48\u0E07 (' + myPendingJobsCache.length + ' \u0E23\u0E49\u0E32\u0E19):\u003C/div\u003E';
-    myPendingJobsCache.forEach(function(item) {
-      html += '\u003Cdiv class=\"history-item\" style=\"cursor:pointer; background:#fff3cd;\" onclick=\"closeModal(); showDriverMyJobsView();\"\u003E' +
-        '\uD83C\uDFEC \u003Cb\u003E\u0E23\u0E49\u0E32\u0E19: ' + safeText(item.customerName) + '\u003C/b\u003E\u003Cbr\u003E' +
-        '\u0E2A\u0E16\u0E32\u0E19\u0E30: \u003Cspan style=\"color:#e67e22; font-weight:bold;\"\u003E' + safeText(item.status) + '\u003C/span\u003E\u003Cbr\u003E' +
-        '\u003Cspan style=\"font-size:11px; color:#555;\"\u003E(\u0E04\u0E25\u0E34\u0E01\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E44\u0E1B\u0E2B\u0E19\u0E49\u0E32\u0E08\u0E31\u0E14\u0E01\u0E32\u0E23\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07)\u003C/span\u003E\u003C/div\u003E';
-    });
-  }
-
-  html += '\u003C/div\u003E';
-  showModal("\uD83D\uDD14 \u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E02\u0E2D\u0E07\u0E27\u0E31\u0E19\u0E19\u0E35\u0E49", "", html, '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E1B\u0E34\u0E14\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E48\u0E32\u0E07\u003C/button\u003E');
 }

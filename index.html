@@ -38,7 +38,6 @@
   <script src="./modules/admin-dashboard.js?v=summary-pending-20260817"></script>
   <script src="./modules/admin-holiday-calendar.js?v=holiday-cal-20260818"></script>
   <script src="./modules/admin-operations.js?v=report-fix-2"></script>
-  <script src="./modules/admin-job-operations.js"></script>
 
   <!-- Foam Label modules -->
   <script src="./modules/foam-customer-repo.js?v=foam-line-20260816-1"></script>
@@ -102,10 +101,6 @@
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()">🏠 แดสบอร์ดภาพรวม</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminCommandCenter()">⚡ Command Center</div>
 
-    <div class="drawer-section-label">งานส่งของ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminJobAssignPanel()">📦 มอบหมายจ๊อบส่งของ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDeliveryHistory()">📜 ประวัติการส่งของ</div>
-
     <div class="drawer-section-label">รออนุมัติ</div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">🌴 อนุมัติคำขอลา <span class="drawer-badge" id="pendingLeavesBadge">0</span></div>
     <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">⛽ อนุมัติน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="pendingFuelsBadge">0</span></div>
@@ -147,7 +142,6 @@
   <script src="./scripts/auth-ui.js"></script>
   <script src="./scripts/employee-ui.js?v=notif-dedup-20260817"></script>
   <script src="./scripts/admin-quick-modal.js"></script>
-  <script src="./scripts/upload.js"></script>
 
   <!-- Bootstrap: start the app -->
   <script>

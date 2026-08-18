@@ -1572,7 +1572,7 @@
       <input type="password" id="newEmpPin" placeholder="รหัส PIN (4 หลัก)" maxlength="4">
       <input type="number" id="newEmpRate" placeholder="ค่าแรงต่อวัน (บาท)">
       <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
-        <input type="checkbox" id="newEmpDriver" style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
+        <input type="checkbox" id="newEmpDriver" style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม)
       </label>
       <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
         <input type="checkbox" id="newEmpFoamLabels" style="width:20px; height:20px; margin:0;"> มีสิทธิ์ใช้งานระบบส่งลังโฟม (เห็นเมนูส่งลังโฟม & รายชื่อลูกค้าทั้งหมด)
@@ -1634,7 +1634,7 @@
       <input type="password" id="editEmpPin" placeholder="รหัส PIN (เว้นว่างไว้ = ไม่เปลี่ยน)" maxlength="4">
       <input type="number" id="editEmpRate" value="${rate}" placeholder="ค่าแรงต่อวัน">
       <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
-        <input type="checkbox" id="editEmpDriver" ${isDriver ? 'checked' : ''} style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
+        <input type="checkbox" id="editEmpDriver" ${isDriver ? 'checked' : ''} style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม)
       </label>
       <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
         <input type="checkbox" id="editEmpFoamLabels" ${canSendFoamLabels ? 'checked' : ''} style="width:20px; height:20px; margin:0;"> มีสิทธิ์ใช้งานระบบส่งลังโฟม (เห็นเมนูส่งลังโฟม & รายชื่อลูกค้าทั้งหมด)

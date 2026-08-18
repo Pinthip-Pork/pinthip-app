@@ -20,7 +20,6 @@
     ` : '';
 
     const driverExtras = currentUser?.isDriver ? `
-      <button class="btn-fuel" onclick="showDriverMyJobsView()">📦 งานส่งของของฉันวันนี้</button>
       <button class="btn-fuel" onclick="showFuelRequestForm()">${escape(t.btnFuelMenu)}</button>
     ` : '';
 

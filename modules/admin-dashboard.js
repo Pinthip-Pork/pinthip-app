@@ -356,7 +356,6 @@
               <div id="ccSummaryStats">กำลังโหลด...</div>
               <div class="cc-quick-label" style="margin-top:12px;">⚡ ทางลัดด่วน</div>
               <div class="cc-quick-actions">
-                <button class="btn-admin btn-admin-accent btn-admin-sm" onclick="openAdminQuickModal('job')">📦 จัดการจ๊อบส่งของ</button>
                 <button class="btn-admin btn-admin-warning btn-admin-sm" onclick="openAdminQuickModal('fuel')">
                   ⛽ อนุมัติเบิกจ่าย <span class="drawer-badge" id="quickFuelsBadge">0</span>
                 </button>
@@ -372,10 +371,7 @@
             <div class="cc-panel-body" id="ccAttendanceList">กำลังโหลด...</div>
           </div>
 
-          <div class="cc-panel">
-            <div class="cc-panel-header">🚚 ติดตามการจัดส่ง (Live Tracking)</div>
-            <div class="cc-panel-body" id="ccDeliveryList">กำลังโหลด...</div>
-          </div>
+          
 
         </div>
 
@@ -397,13 +393,11 @@
       window.db.ref('settings/globalLateTime').once('value'),
       window.db.ref('employees').once('value'),
       window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, todayStr, todayStr),
-      window.db.ref('leaves').once('value'),
-      window.db.ref('delivery_jobs/' + todayStr).once('value')
-    ]).then(([settingsSnap, empSnap, logsObj, leaveSnap, jobSnap]) => {
+      window.db.ref('leaves').once('value')
+    ]).then(([settingsSnap, empSnap, logsObj, leaveSnap]) => {
       const globalLateTime = settingsSnap.val() || '08:00';
       const employeesObj = empSnap.val() || {};
       const leavesObj = leaveSnap.val() || {};
-      const jobsObj = jobSnap.val() || {};
 
       const allEmployees = Object.values(employeesObj);
       const checkedInList = Object.values(logsObj).filter((log) => log.date === todayStr && log.type === 'เข้างาน');
@@ -432,8 +426,6 @@
           absentList.push({ emp });
         }
       });
-
-      const totalPresentCount = presentList.length + lateList.length;
 
       const summaryContainer = document.getElementById('ccSummaryStats');
       if (summaryContainer) {
@@ -467,51 +459,6 @@
         });
         attContainer.innerHTML = htmlAtt || '<div class="no-data">ไม่มีข้อมูลพนักงาน</div>';
       }
-
-      const deliveryContainer = document.getElementById('ccDeliveryList');
-      if (deliveryContainer) {
-        const jobList = Object.keys(jobsObj).map((k) => ({ key: k, ...jobsObj[k] }));
-        if (jobList.length === 0) {
-          deliveryContainer.innerHTML = '<div class="no-data" style="text-align:center; padding:15px;">ยังไม่มีการมอบหมายจ๊อบส่งของในวันนี้</div>';
-          return;
-        }
-
-        let htmlJob = '';
-        jobList.forEach((j) => {
-          const isCompleted = String(j.status).includes('สำเร็จ');
-          const isOnTheWay = String(j.status).includes('กำลังเดินทาง');
-          const statusLabel = isCompleted ? 'done' : (isOnTheWay ? 'ongoing' : 'pending');
-          const statusText = isCompleted ? 'สำเร็จ' : (isOnTheWay ? 'กำลังเดินทาง' : 'รอดำเนินการ');
-          const viewPhotoBtn = j.photoUrl ? `<a href="${j.photoUrl}" target="_blank" style="color:#2563eb; font-size:11px; text-decoration:underline; display:block; margin-top:4px;">🖼️ ดูรูปหลักฐาน</a>` : '';
-
-          htmlJob += `
-            <div class="cc-delivery-card">
-              <div class="driver">🚚 ${j.driverName}</div>
-              <div style="color:#475569; margin-bottom:4px;">🏬 ${j.customerName}</div>
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="status-badge ${statusLabel}">${statusText}</span>
-                <span style="font-size:11px; color:#94a3b8;">${j.deliveredTime || '-'}</span>
-              </div>
-              ${viewPhotoBtn}
-              <button class="btn-admin btn-admin-danger btn-admin-sm" onclick="adminDeleteDeliveryStatus('${j.key}')" style="margin-top:6px;">🗑️ ลบ</button>
-            </div>
-          `;
-        });
-        deliveryContainer.innerHTML = htmlJob;
-      }
-    });
-  }
-
-  function adminDeleteDeliveryStatus(jobKey) {
-    if (!window.confirm('ต้องการลบรายการส่งของนี้ใช่หรือไม่?')) return;
-
-    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
-    window.db.ref(`delivery_jobs/${todayStr}/${jobKey}`).remove((error) => {
-      if (error) {
-        window.alert('ลบรายการส่งของไม่สำเร็จ กรุณาลองใหม่');
-        return;
-      }
-      showAdminCommandCenter();
     });
   }
 
@@ -524,5 +471,4 @@
   window.showAdminDashboard = showAdminDashboard;
   window.showAdminCommandCenter = showAdminCommandCenter;
   window.loadCommandCenterData = loadCommandCenterData;
-  window.adminDeleteDeliveryStatus = adminDeleteDeliveryStatus;
 })();
