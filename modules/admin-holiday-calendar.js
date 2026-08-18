@@ -527,7 +527,7 @@
       '<div class="holiday-calendar-wrap">' +
         '<div class="holiday-calendar-header">' +
           '<button class="btn-admin btn-admin-outline btn-admin-sm" onclick="adminCalendarPrevMonth()">◀ ก่อนหน้า</button>' +
-          '<div class="holiday-calendar-title">🙏 ' + monthName + ' ' + beYear + '</div>' +
+          '<div class="holiday-calendar-title">เดือน ' + monthName + ' ' + beYear + '</div>' +
           '<button class="btn-admin btn-admin-outline btn-admin-sm" onclick="adminCalendarNextMonth()">ถัดไป ▶</button>' +
           '<button class="btn-admin btn-admin-outline btn-admin-sm" onclick="adminCalendarGoToday()">วันนี้</button>' +
         '</div>' +
