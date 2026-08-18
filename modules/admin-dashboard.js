@@ -259,7 +259,7 @@
               </div>
 
               <div class="admin-bottom-actions">
-                <button class="btn-admin btn-admin-accent" onclick="showAdminCommandCenter()">🖥️ สลับไป Command Center</button>
+                <button class="btn-admin btn-admin-accent" onclick="showHolidayManagement()">🗓️ กำหนดวันหยุดร้าน Center</button>
                 <button class="btn-admin btn-admin-outline" onclick="showDailyPayroll()">💵 สรุปค่าแรงย้อนหลัง</button>
                 <button class="btn-admin btn-admin-outline" onclick="showAnalyticsReport()">📈 สรุปค่าใช้จ่ายประจำเดือน</button>
                 <button class="btn-admin btn-admin-outline" onclick="showEmpManagement()">⚙️ จัดการพนักงาน</button>
