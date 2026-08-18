@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pinthip-cache-v20260819-1';
+const CACHE_NAME = 'pinthip-cache-v20260819-2';
 const APP_ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const APP_ASSETS = [
   './icon-192.png'
 ];
 
+// Pre-cache the app shell on install so the first load after SW activation is instant.
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -23,6 +24,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Stale-while-revalidate helper: respond immediately from cache while refreshing in
+// the background — keeps navigation fast and offline-capable without waiting on the
+// network for every request.
+function staleWhileRevalidate(request) {
+  return caches.open(CACHE_NAME).then((cache) => {
+    return cache.match(request).then((cached) => {
+      const fetchPromise = fetch(request).then((response) => {
+        if (response && response.status === 200 && response.type !== 'opaque') {
+          cache.put(request, response.clone());
+        }
+        return response;
+      }).catch(() => cached);
+      // Return cached copy immediately (if any), otherwise wait for the network.
+      return cached || fetchPromise;
+    });
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
@@ -30,6 +49,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Navigation: network-first so users get the latest HTML, fall back to cache offline.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -43,6 +63,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // JS/CSS: network-first so code updates (versioned ?v= query strings) land promptly,
+  // but fall back to cache when offline.
   const networkFirstTypes = ['script', 'style'];
   if (networkFirstTypes.includes(request.destination)) {
     event.respondWith(
@@ -55,20 +77,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Static assets (images, fonts, manifest): stale-while-revalidate for instant loads.
   const safeStaticTypes = ['image', 'font', 'manifest'];
   const isAppAsset = safeStaticTypes.includes(request.destination) || request.url.includes('.png') || request.url.includes('.json');
 
   if (isAppAsset) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          return response;
-        }).catch(() => cached || Response.error());
-      })
-    );
+    event.respondWith(staleWhileRevalidate(request));
     return;
   }
 

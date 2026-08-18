@@ -1,4 +1,4 @@
-/**
+﻿/**
  * foam-admin-ui.js — Admin review + print queue for foam label delivery
  * Dependencies: window.PinThipSafe.foamCustomerRepo, window.PinThipSafe.foamDeliveryRepo, window.PinThipSafe.foamPrint
  */
@@ -255,6 +255,7 @@
       });
 
       importer.then(function () {
+        bustFoamCustomerCache();
         window.showModal('📥 สำเร็จ', 'นำเข้าสู่ฐานข้อมูลลูกค้าแล้ว ' + created + ' รายการ', '<button class="btn-ok" onclick="closeModal(); showFoamCustomerManager();">ตกลง</button>');
       }).catch(function (err) {
         console.warn('Import foam customers failed:', err);
@@ -340,39 +341,80 @@
     var list = document.getElementById('foamCustomerManagerList');
     if (!repo || !list) return;
 
-    repo.searchCustomers(query).then(function (customers) {
-      customers.sort(function (a, b) {
-        return String(a.name || '').localeCompare(String(b.name || ''), 'th');
-      });
+    // OPTIMIZATION: debounce the Firebase fetch + reuse a cached customer list so
+    // each keystroke doesn't re-download the entire customer tree. The cache is
+    // invalidated whenever a customer is added/edited/deleted (see bustFoamCustomerCache).
+    if (foamCustomerSearchTimer) {
+      clearTimeout(foamCustomerSearchTimer);
+      foamCustomerSearchTimer = null;
+    }
+    foamCustomerSearchTimer = setTimeout(function () {
+      foamCustomerSearchTimer = null;
+      var q = String(query || '').trim().toLowerCase();
 
-      if (!customers.length) {
-        list.innerHTML = '<div style="color:#888; text-align:center; padding:25px;">ไม่พบลูกค้า</div>';
+      function renderFrom(customers) {
+        customers.sort(function (a, b) {
+          return String(a.name || '').localeCompare(String(b.name || ''), 'th');
+        });
+        var html = '';
+        customers.forEach(function (customer) {
+          // (existing per-row markup kept unchanged below)
+          html += '' +
+            '<div class="history-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">' +
+              '<div style="flex:1; min-width:200px;">' +
+                '<b style="font-size:15px;">👤 ' + escape(customer.name || '') + '</b>' +
+                (customer.phone ? '<br><span style="font-size:13px; color:#555;">📞 ' + escape(customer.phone) + '</span>' : '') +
+                (customer.lineName ? '<br><span style="font-size:12px; color:#6f42c1;">💬 LINE: ' + escape(customer.lineName) + '</span>' : '') +
+                (customer.address ? '<br><span style="font-size:12px; color:#666;">📍 ' + escape(customer.address) + '</span>' : '') +
+                ((customer.district || customer.province) ? '<br><span style="font-size:12px; color:#666;">' + escape([customer.subdistrict, customer.district, customer.province, customer.postalCode].filter(Boolean).join(' ')) + '</span>' : '') +
+                (customer.shipping ? '<br><span style="font-size:12px; color:#0d6efd;">🚚 ' + escape(customer.shipping) + '</span>' : '') +
+              '</div>' +
+              '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+                '<button class="btn-fuel" onclick="foamEditCustomerFromManager(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">✏️ แก้ไขข้อมูล</button>' +
+                '<button class="btn-blue" onclick="foamUseCustomerForPrint(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
+              '</div>' +
+            '</div>';
+        });
+        list.innerHTML = html;
+      }
+
+      var cached = window.PinThipSafe.foamCustomerRepo.__cachedList;
+      if (cached) {
+        var filtered = q
+          ? cached.filter(function (c) {
+              return (String(c.name || '').toLowerCase().indexOf(q) !== -1) ||
+                     (String(c.phone || '').toLowerCase().indexOf(q) !== -1);
+            })
+          : cached.slice();
+        renderFrom(filtered);
         return;
       }
 
-      var html = '';
-      customers.forEach(function (customer) {
-        var addr = [customer.address, customer.subdistrict, customer.district, customer.province, customer.postalCode].filter(Boolean).join(' ');
-        html += '<div class="history-item" style="display:flex; flex-direction:column; gap:9px; padding:14px;">' +
-          '<div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">' +
-            '<div style="font-size:18px; line-height:1.4;"><b>' + escape(customer.name || '-') + '</b>' + (customer.phone ? '<span style="font-size:15px; font-weight:normal; white-space:nowrap;"> | 📞 ' + escape(customer.phone) + '</span>' : '') + '</div>' +
-            '<button class="btn-danger" onclick="foamDeleteCustomerFromManager(\'' + escape(customer.key || '') + '\')" aria-label="ลบลูกค้า ' + escape(customer.name || '') + '" title="ลบลูกค้า" style="width:auto; min-width:0; margin:0; padding:4px 8px; font-size:11px; line-height:1.2; border-radius:999px; box-shadow:none;">🗑️ ลบ</button>' +
-          '</div>' +
-          (addr ? '<div style="font-size:15px; line-height:1.5; color:#444;">📍 ' + escape(addr) + '</div>' : '') +
-          (customer.lineName ? '<div style="font-size:14px; line-height:1.4; color:#16803c;">💬 LINE: ' + escape(customer.lineName) + '</div>' : '') +
-          (customer.shipping ? '<div style="font-size:14px; line-height:1.4; color:#555;">🚚 ' + escape(customer.shipping) + '</div>' : '') +
-          '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
-            '<button class="btn-fuel" onclick="foamEditCustomerFromManager(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">✏️ แก้ไขข้อมูล</button>' +
-            '<button class="btn-blue" onclick="foamUseCustomerForPrint(\'' + escape(customer.key || '') + '\')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
-          '</div>' +
-        '</div>';
+      list.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>';
+      repo.fetchAllCustomers().then(function (customers) {
+        window.PinThipSafe.foamCustomerRepo.__cachedList = customers;
+        var filtered = q
+          ? customers.filter(function (c) {
+              return (String(c.name || '').toLowerCase().indexOf(q) !== -1) ||
+                     (String(c.phone || '').toLowerCase().indexOf(q) !== -1);
+            })
+          : customers.slice();
+        renderFrom(filtered);
+      }).catch(function (err) {
+        console.warn('foamCustomerManagerSearch failed:', err);
+        list.innerHTML = '<div style="color:#d9534f; text-align:center; padding:25px;">โหลดข้อมูลลูกค้าไม่สำเร็จ</div>';
       });
-      list.innerHTML = html;
-    }).catch(function (err) {
-      console.warn('foamCustomerManagerSearch failed:', err);
-      list.innerHTML = '<div style="color:#d9534f; text-align:center; padding:25px;">โหลดข้อมูลลูกค้าไม่สำเร็จ</div>';
-    });
+    }, 250);
   }
+
+  // Bump the customer cache version so the next search refetches from Firebase.
+  function bustFoamCustomerCache() {
+    if (window.PinThipSafe && window.PinThipSafe.foamCustomerRepo) {
+      window.PinThipSafe.foamCustomerRepo.__cachedList = null;
+    }
+  }
+
+  var foamCustomerSearchTimer = null;
 
   function foamSubmitManualCustomer() {
     console.log('[foam-admin] foamSubmitManualCustomer called');
@@ -405,6 +447,7 @@
 
     console.log('[foam-admin] Adding customer with createdBy: admin');
     repo.addCustomer(payload, 'admin').then(function () {
+      bustFoamCustomerCache();
       console.log('[foam-admin] Customer added successfully');
       window.showModal('✅ สำเร็จ', 'เพิ่มลูกค้าลังโฟมเรียบร้อยแล้ว', '<button class="btn-ok" onclick="closeModal(); showFoamCustomerManager();">ตกลง</button>');
     }).catch(function (err) {
@@ -420,6 +463,7 @@
     if (!repo) return;
 
     repo.deleteCustomer(customerKey).then(function () {
+      bustFoamCustomerCache();
       foamCustomerManagerSearch();
     }).catch(function (err) {
       console.warn('Delete foam customer failed:', err);
@@ -486,6 +530,7 @@
     }
 
     repo.updateCustomer(customerKey, data).then(function () {
+      bustFoamCustomerCache();
       window.closeModal();
       foamCustomerManagerSearch();
       window.showModal('✅ สำเร็จ', 'บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว', '', '<button class="btn-ok" onclick="closeModal()">ตกลง</button>');
@@ -799,6 +844,7 @@
   window.loadFoamAdminQueue = loadFoamAdminQueue;
   window.showFoamCustomerManager = showFoamCustomerManager;
   window.foamCustomerManagerSearch = foamCustomerManagerSearch;
+  window.bustFoamCustomerCache = bustFoamCustomerCache;
   window.foamHandleImportFile = foamHandleImportFile;
   window.foamSubmitManualCustomer = foamSubmitManualCustomer;
   window.foamDeleteCustomerFromManager = foamDeleteCustomerFromManager;

@@ -332,34 +332,86 @@ function showHistory() {
 
 // ===== Today List (Quick Stats) =====
 var todayListRefreshTimer = null;
+// OPTIMIZATION: keep a single set of realtime listeners for today's logs + leaves so
+// the UI updates the moment someone clocks in, instead of re-fetching the entire
+// settings/employees/logs/leaves tree every 15 seconds via setTimeout.
+var todayListListeners = { logs: null, leaves: null, settings: null, employees: null };
+var todayListLatest = { globalLateTime: '08:00', employeesObj: {}, logsObj: {}, leavesObj: {} };
+var todayListRenderPending = false;
+
+function stopTodayListRealtime() {
+  try {
+    if (todayListListeners.logs) { db.ref('logs/' + getLocalDateTimeString().slice(0, 7)).off('value', todayListListeners.logs); todayListListeners.logs = null; }
+    if (todayListListeners.leaves) { db.ref('leaves').off('value', todayListListeners.leaves); todayListListeners.leaves = null; }
+    if (todayListListeners.settings) { db.ref('settings/globalLateTime').off('value', todayListListeners.settings); todayListListeners.settings = null; }
+    if (todayListListeners.employees) { db.ref('employees').off('value', todayListListeners.employees); todayListListeners.employees = null; }
+  } catch (e) {
+    console.warn('stopTodayListRealtime failed:', e);
+  }
+}
+
+function scheduleTodayListRender() {
+  if (todayListRenderPending) return;
+  todayListRenderPending = true;
+  var run = function () { todayListRenderPending = false; renderTodayList(); };
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+  else setTimeout(run, 16);
+}
 
 function loadTodayListRealtime() {
+  var container = document.getElementById('checkinContainer');
+  if (!container) return;
+
+  // OPTIMIZATION: replace the 15s setTimeout polling loop with Firebase realtime
+  // listeners. The dashboard now updates instantly on clock-in/leave changes with a
+  // single open connection per path instead of 4 once()-reads every 15 seconds.
+  stopTodayListRealtime();
+
+  todayListListeners.settings = db.ref('settings/globalLateTime').on('value', function(snap) {
+    todayListLatest.globalLateTime = snap.val() || '08:00';
+    scheduleTodayListRender();
+  });
+  todayListListeners.employees = db.ref('employees').on('value', function(snap) {
+    todayListLatest.employeesObj = snap.val() || {};
+    scheduleTodayListRender();
+  });
+  todayListListeners.logs = db.ref('logs/' + getLocalDateTimeString().slice(0, 7)).on('value', function(snap) {
+    todayListLatest.logsObj = snap.val() || {};
+    scheduleTodayListRender();
+  });
+  todayListListeners.leaves = db.ref('leaves').on('value', function(snap) {
+    todayListLatest.leavesObj = snap.val() || {};
+    scheduleTodayListRender();
+  });
+
+  renderTodayList();
+}
+
+function renderTodayList() {
   var container = document.getElementById('checkinContainer');
   var statsContainer = document.getElementById('quickStatsContainer');
   if (!container) return;
 
   var todayStr = getLocalDateTimeString();
-
-  Promise.all([
-    db.ref('settings/globalLateTime').once('value'),
-    db.ref('employees').once('value'),
-    PinThipSafe.logsRepo.fetchLogsForRange(db, todayStr, todayStr),
-    db.ref('leaves').once('value')
-  ]).then(function(results) {
-    var settingsSnap = results[0];
-    var empSnap = results[1];
-    var logsObj = results[2];
-    var leaveSnap = results[3];
-    var globalLateTime = settingsSnap.val() || "08:00";
-    var employeesObj = empSnap.val() || {};
-    var leavesObj = leaveSnap.val() || {};
+  var globalLateTime = todayListLatest.globalLateTime || '08:00';
+  var employeesObj = todayListLatest.employeesObj || {};
+  var logsObj = todayListLatest.logsObj || {};
+  var leavesObj = todayListLatest.leavesObj || {};
 
     var allEmployees = Object.values(employeesObj);
-    var checkedInList = Object.values(logsObj).filter(function(l) {
-      return l.date === todayStr && l.type === "\u0E40\u0E02\u0E49\u0E32\u0E07\u0E32\u0E19";
+    // OPTIMIZATION: index today's check-ins and approved leaves by empId once so the
+    // per-employee lookup is O(1) instead of O(logs) with repeated .find() calls.
+    var checkedInByEmpId = {};
+    Object.values(logsObj).forEach(function(l) {
+      if (l.date === todayStr && l.type === "\u0E40\u0E02\u0E49\u0E32\u0E07\u0E32\u0E19") {
+        checkedInByEmpId[String(l.empId)] = l;
+      }
     });
-    var approvedLeavesToday = Object.values(leavesObj).filter(function(l) {
-      return String(l.status || '').indexOf('\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27') !== -1 && l.startDate <= todayStr && l.endDate >= todayStr;
+    var approvedLeaveByEmpId = {};
+    Object.values(leavesObj).forEach(function(l) {
+      if (String(l.status || '').indexOf('\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27') !== -1 && l.startDate <= todayStr && l.endDate >= todayStr) {
+        approvedLeaveByEmpId[String(l.empId)] = l;
+      }
     });
 
     var leaveList = [];
@@ -368,8 +420,9 @@ function loadTodayListRealtime() {
     var absentList = [];
 
     allEmployees.forEach(function(emp) {
-      var present = checkedInList.find(function(item) { return String(item.empId) === String(emp.empId); });
-      var leave = approvedLeavesToday.find(function(item) { return String(item.empId) === String(emp.empId); });
+      var empIdStr = String(emp.empId);
+      var leave = approvedLeaveByEmpId[empIdStr];
+      var present = checkedInByEmpId[empIdStr];
       if (leave) {
         leaveList.push({ emp: emp, leave: leave });
       } else if (present) {
@@ -405,10 +458,6 @@ function loadTodayListRealtime() {
         '\u003C/div\u003E';
     }
     container.innerHTML = html;
-
-    if (todayListRefreshTimer) clearTimeout(todayListRefreshTimer);
-    todayListRefreshTimer = setTimeout(loadTodayListRealtime, 15000);
-  });
 }
 
 // ===== Holiday Management =====
@@ -449,6 +498,7 @@ function delHoliday(k) {
 
 // ===== Logout =====
 function handleLogout() {
+  if (typeof stopTodayListRealtime === 'function') stopTodayListRealtime();
   if (typeof stopDeviceAccessGuard === 'function') stopDeviceAccessGuard();
   if (typeof stopDevicePresence === 'function') stopDevicePresence();
   if (typeof stopAdminNotificationListener === 'function') stopAdminNotificationListener();

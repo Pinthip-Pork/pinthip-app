@@ -40,11 +40,18 @@
       let todaySalaryTotal = 0;
       const countedEmployeeIds = new Set();
 
+      // OPTIMIZATION: index employees by empId once instead of calling
+      // Object.values(employeesObj).find(...) for every log entry (O(n*m) -> O(n+m)).
+      const employeeByEmpId = new Map();
+      Object.values(employeesObj).forEach((emp) => {
+        employeeByEmpId.set(String(emp.empId), emp);
+      });
+
       Object.values(logsObj).forEach((log) => {
         const employeeId = String(log.empId);
         if (log.date !== todayStr || log.type !== 'เข้างาน' || approvedLeaveEmployeeIds.has(employeeId) || countedEmployeeIds.has(employeeId)) return;
 
-        const employee = Object.values(employeesObj).find((emp) => String(emp.empId) === employeeId);
+        const employee = employeeByEmpId.get(employeeId);
         if (!employee) return;
 
         countedEmployeeIds.add(employeeId);

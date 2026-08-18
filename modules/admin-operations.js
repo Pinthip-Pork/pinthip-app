@@ -80,29 +80,40 @@
         return;
       }
 
+      // OPTIMIZATION: pre-index logs and leaves by empId once (O(n+m)) instead of
+      // nested loops (O(employees × logs) + O(employees × leaves)).
+      const logsByEmpId = new Map();
+      Object.keys(logs).forEach((lk) => {
+        const log = logs[lk];
+        if (!log || log.type !== 'เข้างาน') return;
+        if (!log.date || log.date < startDate || log.date > endDate) return;
+        const empId = String(log.empId);
+        if (!logsByEmpId.has(empId)) logsByEmpId.set(empId, []);
+        logsByEmpId.get(empId).push(log);
+      });
+
+      const leavesByEmpId = new Map();
+      Object.keys(leaves).forEach((fk) => {
+        const leave = leaves[fk];
+        const statusStr = String(leave.status || '');
+        if (!statusStr.includes('อนุมัติแล้ว')) return;
+        if (!leave.startDate || !leave.endDate || leave.startDate > endDate || leave.endDate < startDate) return;
+        const empId = String(leave.empId);
+        if (!leavesByEmpId.has(empId)) leavesByEmpId.set(empId, 0);
+        leavesByEmpId.set(empId, leavesByEmpId.get(empId) + 1);
+      });
+
       empKeys.forEach((ek) => {
         const emp = employees[ek];
+        const empId = String(emp.empId);
+        const empLogs = logsByEmpId.get(empId) || [];
         let presentCount = 0;
         let lateCount = 0;
-        let leaveCount = 0;
-
-        Object.keys(logs).forEach((lk) => {
-          const log = logs[lk];
-          if (String(log.empId) === String(emp.empId) && log.date && log.date >= startDate && log.date <= endDate && log.type === 'เข้างาน') {
-            presentCount++;
-            if (log.time > globalLateTime) {
-              lateCount++;
-            }
-          }
+        empLogs.forEach((log) => {
+          presentCount++;
+          if (log.time > globalLateTime) lateCount++;
         });
-
-        Object.keys(leaves).forEach((fk) => {
-          const leave = leaves[fk];
-          const statusStr = String(leave.status || '');
-          if (String(leave.empId) === String(emp.empId) && leave.startDate && leave.endDate && leave.startDate <= endDate && leave.endDate >= startDate && statusStr.includes('อนุมัติแล้ว')) {
-            leaveCount++;
-          }
-        });
+        const leaveCount = leavesByEmpId.get(empId) || 0;
 
         summaryList.push({
           empId: emp.empId,
