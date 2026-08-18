@@ -567,35 +567,8 @@
             (request.note ? '📝 หมายเหตุ: ' + escape(request.note) : '') +
           '</div>' +
         '</div>' +
-        '<div style="margin-top:12px; text-align:left;">' +
-          '<div style="background:#fff; border:1px solid #e9ecef; border-radius:10px; padding:14px;">' +
-            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
-              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">ชื่อลูกค้า</label><input id="foamEditName" type="text" value="' + escape(name) + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
-              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">เบอร์โทรศัพท์</label><input id="foamEditPhone" type="text" value="' + escape(snapshotData.phone || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
-            '</div>' +
-            '<div style="margin-top:10px;"><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">ที่อยู่</label><textarea id="foamEditAddress" rows="2" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box; resize:vertical;">' + escape(snapshotData.address || '') + '</textarea></div>' +
-            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">' +
-              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">แขวง/ตำบล</label><input id="foamEditSubdistrict" type="text" value="' + escape(snapshotData.subdistrict || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
-              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">เขต/อำเภอ</label><input id="foamEditDistrict" type="text" value="' + escape(snapshotData.district || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
-            '</div>' +
-            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">' +
-              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">จังหวัด</label><input id="foamEditProvince" type="text" value="' + escape(snapshotData.province || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
-              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">รหัสไปรษณีย์</label><input id="foamEditPostal" type="text" value="' + escape(snapshotData.postalCode || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
-            '</div>' +
-            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">' +
-              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">ขนส่ง</label><input id="foamEditShipping" type="text" value="' + escape(snapshotData.shipping || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
-              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">จำนวนลัง</label><select id="foamEditBoxCount" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box; font-weight:bold;">' +
-                '<option value="1" ' + ((request.boxCount || 1) === 1 ? 'selected' : '') + '>1 ลัง</option>' +
-                '<option value="2" ' + ((request.boxCount || 1) === 2 ? 'selected' : '') + '>2 ลัง</option>' +
-                '<option value="3" ' + ((request.boxCount || 1) === 3 ? 'selected' : '') + '>3 ลัง</option>' +
-              '</select></div>' +
-            '</div>' +
-            '<div style="margin-top:10px;"><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">หมายเหตุ</label><textarea id="foamEditNote" rows="2" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box; resize:vertical;">' + escape(snapshotData.note || request.note || '') + '</textarea></div>' +
-          '</div>' +
-        '</div>' +
         '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;">' +
-          '<button class="btn-blue" onclick="foamAdminSaveSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">💾 บันทึกข้อมูล</button>' +
-          (canApprove ? '<button class="btn-fuel" onclick="foamAdminApproveSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">✅ อนุมัติ</button>' : '') +
+          '<button class="btn-fuel" onclick="foamAdminEditSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">✏️ แก้ไขข้อมูล</button>' +
           '<button class="btn-danger" onclick="foamAdminRejectSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">❌ ยกเลิก</button>' +
           '<button class="btn-purple" onclick="foamAdminPrintSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">🖨️ พิมพ์ป้าย</button>' +
           '<button class="btn-danger" onclick="foamAdminDeleteSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px; background:#6c757d;">🗑️ ลบรายการ</button>' +
@@ -619,32 +592,75 @@
     });
   }
 
-  function foamAdminSaveSelected(requestKey, dateStr) {
+  function foamAdminEditSelected(requestKey, dateStr) {
+    var db = window.db;
+    if (!db) return;
+
+    db.ref('foam_delivery_requests/' + dateStr + '/' + requestKey).once('value').then(function (snapshot) {
+      var request = snapshot.val();
+      if (!request) {
+        window.alert('ไม่พบรายการที่ต้องการแก้ไข');
+        return;
+      }
+
+      var data = request.customerSnapshot || {};
+      var fields = [
+        ['foamEditCustName', 'ชื่อลูกค้า *', data.name],
+        ['foamEditCustPhone', 'เบอร์โทรศัพท์', data.phone],
+        ['foamEditCustAddress', 'ที่อยู่', data.address],
+        ['foamEditCustSubdistrict', 'แขวง/ตำบล', data.subdistrict],
+        ['foamEditCustDistrict', 'เขต/อำเภอ', data.district],
+        ['foamEditCustProvince', 'จังหวัด', data.province],
+        ['foamEditCustPostal', 'รหัสไปรษณีย์', data.postalCode],
+        ['foamEditCustShipping', 'ขนส่ง', data.shipping]
+      ];
+      var formHtml = '<div style="display:grid; gap:10px; text-align:left;">';
+      fields.forEach(function (f) {
+        formHtml += '<label style="font-weight:bold; font-size:14px;">' + f[1] + '<input id="' + f[0] + '" type="text" value="' + escape(f[2] || '') + '" style="width:100%; margin-top:4px; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></label>';
+      });
+      formHtml += '<label style="font-weight:bold; font-size:14px;">หมายเหตุ<textarea id="foamEditCustNote" rows="2" style="width:100%; margin-top:4px; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box; resize:vertical;">' + escape(data.note || request.note || '') + '</textarea></label>';
+      formHtml += '<label style="font-weight:bold; font-size:14px;">จำนวนลัง<select id="foamEditCustBoxCount" style="width:100%; margin-top:4px; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box; font-weight:bold;">' +
+        '<option value="1"' + ((request.boxCount || 1) === 1 ? ' selected' : '') + '>1 ลัง</option>' +
+        '<option value="2"' + ((request.boxCount || 1) === 2 ? ' selected' : '') + '>2 ลัง</option>' +
+        '<option value="3"' + ((request.boxCount || 1) === 3 ? ' selected' : '') + '>3 ลัง</option>' +
+      '</select></label>';
+      formHtml += '</div>';
+
+      window.openWideModal('✏️ แก้ไขข้อมูลรายการส่งลังโฟม', formHtml,
+        '<button class="btn-back" onclick="closeModal()">ยกเลิก</button>' +
+        '<button class="btn-ok" onclick="foamAdminSaveEdited(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')">💾 บันทึก</button>');
+    }).catch(function (err) {
+      console.warn('foamAdminEditSelected failed:', err);
+      window.alert('โหลดข้อมูลไม่สำเร็จ');
+    });
+  }
+
+  function foamAdminSaveEdited(requestKey, dateStr) {
     var repository = getDeliveryRepo();
     var customerRepo = getCustomerRepo();
-    var detail = document.getElementById('foamAdminDetail');
-    if (!repository || !customerRepo || !detail) return;
+    if (!repository || !customerRepo) return;
 
-    var requestRef = window.db.ref('foam_delivery_requests/' + dateStr + '/' + requestKey);
-    var selected = {};
-    requestRef.once('value').then(function (snapshot) {
-      selected = snapshot.val() || {};
+    var db = window.db;
+    if (!db) return;
+
+    db.ref('foam_delivery_requests/' + dateStr + '/' + requestKey).once('value').then(function (snapshot) {
+      var selected = snapshot.val() || {};
       var data = {
-        name: document.getElementById('foamEditName')?.value.trim() || '',
-        phone: document.getElementById('foamEditPhone')?.value.trim() || '',
-        address: document.getElementById('foamEditAddress')?.value.trim() || '',
-        subdistrict: document.getElementById('foamEditSubdistrict')?.value.trim() || '',
-        district: document.getElementById('foamEditDistrict')?.value.trim() || '',
-        province: document.getElementById('foamEditProvince')?.value.trim() || '',
-        postalCode: document.getElementById('foamEditPostal')?.value.trim() || '',
-        shipping: document.getElementById('foamEditShipping')?.value.trim() || '',
-        note: document.getElementById('foamEditNote')?.value.trim() || '',
-        boxCount: Number(document.getElementById('foamEditBoxCount')?.value || 1)
+        name: document.getElementById('foamEditCustName')?.value.trim() || '',
+        phone: document.getElementById('foamEditCustPhone')?.value.trim() || '',
+        address: document.getElementById('foamEditCustAddress')?.value.trim() || '',
+        subdistrict: document.getElementById('foamEditCustSubdistrict')?.value.trim() || '',
+        district: document.getElementById('foamEditCustDistrict')?.value.trim() || '',
+        province: document.getElementById('foamEditCustProvince')?.value.trim() || '',
+        postalCode: document.getElementById('foamEditCustPostal')?.value.trim() || '',
+        shipping: document.getElementById('foamEditCustShipping')?.value.trim() || '',
+        note: document.getElementById('foamEditCustNote')?.value.trim() || '',
+        boxCount: Number(document.getElementById('foamEditCustBoxCount')?.value || 1)
       };
 
       if (!data.name) {
         window.alert('กรุณากรอกชื่อลูกค้า');
-        return Promise.resolve();
+        return;
       }
 
       var snapshotData = {
@@ -673,27 +689,18 @@
           shipping: data.shipping,
           note: data.note
         }).then(function () {
-          return repository.updateStatus(dateStr, requestKey, targetStatus, 'admin');
+          if (selected.status !== 'cancelled' && selected.status !== 'completed') {
+            return repository.updateStatus(dateStr, requestKey, targetStatus, 'admin');
+          }
         });
       });
     }).then(function () {
-      window.showModal('💾 สำเร็จ', 'บันทึกข้อมูลลูกค้าและรายการส่งเรียบร้อยแล้ว', '<button class="btn-ok" onclick="closeModal(); foamAdminSelectRequest(\'' + requestKey + '\', \'" + dateStr + "\' );">ตกลง</button>');
+      window.closeModal();
+      window.showModal('✅ สำเร็จ', 'บันทึกข้อมูลเรียบร้อยแล้ว', '<button class="btn-ok" onclick="closeModal(); foamAdminSelectRequest(\'' + requestKey + '\', \'' + dateStr + '\');">ตกลง</button>');
       loadFoamAdminQueue();
     }).catch(function (err) {
-      console.warn('Save foam request failed:', err);
+      console.warn('Save edited foam request failed:', err);
       window.alert('บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่');
-    });
-  }
-
-  function foamAdminApproveSelected(requestKey, dateStr) {
-    var repo = getDeliveryRepo();
-    if (!repo) return;
-
-    repo.updateStatus(dateStr, requestKey, 'approved', 'admin').then(function () {
-      loadFoamAdminQueue();
-    }).catch(function (err) {
-      console.warn('Approve foam request failed:', err);
-      window.alert('อนุมัติรายการไม่สำเร็จ');
     });
   }
 
@@ -781,8 +788,8 @@
     foamSaveEditedCustomer: foamSaveEditedCustomer,
     foamUseCustomerForPrint: foamUseCustomerForPrint,
     foamAdminSelectRequest: foamAdminSelectRequest,
-    foamAdminSaveSelected: foamAdminSaveSelected,
-    foamAdminApproveSelected: foamAdminApproveSelected,
+    foamAdminEditSelected: foamAdminEditSelected,
+    foamAdminSaveEdited: foamAdminSaveEdited,
     foamAdminRejectSelected: foamAdminRejectSelected,
     foamAdminDeleteSelected: foamAdminDeleteSelected,
     foamAdminPrintSelected: foamAdminPrintSelected
@@ -799,8 +806,8 @@
   window.foamSaveEditedCustomer = foamSaveEditedCustomer;
   window.foamUseCustomerForPrint = foamUseCustomerForPrint;
   window.foamAdminSelectRequest = foamAdminSelectRequest;
-  window.foamAdminSaveSelected = foamAdminSaveSelected;
-  window.foamAdminApproveSelected = foamAdminApproveSelected;
+  window.foamAdminEditSelected = foamAdminEditSelected;
+  window.foamAdminSaveEdited = foamAdminSaveEdited;
   window.foamAdminRejectSelected = foamAdminRejectSelected;
   window.foamAdminDeleteSelected = foamAdminDeleteSelected;
   window.foamAdminPrintSelected = foamAdminPrintSelected;
