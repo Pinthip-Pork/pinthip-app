@@ -326,17 +326,33 @@
 
       if (pageTitle) pageTitle.innerText = t.pageTitleFuel || 'แบบฟอร์มขอเบิก';
       if (listBox) listBox.style.display = 'none';
-      if (status) status.innerHTML = '';
+      if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
 
-      // Render the form IMMEDIATELY with a default "รถส่วนกลาง" option + a free-text
-      // plate field. We then try to load car_plates best-effort: admins get the real
-      // dropdown populated; employees/drivers hit permission_denied (car_plates is
-      // admin-only in firebase.rules.json) and simply keep the default + manual input.
-      // Previously the form waited on car_plates, and the permission_denied error
-      // silently swallowed the callback so the form never opened for non-admins.
-      const defaultOption = '<option value="รถส่วนกลาง">รถส่วนกลาง</option>';
+      // Load the plates added by the admin, then render the dropdown.
+      // Note: firebase.rules.json allows any authenticated user to read car_plates
+      // (write stays admin-only), so employees/drivers can select from this list.
+      window.db.ref('car_plates').once('value', (snapshot) => {
+        try {
+          if (status) status.innerHTML = '';
+          const platesObj = snapshot.val() || {};
+          // Null-guard: a deleted/partial car_plates child may be null and would throw
+          // on `.plate`, silently swallowing the callback so the form never renders.
+          const platesList = Object.keys(platesObj)
+            .map((k) => platesObj[k])
+            .filter((entry) => entry && entry.plate)
+            .map((entry) => entry.plate);
 
-      const html = `
+          let optionsHtml = '<option value="">-- เลือกทะเบียนรถ --</option>';
+          if (platesList.length === 0) {
+            optionsHtml += '<option value="รถส่วนกลาง">รถส่วนกลาง</option>';
+          } else {
+            platesList.forEach((p) => {
+              const safePlate = window.PinThipSafe.safeText(p);
+              optionsHtml += `<option value="${safePlate}">${safePlate}</option>`;
+            });
+          }
+
+          const html = `
         <div class="user-banner">${window.currentUser && window.currentUser.empName ? window.currentUser.empName : ''} (${window.currentUser && window.currentUser.empId ? window.currentUser.empId : ''})</div>
         <div style="text-align:left; font-size:13px; color:#555; margin-bottom:5px;"><b>📌 ประเภทการเบิก:</b></div>
         <select id="requestType" style="margin-bottom:8px;" onchange="toggleFuelAmountField()">
@@ -345,10 +361,9 @@
         </select>
 
         <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>🚗 เลือกทะเบียนรถ:</b></div>
-        <select id="carPlateSelect" style="margin-bottom:4px;">
-          ${defaultOption}
+        <select id="carPlateSelect" style="margin-bottom:8px;">
+          ${optionsHtml}
         </select>
-        <input type="text" id="carPlateInput" placeholder="หรือพิมพ์ทะเบียนรถเอง (ถ้าไม่มีในรายการ)" style="margin-bottom:8px; font-size:13px;">
 
         <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>📍 รายละเอียด / เส้นทาง / รายการซ่อม:</b></div>
         <textarea id="fuelRoute" rows="3" placeholder="เช่น ไปส่งหมูตลาดสุพรรณ หรือ เปลี่ยนยางนอกล้อหลัง"></textarea>
@@ -362,34 +377,17 @@
         <button class="btn-fuel" onclick="handleFuelSubmit()">💾 ส่งคำขอเบิกจ่าย</button>
         <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
       `;
-      const mainContent = document.getElementById('mainContent');
-      if (mainContent) mainContent.innerHTML = html;
-
-      // Best-effort load of car_plates. Non-admins will get permission_denied,
-      // which we swallow — the form above is already usable with the default option.
-      window.db.ref('car_plates').once('value', (snapshot) => {
-        try {
-          const platesObj = snapshot.val() || {};
-          const platesList = Object.keys(platesObj)
-            .map((k) => platesObj[k])
-            .filter((entry) => entry && entry.plate)
-            .map((entry) => entry.plate);
-          if (platesList.length === 0) return;
-
-          const select = document.getElementById('carPlateSelect');
-          if (!select) return;
-          let optionsHtml = '<option value="">-- เลือกทะเบียนรถ --</option>';
-          platesList.forEach((p) => {
-            const safePlate = window.PinThipSafe.safeText(p);
-            optionsHtml += `<option value="${safePlate}">${safePlate}</option>`;
-          });
-          select.innerHTML = optionsHtml;
+          const mainContent = document.getElementById('mainContent');
+          if (mainContent) mainContent.innerHTML = html;
         } catch (innerErr) {
-          console.warn('[showFuelRequestForm] could not enrich car_plates dropdown:', innerErr);
+          console.error('[showFuelRequestForm] error inside car_plates callback:', innerErr);
+          const mainContent = document.getElementById('mainContent');
+          if (mainContent) mainContent.innerHTML = '<div style="color:#dc3545;">⚠️ โหลดข้อมูลทะเบียนรถไม่สำเร็จ: ' + (innerErr && innerErr.message ? innerErr.message : '') + '</div><button class="btn-back" onclick="showDashboard()">⬅️ กลับ</button>';
         }
       }, (dbErr) => {
-        // Expected for non-admin users (permission_denied). Not fatal — form already rendered.
-        console.warn('[showFuelRequestForm] car_plates read skipped (likely permission_denied):', dbErr && dbErr.message ? dbErr.message : dbErr);
+        console.error('[showFuelRequestForm] car_plates read failed:', dbErr);
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) mainContent.innerHTML = '<div style="color:#dc3545;">⚠️ อ่านข้อมูลทะเบียนรถไม่ได้: ' + (dbErr && dbErr.message ? dbErr.message : '') + '</div><button class="btn-back" onclick="showDashboard()">⬅️ กลับ</button>';
       });
     } catch (outerErr) {
       console.error('[showFuelRequestForm] outer error:', outerErr);
@@ -414,15 +412,12 @@
 
   function handleFuelSubmit() {
     const reqType = document.getElementById('requestType')?.value;
-    // Prefer the free-text plate field (so non-admins who can't read car_plates
-    // can still type a plate); fall back to the dropdown selection.
-    const manualPlate = document.getElementById('carPlateInput')?.value.trim();
-    const carPlate = manualPlate || document.getElementById('carPlateSelect')?.value;
+    const carPlate = document.getElementById('carPlateSelect')?.value;
     const route = document.getElementById('fuelRoute')?.value.trim();
     const amountInput = document.getElementById('fuelAmountInput')?.value.trim();
 
     if (!carPlate) {
-      window.alert('กรุณาเลือกหรือพิมพ์ทะเบียนรถ');
+      window.alert('กรุณาเลือกทะเบียนรถ');
       return;
     }
 

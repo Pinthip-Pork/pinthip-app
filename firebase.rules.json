@@ -92,7 +92,7 @@
       ".write": "auth != null && auth.token.role === 'admin'"
     },
     "car_plates": {
-      ".read": "auth != null && auth.token.role === 'admin'",
+      ".read": "auth != null",
       ".write": "auth != null && auth.token.role === 'admin'"
     },
     "holidays": {
