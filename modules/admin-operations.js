@@ -317,32 +317,40 @@
   }
 
   function showFuelRequestForm() {
-    const t = (window.i18n && window.i18n[window.currentLang]) || { pageTitleFuel: 'Fuel', btnBack: 'Back' };
-    const pageTitle = document.getElementById('pageTitle');
-    const listBox = document.getElementById('listBox');
-    const status = document.getElementById('status');
+    console.log('[showFuelRequestForm] clicked');
+    try {
+      const t = (window.i18n && window.i18n[window.currentLang]) || { pageTitleFuel: 'Fuel', btnBack: 'Back' };
+      const pageTitle = document.getElementById('pageTitle');
+      const listBox = document.getElementById('listBox');
+      const status = document.getElementById('status');
 
-    if (pageTitle) pageTitle.innerText = t.pageTitleFuel || 'แบบฟอร์มขอเบิก';
-    if (listBox) listBox.style.display = 'none';
-    if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+      if (pageTitle) pageTitle.innerText = t.pageTitleFuel || 'แบบฟอร์มขอเบิก';
+      if (listBox) listBox.style.display = 'none';
+      if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
 
-    window.db.ref('car_plates').once('value', (snapshot) => {
-      if (status) status.innerHTML = '';
-      const platesObj = snapshot.val() || {};
-      const platesList = Object.keys(platesObj).map((k) => platesObj[k].plate);
+      window.db.ref('car_plates').once('value', (snapshot) => {
+        try {
+          if (status) status.innerHTML = '';
+          const platesObj = snapshot.val() || {};
+          // Null-guard: a deleted/partial car_plates child may be null and would throw
+          // on `.plate`, silently swallowing the callback so the form never renders.
+          const platesList = Object.keys(platesObj)
+            .map((k) => platesObj[k])
+            .filter((entry) => entry && entry.plate)
+            .map((entry) => entry.plate);
 
-      let optionsHtml = '<option value="">-- เลือกทะเบียนรถ --</option>';
-      if (platesList.length === 0) {
-        optionsHtml += '<option value="รถส่วนกลาง">รถส่วนกลาง</option>';
-      } else {
-        platesList.forEach((p) => {
-          const safePlate = window.PinThipSafe.safeText(p);
-          optionsHtml += `<option value="${safePlate}">${safePlate}</option>`;
-        });
-      }
+          let optionsHtml = '<option value="">-- เลือกทะเบียนรถ --</option>';
+          if (platesList.length === 0) {
+            optionsHtml += '<option value="รถส่วนกลาง">รถส่วนกลาง</option>';
+          } else {
+            platesList.forEach((p) => {
+              const safePlate = window.PinThipSafe.safeText(p);
+              optionsHtml += `<option value="${safePlate}">${safePlate}</option>`;
+            });
+          }
 
-      const html = `
-        <div class="user-banner">${window.currentUser.empName} (${window.currentUser.empId})</div>
+          const html = `
+        <div class="user-banner">${window.currentUser && window.currentUser.empName ? window.currentUser.empName : ''} (${window.currentUser && window.currentUser.empId ? window.currentUser.empId : ''})</div>
         <div style="text-align:left; font-size:13px; color:#555; margin-bottom:5px;"><b>📌 ประเภทการเบิก:</b></div>
         <select id="requestType" style="margin-bottom:8px;" onchange="toggleFuelAmountField()">
           <option value="⛽ เบิกค่าน้ำมัน">⛽ เบิกค่าน้ำมันรถส่งของ</option>
@@ -366,9 +374,22 @@
         <button class="btn-fuel" onclick="handleFuelSubmit()">💾 ส่งคำขอเบิกจ่าย</button>
         <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
       `;
-      const mainContent = document.getElementById('mainContent');
-      if (mainContent) mainContent.innerHTML = html;
-    });
+          const mainContent = document.getElementById('mainContent');
+          if (mainContent) mainContent.innerHTML = html;
+        } catch (innerErr) {
+          console.error('[showFuelRequestForm] error inside car_plates callback:', innerErr);
+          const mainContent = document.getElementById('mainContent');
+          if (mainContent) mainContent.innerHTML = '<div style="color:#dc3545;">⚠️ โหลดข้อมูลทะเบียนรถไม่สำเร็จ: ' + (innerErr && innerErr.message ? innerErr.message : '') + '</div><button class="btn-back" onclick="showDashboard()">⬅️ กลับ</button>';
+        }
+      }, (dbErr) => {
+        console.error('[showFuelRequestForm] car_plates read failed:', dbErr);
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) mainContent.innerHTML = '<div style="color:#dc3545;">⚠️ อ่านข้อมูลทะเบียนรถไม่ได้: ' + (dbErr && dbErr.message ? dbErr.message : '') + '</div><button class="btn-back" onclick="showDashboard()">⬅️ กลับ</button>';
+      });
+    } catch (outerErr) {
+      console.error('[showFuelRequestForm] outer error:', outerErr);
+      window.alert('เปิดฟอร์มเบิกไม่ได้: ' + (outerErr && outerErr.message ? outerErr.message : outerErr));
+    }
   }
 
   function toggleFuelAmountField() {

@@ -398,18 +398,23 @@ function renderTodayList() {
   var logsObj = todayListLatest.logsObj || {};
   var leavesObj = todayListLatest.leavesObj || {};
 
-    var allEmployees = Object.values(employeesObj);
+    var allEmployees = Object.values(employeesObj).filter(function(emp) { return emp && emp.empId != null; });
     // OPTIMIZATION: index today's check-ins and approved leaves by empId once so the
     // per-employee lookup is O(1) instead of O(logs) with repeated .find() calls.
+    // Null-guard every entry: Firebase may deliver null children which would otherwise
+    // throw inside the realtime callback and surface as an opaque "util.ts:485" error.
     var checkedInByEmpId = {};
     Object.values(logsObj).forEach(function(l) {
+      if (!l || !l.empId) return;
       if (l.date === todayStr && l.type === "\u0E40\u0E02\u0E49\u0E32\u0E07\u0E32\u0E19") {
         checkedInByEmpId[String(l.empId)] = l;
       }
     });
     var approvedLeaveByEmpId = {};
     Object.values(leavesObj).forEach(function(l) {
-      if (String(l.status || '').indexOf('\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27') !== -1 && l.startDate <= todayStr && l.endDate >= todayStr) {
+      if (!l || !l.empId) return;
+      var statusStr = String(l.status || '');
+      if (statusStr.indexOf('\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27') !== -1 && l.startDate <= todayStr && l.endDate >= todayStr) {
         approvedLeaveByEmpId[String(l.empId)] = l;
       }
     });
