@@ -463,7 +463,6 @@ function handleLogout() {
   isAdmin = false;
   window.isAdmin = false;
   if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(false);
-  if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(false);
   PinThipSafe.session.clearAuthState();
   if (typeof showLoginForm === 'function') showLoginForm();
 }

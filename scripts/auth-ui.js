@@ -53,7 +53,6 @@ async function handleLogin() {
     window.currentUser = currentUser;
     if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
     if (typeof enableNotificationSound === 'function') enableNotificationSound();
-    if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(true);
     if (typeof startDevicePresence === 'function') {
       startDevicePresence('admin-' + deviceId, 'Admin', 'admin');
     }
@@ -108,7 +107,6 @@ async function handleLogin() {
       window.isAdmin = isAdmin;
       if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
       if (typeof enableNotificationSound === 'function') enableNotificationSound();
-      if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(true);
       if (typeof startDevicePresence === 'function') {
         startDevicePresence(deviceAccess.deviceId, currentUser.empName, 'employee');
       }
@@ -158,7 +156,6 @@ async function handleCustomAuthLogin(inputId, inputPin) {
       setStatusText('status', '');
       if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
       if (typeof enableNotificationSound === 'function') enableNotificationSound();
-      if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(true);
       if (typeof startDevicePresence === 'function') {
         startDevicePresence(result.data.deviceId, currentUser.empName, 'employee');
       }

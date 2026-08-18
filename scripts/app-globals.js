@@ -222,7 +222,6 @@ function showLoginForm() {
   document.getElementById('hamburgerBtn').style.display = 'none';
   document.getElementById('bellBtn').style.display = 'none';
   if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(false);
-  if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(false);
   var t = i18n[currentLang];
   document.getElementById('pageTitle').innerText = t.pageTitleLogin;
   document.getElementById('status').innerText = "";
@@ -389,7 +388,6 @@ function initApp() {
           currentUser = null;
           window.currentUser = null;
           if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
-          if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(true);
           if (typeof startDevicePresence === 'function') {
             startDevicePresence('admin-' + window.PinThipSafe.utils.getDeviceId(), 'Admin', 'admin');
           }
@@ -413,7 +411,6 @@ function initApp() {
           isAdmin = false;
           window.isAdmin = false;
           if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
-          if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(true);
           if (typeof startDevicePresence === 'function') {
             startDevicePresence(window.PinThipSafe.utils.getDeviceId(), currentUser.empName, 'employee');
           }
