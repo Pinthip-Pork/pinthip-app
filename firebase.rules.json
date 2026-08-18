@@ -5,7 +5,7 @@
       ".write": "auth != null && auth.token.role === 'admin'",
       "admin": {
         ".read": "auth != null && auth.token.role === 'admin'",
-        ".write": "auth != null && auth.token.role === 'admin'"
+        ".write": "!data.exists() || (auth != null && auth.token.role === 'admin')"
       },
       "deviceAccessAutoApprove": {
         ".read": "auth != null",
