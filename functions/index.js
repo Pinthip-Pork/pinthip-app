@@ -334,23 +334,24 @@ exports.adminLogin = onCall(async (request) => {
     throw new HttpsError('permission-denied', 'This device is blocked. Contact another admin.');
   }
 
-  // If no admin config exists in DB, allow one-time setup from request
+  // If no admin config exists in DB, allow one-time setup.
+  // Prefer the setup payload from the client (local-admin-config.js), but
+  // fall back to default admin/8888 so setup never depends on client cache.
   if (!adminConfig) {
-    // Require setup data for first-time initialization
-    const setupUsername = requireText(request.data?.setup?.username, 'setup.username');
-    const setupPin = requireText(request.data?.setup?.pin, 'setup.pin');
+    const setupUsername = String(request.data?.setup?.username || 'admin').trim();
+    const setupPin = String(request.data?.setup?.pin || '8888').trim();
 
-    if (String(setupPin).trim().length < 4) {
+    if (setupPin.length < 4) {
       throw new HttpsError('invalid-argument', 'PIN must be at least 4 characters.');
     }
-    if (String(setupUsername).trim().length < 3) {
+    if (setupUsername.length < 3) {
       throw new HttpsError('invalid-argument', 'Username must be at least 3 characters.');
     }
 
     adminConfig = {
       enabled: true,
-      username: String(setupUsername).trim(),
-      pin: hashPin(String(setupPin).trim()),
+      username: setupUsername,
+      pin: hashPin(setupPin),
       // First device to set up becomes the root admin device
       approvedDevices: {
         [deviceId]: {
