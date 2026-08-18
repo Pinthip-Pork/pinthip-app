@@ -34,7 +34,7 @@
   };
 
   const sessionSettings = {
-    adminSessionTtlMinutes: 60 * 24 * 30
+    adminSessionTtlMinutes: 60 * 24 * 7 // 7 days — reduced from 30 days for better security
   };
 
   const deviceAccessPilot = {

@@ -278,25 +278,27 @@ async function recoverFirebaseSession() {
     var deviceId = window.PinThipSafe.utils.getDeviceId();
     var deviceInfo = window.PinThipSafe.utils.getDeviceInfo();
 
-    if (stored.isAdmin && stored.credentials && stored.credentials.username && stored.credentials.pin) {
-      // Re-authenticate admin
-      var adminCallable = firebase.functions().httpsCallable('adminLogin');
-      var adminResult = await adminCallable({
-        username: stored.credentials.username,
-        pin: stored.credentials.pin,
-        deviceId: deviceId,
-        deviceInfo: deviceInfo
-      });
-      await firebase.auth().signInWithCustomToken(adminResult.data.token);
+    // Use session token for re-authentication (no PIN stored in localStorage)
+    var sessionToken = stored.credentials && stored.credentials.sessionToken;
+    if (!sessionToken) {
+      console.warn('No session token available for recovery. Please log in again.');
+      return false;
+    }
 
-      // Refresh the stored session (reset expiry)
-      PinThipSafe.session.setAdminSession(stored.credentials);
+    var refreshCallable = firebase.functions().httpsCallable('refreshSession');
+    var refreshResult = await refreshCallable({
+      sessionToken: sessionToken,
+      deviceId: deviceId
+    });
+    await firebase.auth().signInWithCustomToken(refreshResult.data.token);
 
+    if (stored.isAdmin) {
       // Re-render the admin dashboard
       isAdmin = true;
       window.isAdmin = true;
       currentUser = null;
       window.currentUser = null;
+      PinThipSafe.session.setAdminSession(stored.credentials);
       if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
       if (typeof startDevicePresence === 'function') {
         startDevicePresence('admin-' + deviceId, 'Admin', 'admin');
@@ -309,25 +311,13 @@ async function recoverFirebaseSession() {
       return true;
     }
 
-    if (!stored.isAdmin && stored.credentials && stored.credentials.empId && stored.credentials.pin) {
-      // Re-authenticate employee
-      var callable = firebase.functions().httpsCallable('loginWithPin');
-      var result = await callable({
-        empId: stored.credentials.empId,
-        pin: stored.credentials.pin,
-        deviceId: deviceId,
-        deviceInfo: deviceInfo
-      });
-      await firebase.auth().signInWithCustomToken(result.data.token);
-
-      // Refresh the stored session (reset expiry)
-      PinThipSafe.session.setUserSession(stored.currentUser, stored.credentials);
-
+    if (stored.currentUser && stored.currentUser.empId) {
       // Re-render the employee dashboard
       currentUser = stored.currentUser;
       window.currentUser = currentUser;
       isAdmin = false;
       window.isAdmin = false;
+      PinThipSafe.session.setUserSession(stored.currentUser, stored.credentials);
       if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
       if (typeof startDevicePresence === 'function') {
         startDevicePresence(deviceId, currentUser.empName, 'employee');

@@ -1512,10 +1512,10 @@
               <div class="history-item" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                   <b>👤 ${emp.empName}</b> (${emp.empId})<br>
-                  🔑 PIN: ${emp.pin} | ค่าแรง: ${emp.dailyRate || 0} บาท | ${driverBadge}${foamBadge}
+                  🔑 PIN: ${emp.pin ? '••••' : '—'} | ค่าแรง: ${emp.dailyRate || 0} บาท | ${driverBadge}${foamBadge}
                 </div>
                 <div style="display:flex; gap:5px;">
-                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditEmpModal('${emp.key}', '${emp.empId}', '${emp.empName}', '${emp.pin}', '${emp.dailyRate || 0}', ${emp.isDriver || false}, ${emp.canSendFoamLabels || false})">✏️</button>
+                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditEmpModal('${emp.key}', '${emp.empId}', '${emp.empName}', '', '${emp.dailyRate || 0}', ${emp.isDriver || false}, ${emp.canSendFoamLabels || false})">✏️</button>
                   <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteEmp('${emp.key}', '${emp.empName}')">🗑️</button>
                 </div>
               </div>
@@ -1611,7 +1611,7 @@
       <input type="hidden" id="editKey" value="${key}">
       <input type="text" id="editEmpIdInput" value="${id}" placeholder="รหัสพนักงาน">
       <input type="text" id="editEmpName" value="${name}" placeholder="ชื่อพนักงาน">
-      <input type="password" id="editEmpPin" value="${pin}" placeholder="รหัส PIN" maxlength="4">
+      <input type="password" id="editEmpPin" placeholder="รหัส PIN (เว้นว่างไว้ = ไม่เปลี่ยน)" maxlength="4">
       <input type="number" id="editEmpRate" value="${rate}" placeholder="ค่าแรงต่อวัน">
       <label style="display:flex; align-items:center; gap:8px; margin:10px 0; text-align:left; font-weight:bold;">
         <input type="checkbox" id="editEmpDriver" ${isDriver ? 'checked' : ''} style="width:20px; height:20px; margin:0;"> เป็นพนักงานขับรถ (มีสิทธิ์เบิกน้ำมัน/ค่าซ่อม & รับจ๊อบส่งของ)
@@ -1635,14 +1635,20 @@
     const isDriver = document.getElementById('editEmpDriver')?.checked;
     const canSendFoamLabels = document.getElementById('editEmpFoamLabels')?.checked;
 
-    window.db.ref('employees/' + key).update({
+    const updateData = {
       empId: newId,
       empName: name,
-      pin,
       dailyRate: Number(rate),
       isDriver,
       canSendFoamLabels
-    }, (err) => {
+    };
+
+    // Only update PIN if admin provides a new one — otherwise keep existing
+    if (pin) {
+      updateData.pin = pin;
+    }
+
+    window.db.ref('employees/' + key).update(updateData, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
       }

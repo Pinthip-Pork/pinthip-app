@@ -8,6 +8,128 @@ const crypto = require('crypto');
 
 initializeApp();
 
+// ===== PIN Hashing =====
+// Format: "sha256$<salt>$<hash>" — salt is random per user
+function hashPin(pin, salt) {
+  const saltStr = salt || crypto.randomBytes(16).toString('hex');
+  const hash = crypto.createHash('sha256').update(`${saltStr}:${String(pin).trim()}`).digest('hex');
+  return `sha256$${saltStr}$${hash}`;
+}
+
+function verifyPin(inputPin, storedHash) {
+  if (!storedHash || typeof storedHash !== 'string') return false;
+  const parts = String(storedHash).split('$');
+  if (parts.length !== 3 || parts[0] !== 'sha256') return false;
+  const [, salt, expectedHash] = parts;
+  const inputHash = crypto.createHash('sha256').update(`${salt}:${String(inputPin).trim()}`).digest('hex');
+  // Timing-safe comparison
+  const a = Buffer.from(expectedHash, 'hex');
+  const b = Buffer.from(inputHash, 'hex');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+function isPlainPin(value) {
+  // Plain PIN is a short numeric/alpha string without the "sha256$" prefix
+  return typeof value === 'string' && !String(value).startsWith('sha256$');
+}
+
+// ===== Rate Limiting =====
+const RATE_LIMIT = {
+  maxAttempts: 5,
+  lockMs: 5 * 60 * 1000,        // 5 minutes
+  maxAttemptsHard: 10,
+  lockMsHard: 30 * 60 * 1000,   // 30 minutes
+  cleanupAfterMs: 60 * 60 * 1000 // clean old entries after 1 hour
+};
+
+async function checkRateLimit(db, key) {
+  const path = `login_attempts/${key}`;
+  const snapshot = await db.ref(path).once('value');
+  const data = snapshot.val() || { count: 0, firstAttemptAt: Date.now(), lockedUntil: 0 };
+
+  const now = Date.now();
+
+  // Clean up old entries
+  if (data.firstAttemptAt && now - data.firstAttemptAt > RATE_LIMIT.cleanupAfterMs) {
+    await db.ref(path).remove();
+    return { allowed: true, remaining: RATE_LIMIT.maxAttempts };
+  }
+
+  // Check if currently locked
+  if (data.lockedUntil && now < data.lockedUntil) {
+    const waitMs = Math.ceil((data.lockedUntil - now) / 1000);
+    return { allowed: false, retryAfterSec: waitMs, message: `Too many failed attempts. Try again in ${Math.ceil(waitMs / 60)} minute(s).` };
+  }
+
+  return { allowed: true, remaining: Math.max(0, RATE_LIMIT.maxAttempts - (data.count || 0)) };
+}
+
+async function recordFailedAttempt(db, key) {
+  const path = `login_attempts/${key}`;
+  const snapshot = await db.ref(path).once('value');
+  const data = snapshot.val() || { count: 0, firstAttemptAt: Date.now(), lockedUntil: 0 };
+
+  const now = Date.now();
+  const newCount = (data.count || 0) + 1;
+  const update = {
+    count: newCount,
+    firstAttemptAt: data.firstAttemptAt || now,
+    lastAttemptAt: now
+  };
+
+  // Apply lockout thresholds
+  if (newCount >= RATE_LIMIT.maxAttemptsHard) {
+    update.lockedUntil = now + RATE_LIMIT.lockMsHard;
+    update.count = 0; // reset counter after hard lock
+  } else if (newCount >= RATE_LIMIT.maxAttempts) {
+    update.lockedUntil = now + RATE_LIMIT.lockMs;
+    update.count = 0; // reset counter after soft lock
+  }
+
+  await db.ref(path).set(update);
+}
+
+async function clearRateLimit(db, key) {
+  await db.ref(`login_attempts/${key}`).remove();
+}
+
+// ===== Session Tokens =====
+const SESSION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function generateSessionToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+async function storeSessionToken(db, token, payload) {
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  await db.ref(`session_tokens/${tokenHash}`).set({
+    ...payload,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + SESSION_TOKEN_TTL_MS
+  });
+}
+
+async function verifySessionToken(db, token) {
+  if (!token || typeof token !== 'string') return null;
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const snapshot = await db.ref(`session_tokens/${tokenHash}`).once('value');
+  const data = snapshot.val();
+  if (!data) return null;
+  if (!data.expiresAt || data.expiresAt <= Date.now()) {
+    await db.ref(`session_tokens/${tokenHash}`).remove();
+    return null;
+  }
+  return data;
+}
+
+async function revokeSessionToken(db, token) {
+  if (!token) return;
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  await db.ref(`session_tokens/${tokenHash}`).remove();
+}
+
+// ===== Helpers =====
 function requireText(value, fieldName) {
   const text = String(value || '').trim();
   if (!text) {
@@ -26,6 +148,7 @@ function getAdminUid(username) {
   return `admin_${hash}`.slice(0, 128);
 }
 
+// ===== Login With PIN (Employee) =====
 exports.loginWithPin = onCall(async (request) => {
   const empId = requireText(request.data?.empId, 'empId');
   const pin = requireText(request.data?.pin, 'pin');
@@ -33,6 +156,13 @@ exports.loginWithPin = onCall(async (request) => {
   const deviceInfo = String(request.data?.deviceInfo || 'Unknown device').slice(0, 120);
 
   const database = getDatabase();
+
+  // Check rate limit for this employee
+  const rateCheck = await checkRateLimit(database, `emp_${empId}`);
+  if (!rateCheck.allowed) {
+    throw new HttpsError('resource-exhausted', rateCheck.message);
+  }
+
   const [employeesSnapshot, autoApproveSnapshot, deviceSnapshot] = await Promise.all([
     database.ref('employees').once('value'),
     database.ref('settings/deviceAccessAutoApprove').once('value'),
@@ -41,11 +171,25 @@ exports.loginWithPin = onCall(async (request) => {
 
   const employees = employeesSnapshot.val() || {};
   const foundEntry = Object.entries(employees).find(([, employee]) => (
-    employee && String(employee.empId || '').trim() === empId && String(employee.pin || '').trim() === pin
+    employee && String(employee.empId || '').trim() === empId
   ));
   const foundEmployee = foundEntry ? foundEntry[1] : null;
 
-  if (!foundEmployee) {
+  // Verify PIN — supports both legacy plain PIN and new hashed PIN
+  let pinValid = false;
+  if (foundEmployee) {
+    const storedPin = foundEmployee.pin;
+    if (isPlainPin(storedPin)) {
+      // Legacy: plain PIN stored — compare directly (will be migrated)
+      pinValid = String(storedPin).trim() === String(pin).trim();
+    } else {
+      // New: hashed PIN
+      pinValid = verifyPin(pin, storedPin);
+    }
+  }
+
+  if (!foundEmployee || !pinValid) {
+    await recordFailedAttempt(database, `emp_${empId}`);
     throw new HttpsError('unauthenticated', 'Invalid employee ID or PIN.');
   }
 
@@ -102,15 +246,31 @@ exports.loginWithPin = onCall(async (request) => {
     throw new HttpsError('permission-denied', 'This device is waiting for admin approval.');
   }
 
+  // Clear rate limit on successful login
+  await clearRateLimit(database, `emp_${empId}`);
+
+  // Create custom token with short TTL (1 hour)
   const token = await getAuth().createCustomToken(uid, {
     role: String(foundEmployee.role || 'employee'),
     empId,
     deviceId
   });
 
-  return { token, uid, empId, status };
+  // Generate session token for persistent login (stored in localStorage instead of PIN)
+  const sessionToken = generateSessionToken();
+  await storeSessionToken(database, sessionToken, {
+    type: 'employee',
+    uid,
+    empId,
+    empName: String(foundEmployee.empName || ''),
+    role: String(foundEmployee.role || 'employee'),
+    deviceId
+  });
+
+  return { token, uid, empId, status, sessionToken };
 });
 
+// ===== Admin Login =====
 exports.adminLogin = onCall(async (request) => {
   const auth = getAuth();
   const database = getDatabase();
@@ -119,6 +279,12 @@ exports.adminLogin = onCall(async (request) => {
   const pin = requireText(request.data?.pin, 'pin');
   const deviceId = requireText(request.data?.deviceId, 'deviceId');
   const deviceInfo = String(request.data?.deviceInfo || 'Unknown device').slice(0, 120);
+
+  // Check rate limit for this admin
+  const rateCheck = await checkRateLimit(database, `admin_${username}`);
+  if (!rateCheck.allowed) {
+    throw new HttpsError('resource-exhausted', rateCheck.message);
+  }
 
   // Read admin config from the database
   const adminConfigSnapshot = await database.ref('settings/admin').once('value');
@@ -158,7 +324,7 @@ exports.adminLogin = onCall(async (request) => {
     adminConfig = {
       enabled: true,
       username: String(setupUsername).trim(),
-      pin: String(setupPin).trim()
+      pin: hashPin(String(setupPin).trim())
     };
 
     await database.ref('settings/admin').set(adminConfig);
@@ -169,15 +335,30 @@ exports.adminLogin = onCall(async (request) => {
   }
 
   const storedUsername = String(adminConfig.username || '').trim().toLowerCase();
-  const storedPin = String(adminConfig.pin || '').trim();
+  const storedPin = adminConfig.pin;
 
   if (String(username).trim().toLowerCase() !== storedUsername) {
+    await recordFailedAttempt(database, `admin_${username}`);
     throw new HttpsError('unauthenticated', 'Invalid admin credentials.');
   }
 
-  if (String(pin).trim() !== storedPin) {
+  // Verify PIN — supports both legacy plain PIN and new hashed PIN
+  let pinValid = false;
+  if (isPlainPin(storedPin)) {
+    // Legacy: plain PIN stored — compare directly (will be migrated)
+    pinValid = String(storedPin).trim() === String(pin).trim();
+  } else {
+    // New: hashed PIN
+    pinValid = verifyPin(pin, storedPin);
+  }
+
+  if (!pinValid) {
+    await recordFailedAttempt(database, `admin_${username}`);
     throw new HttpsError('unauthenticated', 'Invalid admin credentials.');
   }
+
+  // Clear rate limit on successful login
+  await clearRateLimit(database, `admin_${username}`);
 
   // Ensure Firebase Auth user exists for admin
   const uid = getAdminUid(username);
@@ -211,5 +392,76 @@ exports.adminLogin = onCall(async (request) => {
     deviceId
   });
 
-  return { token, uid, expiresIn: 3600 };
+  // Generate session token for persistent login
+  const sessionToken = generateSessionToken();
+  await storeSessionToken(database, sessionToken, {
+    type: 'admin',
+    uid,
+    username,
+    role: 'admin',
+    deviceId
+  });
+
+  return { token, uid, expiresIn: 3600, sessionToken };
+});
+
+// ===== Refresh Session (re-auth without PIN) =====
+exports.refreshSession = onCall(async (request) => {
+  const sessionToken = requireText(request.data?.sessionToken, 'sessionToken');
+  const deviceId = requireText(request.data?.deviceId, 'deviceId');
+
+  const database = getDatabase();
+  const session = await verifySessionToken(database, sessionToken);
+
+  if (!session) {
+    throw new HttpsError('unauthenticated', 'Session expired. Please log in again.');
+  }
+
+  // Verify device matches
+  if (session.deviceId && session.deviceId !== deviceId) {
+    throw new HttpsError('permission-denied', 'Session is bound to a different device.');
+  }
+
+  // Create fresh custom token
+  let token;
+  if (session.type === 'admin') {
+    const uid = getAdminUid(session.username);
+    token = await getAuth().createCustomToken(uid, {
+      role: 'admin',
+      username: session.username,
+      deviceId
+    });
+  } else {
+    const uid = getEmployeeUid(session.empId);
+    token = await getAuth().createCustomToken(uid, {
+      role: session.role || 'employee',
+      empId: session.empId,
+      deviceId
+    });
+  }
+
+  // Refresh session token expiry (sliding window)
+  const tokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
+  await database.ref(`session_tokens/${tokenHash}`).update({
+    expiresAt: Date.now() + SESSION_TOKEN_TTL_MS,
+    lastRefreshedAt: Date.now()
+  });
+
+  return {
+    token,
+    uid: session.uid,
+    isAdmin: session.type === 'admin',
+    empId: session.empId || null,
+    username: session.username || null,
+    role: session.role || 'employee'
+  };
+});
+
+// ===== Logout (revoke session token) =====
+exports.logout = onCall(async (request) => {
+  const sessionToken = request.data?.sessionToken;
+  if (sessionToken) {
+    await revokeSessionToken(getDatabase(), sessionToken);
+  }
+  return { success: true };
 });

@@ -6,7 +6,7 @@
 
   function getSessionTtlMs() {
     const config = window.PinThipSafe?.config?.sessionSettings || {};
-    const ttlMinutes = Number(config.adminSessionTtlMinutes || 60 * 24 * 30);
+    const ttlMinutes = Number(config.adminSessionTtlMinutes || 60 * 24 * 7);
     return ttlMinutes * 60 * 1000;
   }
 
@@ -61,6 +61,15 @@
   function clearAuthState() {
     remove(SESSION_KEYS.admin);
     remove(SESSION_KEYS.user);
+  }
+
+  // Sanitize stored credentials — never expose PIN in localStorage
+  function sanitizeCredentials(credentials) {
+    if (!credentials) return null;
+    const clean = { ...credentials };
+    // Remove PIN field — session token replaces it for re-authentication
+    delete clean.pin;
+    return clean;
   }
 
   function getStoredSession() {
@@ -123,12 +132,12 @@
     write(SESSION_KEYS.admin, {
       value: {
         isAdmin: true,
-        credentials: credentials || null
+        credentials: sanitizeCredentials(credentials) || null
       },
       expiresAt: Date.now() + ttlMs
     });
     remove(SESSION_KEYS.user);
-    return { isAdmin: true, currentUser: null, credentials: credentials || null };
+    return { isAdmin: true, currentUser: null, credentials: sanitizeCredentials(credentials) || null };
   }
 
   function setUserSession(user, credentials) {
@@ -142,11 +151,11 @@
     write(SESSION_KEYS.user, {
       value: {
         user: user,
-        credentials: credentials || null
+        credentials: sanitizeCredentials(credentials) || null
       },
       expiresAt: Date.now() + ttlMs
     });
-    return { isAdmin: false, currentUser: user, credentials: credentials || null };
+    return { isAdmin: false, currentUser: user, credentials: sanitizeCredentials(credentials) || null };
   }
 
   window.PinThipSafe = window.PinThipSafe || {};

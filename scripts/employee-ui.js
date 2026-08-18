@@ -451,6 +451,23 @@ function delHoliday(k) {
 function handleLogout() {
   if (typeof stopDeviceAccessGuard === 'function') stopDeviceAccessGuard();
   if (typeof stopDevicePresence === 'function') stopDevicePresence();
+
+  // Revoke session token on server before clearing local state
+  try {
+    var sessionInfo = PinThipSafe.session ? PinThipSafe.session.restoreSession() : null;
+    var token = sessionInfo && sessionInfo.credentials && sessionInfo.credentials.sessionToken;
+    if (token && window.firebase && window.firebase.functions) {
+      var logoutCallable = window.firebase.functions().httpsCallable('logout');
+      logoutCallable({ sessionToken: token }).then(function() {
+        console.log('Session token revoked on server');
+      }).catch(function(err) {
+        console.warn('Server revoke failed (will still clear local):', err);
+      });
+    }
+  } catch (e) {
+    console.warn('Unable to revoke session:', e);
+  }
+
   if (window.firebase?.auth) {
     firebase.auth().signOut().then(function() {
       console.log('Firebase Auth sign-out successful');
@@ -463,7 +480,7 @@ function handleLogout() {
   isAdmin = false;
   window.isAdmin = false;
   if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(false);
-  PinThipSafe.session.clearAuthState();
+  if (PinThipSafe && PinThipSafe.session) PinThipSafe.session.clearAuthState();
   if (typeof showLoginForm === 'function') showLoginForm();
 }
 

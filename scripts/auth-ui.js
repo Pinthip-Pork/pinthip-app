@@ -45,7 +45,7 @@ async function handleLogin() {
     setStatusText('status', '');
     var sessionState = PinThipSafe.session.setAdminSession({
       username: inputId,
-      pin: inputPin
+      sessionToken: adminResult.data.sessionToken
     });
     isAdmin = sessionState.isAdmin;
     window.isAdmin = isAdmin;
@@ -132,7 +132,8 @@ async function handleCustomAuthLogin(inputId, inputPin) {
     await firebase.auth().signInWithCustomToken(result.data.token);
 
     db.ref('employees').once('value', function(snapshot) {
-      var foundUser = window.PinThipSafe.auth.findEmployeeByCredentials(snapshot.val(), inputId, inputPin);
+      // Cloud Function already validated the PIN — just look up employee data by empId
+      var foundUser = window.PinThipSafe.auth.findEmployeeByEmpId(snapshot.val(), inputId);
       if (!foundUser) {
         setStatusText('status', '\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E39\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 \u0E41\u0E15\u0E48\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19');
         return;
@@ -147,7 +148,7 @@ async function handleCustomAuthLogin(inputId, inputPin) {
       });
       var sessionState = PinThipSafe.session.setUserSession(currentUser, {
         empId: inputId,
-        pin: inputPin
+        sessionToken: result.data.sessionToken
       });
       currentUser = sessionState.currentUser;
       window.currentUser = currentUser;

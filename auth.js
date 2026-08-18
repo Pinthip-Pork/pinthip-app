@@ -35,11 +35,30 @@
       return { allowed: false, reason: 'Invalid admin username.' };
     }
 
+    // Note: This is only a client-side pre-check. Real validation happens in Cloud Function.
+    // The client-side config may have a plain PIN for legacy setups, but the authoritative
+    // check is in functions/index.js which handles both plain and hashed PINs.
     if (normalizedPin !== String(adminConfig.pin)) {
       return { allowed: false, reason: 'Invalid admin PIN.' };
     }
 
     return { allowed: true, reason: 'Admin login successful.' };
+  }
+
+  // Check PIN against employee record — supports both legacy plain PIN and hashed PIN
+  function checkPinMatch(employee, inputPin) {
+    if (!employee || !employee.pin) return false;
+    const storedPin = employee.pin;
+    const normalizedInputPin = String(inputPin || '').trim();
+
+    // Legacy plain PIN
+    if (typeof storedPin === 'string' && !storedPin.startsWith('sha256$')) {
+      return String(storedPin).trim() === normalizedInputPin;
+    }
+
+    // Hashed PIN — cannot verify client-side (needs crypto), so return false
+    // Real verification happens in Cloud Function (loginWithPin)
+    return false;
   }
 
   function findEmployeeByCredentials(employees, inputId, inputPin) {
@@ -51,7 +70,21 @@
     return Object.keys(employees).reduce((found, key) => {
       if (found) return found;
       const emp = employees[key];
-      if (emp && String(emp.empId).trim() === normalizedInputId && String(emp.pin).trim() === normalizedPin) {
+      if (emp && String(emp.empId).trim() === normalizedInputId && checkPinMatch(emp, normalizedPin)) {
+        return emp;
+      }
+      return null;
+    }, null);
+  }
+
+  // Find employee by empId only (no PIN check) — used after Cloud Function validated the PIN
+  function findEmployeeByEmpId(employees, inputId) {
+    if (!employees) return null;
+    const normalizedInputId = String(inputId || '').trim();
+    return Object.keys(employees).reduce((found, key) => {
+      if (found) return found;
+      const emp = employees[key];
+      if (emp && String(emp.empId).trim() === normalizedInputId) {
         return emp;
       }
       return null;
@@ -65,7 +98,7 @@
       empName: String(user.empName || ''),
       isDriver: Boolean(user.isDriver),
       canSendFoamLabels: Boolean(user.canSendFoamLabels),
-      pin: user.pin || undefined,
+      // Do NOT include pin in session user — PIN should never be stored client-side
       role: user.role || 'employee'
     };
   }
@@ -76,6 +109,8 @@
     isAdminLoginEnabled,
     tryLoginAdmin,
     findEmployeeByCredentials,
-    normalizeSessionUser
+    findEmployeeByEmpId,
+    normalizeSessionUser,
+    checkPinMatch
   };
 })();
