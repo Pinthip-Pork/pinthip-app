@@ -1,5 +1,5 @@
 ﻿/**
- * admin-quick-modal.js โ€” Admin quick command center modals (job, fuel, leave)
+ * admin-quick-modal.js - Admin quick approval modals (fuel, leave)
  * Extracted from index.html inline script
  * Dependencies: app-globals.js (for openWideModal, getLocalDateTimeString, db, etc.)
  */
@@ -70,7 +70,7 @@ function updateQuickFuelStatus(key) {
     if (!err) {
       alert('\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E32\u0E23\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22');
       loadQuickFuelContent();
-      if (typeof showAdminCommandCenter === 'function') showAdminCommandCenter();
+      if (typeof showAdminDashboard === 'function') showAdminDashboard();
     }
   });
 }
@@ -113,6 +113,6 @@ function updateQuickLeaveStatus(key) {
   db.ref('leaves/' + key).update({ status: status }, function() {
     alert('\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E1C\u0E25\u0E01\u0E32\u0E23\u0E1E\u0E34\u0E08\u0E32\u0E23\u0E13\u0E32\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22');
     loadQuickLeaveContent();
-    if (typeof showAdminCommandCenter === 'function') showAdminCommandCenter();
+    if (typeof showAdminDashboard === 'function') showAdminDashboard();
   });
 }

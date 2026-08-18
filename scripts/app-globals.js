@@ -341,7 +341,7 @@ function initApp() {
 
   // Proactive token refresh every 45 minutes to keep Firebase Auth session alive
   // (Firebase custom tokens have a 1-hour TTL; refreshing before expiry prevents silent logout)
-  setInterval(function() {
+  window._tokenRefreshInterval = setInterval(function() {
     var cu = firebase.auth().currentUser;
     if (cu) {
       cu.getIdToken(true).catch(function(e) {

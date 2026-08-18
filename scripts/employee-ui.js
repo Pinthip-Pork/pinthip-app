@@ -451,6 +451,7 @@ function delHoliday(k) {
 function handleLogout() {
   if (typeof stopDeviceAccessGuard === 'function') stopDeviceAccessGuard();
   if (typeof stopDevicePresence === 'function') stopDevicePresence();
+  if (typeof stopAdminNotificationListener === 'function') stopAdminNotificationListener();
 
   // Revoke session token on server before clearing local state
   try {
@@ -497,10 +498,38 @@ var isInitialLoadFuels = true;
 var notifiedFuelsKeys = {};
 var isInitialLoadFoam = true;
 
+// Track realtime listener refs so we can detach them on logout (prevents leak on re-login)
+var adminNotificationListeners = { foam: null, leaves: null, fuels: null };
+
+function stopAdminNotificationListener() {
+  try {
+    if (adminNotificationListeners.foam) {
+      db.ref('foam_delivery_requests').off('value', adminNotificationListeners.foam);
+      adminNotificationListeners.foam = null;
+    }
+    if (adminNotificationListeners.leaves) {
+      db.ref('leaves').off('value', adminNotificationListeners.leaves);
+      adminNotificationListeners.leaves = null;
+    }
+    if (adminNotificationListeners.fuels) {
+      db.ref('fuel_requests').off('value', adminNotificationListeners.fuels);
+      adminNotificationListeners.fuels = null;
+    }
+  } catch (e) {
+    console.warn('stopAdminNotificationListener failed:', e);
+  }
+  // Reset initial-load flags so next login starts fresh
+  isInitialLoadFoam = true;
+  isInitialLoadLeaves = true;
+  isInitialLoadFuels = true;
+}
+
 function startAdminNotificationListener() {
+  // Idempotent: detach any existing listeners first so re-login doesn't stack callbacks
+  stopAdminNotificationListener();
   document.getElementById('bellBtn').style.display = 'block';
 
-  db.ref('foam_delivery_requests').on('value', function(snap) {
+  adminNotificationListeners.foam = db.ref('foam_delivery_requests').on('value', function(snap) {
     var obj = snap.val() || {};
     pendingFoamCache = [];
     var newPendingFoamCount = 0;
@@ -510,7 +539,7 @@ function startAdminNotificationListener() {
       var group = obj[dateKey] || {};
       Object.keys(group).forEach(function(k) {
         var item = group[k];
-        if (String(item.status || '').indexOf('pending') !== -1 || String(item.status || '').indexOf('เธฃเธญ') !== -1) {
+        if (String(item.status || '').indexOf('pending') !== -1) {
           var compositeKey = dateKey + '/' + k;
           pendingFoamCache.push({ key: k, dateKey: dateKey, ...item });
           newPendingFoamCount++;
@@ -523,16 +552,16 @@ function startAdminNotificationListener() {
     });
 
     if (!isInitialLoadFoam && hasNewFoamItem) {
-      if (typeof playNotificationAlert === 'function') playNotificationAlert('เธกเธตเธฃเธฒเธขเธเธฒเธฃเธเนเธฒเธขเธฅเธฑเธเนเธเธกเธฃเธญเธญเธเธธเธกเธฑเธ•เธด');
-      if (typeof showDesktopNotification === 'function') showDesktopNotification('เธกเธตเธฃเธฒเธขเธเธฒเธฃเธเนเธฒเธขเธฅเธฑเธเนเธเธก', 'เธฃเธฒเธขเธเธฒเธฃเธชเนเธเธฅเธฑเธเนเธเธกเนเธซเธกเนเธฃเธญเนเธญเธ”เธกเธดเธเธ•เธฃเธงเธเธชเธญเธ');
-      showModal('๐”” เธกเธตเธฃเธฒเธขเธเธฒเธฃเธเนเธฒเธขเธฅเธฑเธเนเธเธก', 'เธกเธตเธฃเธฒเธขเธเธฒเธฃเธชเนเธเธฅเธฑเธเนเธเธกเนเธซเธกเนเธ—เธตเนเธ•เนเธญเธเธ•เธฃเธงเธเธชเธญเธ', '<button class="btn-ok" onclick="closeModal(); showFoamAdminView();">เธ•เธเธฅเธ</button>');
+      if (typeof playNotificationAlert === 'function') playNotificationAlert('มีรายการป้ายลังโฟมรออนุมัติ');
+      if (typeof showDesktopNotification === 'function') showDesktopNotification('มีรายการป้ายลังโฟม', 'รายการส่งลังโฟมใหม่รอแอดมินตรวจสอบ');
+      showModal('🔔 มีรายการป้ายลังโฟม', 'มีรายการส่งลังโฟมใหม่ที่ต้องตรวจสอบ', '<button class="btn-ok" onclick="closeModal(); showFoamAdminView();">ตกลง</button>');
     }
 
     isInitialLoadFoam = false;
     updateAdminBellBadgeCount();
   });
 
-  db.ref('leaves').on('value', function(snap) {
+  adminNotificationListeners.leaves = db.ref('leaves').on('value', function(snap) {
     var obj = snap.val() || {};
     pendingLeavesCache = [];
     var newPendingCount = 0;
@@ -558,7 +587,7 @@ function startAdminNotificationListener() {
     updateAdminBellBadgeCount();
   });
 
-  db.ref('fuel_requests').on('value', function(snap) {
+  adminNotificationListeners.fuels = db.ref('fuel_requests').on('value', function(snap) {
     var obj = snap.val() || {};
     pendingFuelsCache = [];
     var newFuelPendingCount = 0;
