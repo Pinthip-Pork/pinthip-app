@@ -332,7 +332,7 @@
       const html = `
         <div class="user-banner">${window.currentUser.empName} (${window.currentUser.empId})</div>
         <div style="text-align:left; font-size:13px; color:#555; margin-bottom:5px;"><b>📌 ประเภทการเบิก:</b></div>
-        <select id="requestType" style="margin-bottom:8px;">
+        <select id="requestType" style="margin-bottom:8px;" onchange="toggleFuelAmountField()">
           <option value="⛽ เบิกค่าน้ำมัน">⛽ เบิกค่าน้ำมันรถส่งของ</option>
           <option value="🔧 เบิกค่าซ่อมรถ">🔧 เบิกค่าซ่อมรถ / ค่าอะไหล่</option>
         </select>
@@ -344,6 +344,12 @@
 
         <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>📍 รายละเอียด / เส้นทาง / รายการซ่อม:</b></div>
         <textarea id="fuelRoute" rows="3" placeholder="เช่น ไปส่งหมูตลาดสุพรรณ หรือ เปลี่ยนยางนอกล้อหลัง"></textarea>
+
+        <div id="fuelAmountField" style="display:none; text-align:left; font-size:13px; color:#555; margin-bottom:3px;">
+          <b>💵 จำนวนเงินที่ต้องการเบิก (บาท):</b>
+          <input type="number" id="fuelAmountInput" placeholder="ระบุจำนวนเงินที่ต้องการเบิก" style="margin-bottom:8px;">
+        </div>
+        <div id="fuelDefaultHint" style="text-align:left; font-size:12px; color:#888; margin-bottom:8px;">💡 เบิกค่าน้ำมันเริ่มต้น 1,000 บาท (แอดมินสามารถปรับยอดได้)</div>
         
         <button class="btn-fuel" onclick="handleFuelSubmit()">💾 ส่งคำขอเบิกจ่าย</button>
         <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
@@ -353,14 +359,42 @@
     });
   }
 
+  function toggleFuelAmountField() {
+    const reqType = document.getElementById('requestType')?.value;
+    const amountField = document.getElementById('fuelAmountField');
+    const defaultHint = document.getElementById('fuelDefaultHint');
+    if (!amountField || !defaultHint) return;
+
+    if (reqType && reqType.includes('ซ่อม')) {
+      amountField.style.display = 'block';
+      defaultHint.style.display = 'none';
+    } else {
+      amountField.style.display = 'none';
+      defaultHint.style.display = 'block';
+    }
+  }
+
   function handleFuelSubmit() {
     const reqType = document.getElementById('requestType')?.value;
     const carPlate = document.getElementById('carPlateSelect')?.value;
     const route = document.getElementById('fuelRoute')?.value.trim();
+    const amountInput = document.getElementById('fuelAmountInput')?.value.trim();
 
     if (!carPlate) {
       window.alert('กรุณาเลือกทะเบียนรถ');
       return;
+    }
+
+    // ค่าเริ่มต้น: เบิกค่าน้ำมัน = 1000 บาท, เบิกค่าซ่อม = พนักงานกรอกเอง
+    let defaultAmount = 0;
+    if (reqType && reqType.includes('น้ำมัน')) {
+      defaultAmount = 1000;
+    } else if (reqType && reqType.includes('ซ่อม')) {
+      if (!amountInput || Number(amountInput) <= 0) {
+        window.alert('กรุณากรอกจำนวนเงินที่ต้องการเบิกค่าซ่อม');
+        return;
+      }
+      defaultAmount = Number(amountInput);
     }
 
     const newRef = window.db.ref('fuel_requests').push();
@@ -370,7 +404,7 @@
       requestType: reqType,
       carPlate,
       route: route || '-',
-      amount: 0,
+      amount: defaultAmount,
       date: window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10),
       status: 'รออนุมัติ ⏳',
       applyDate: new Date().toLocaleDateString()
@@ -1698,6 +1732,7 @@
   window.executeDeleteLocation = executeDeleteLocation;
 
   window.showFuelRequestForm = showFuelRequestForm;
+  window.toggleFuelAmountField = toggleFuelAmountField;
   window.handleFuelSubmit = handleFuelSubmit;
   window.showAdminFuelRequests = showAdminFuelRequests;
   window.updateFuelStatusWithAmount = updateFuelStatusWithAmount;
