@@ -568,37 +568,30 @@
           '</div>' +
         '</div>' +
         '<div style="margin-top:12px; text-align:left;">' +
-          '<label style="display:block; font-weight:bold; margin-bottom:4px;">ชื่อลูกค้า</label>' +
-          '<input id="foamEditName" type="text" value="' + escape(name) + '">' +
-
-          '<label style="display:block; font-weight:bold; margin-top:8px; margin-bottom:4px;">เบอร์โทรศัพท์</label>' +
-          '<input id="foamEditPhone" type="text" value="' + escape(snapshotData.phone || '') + '">' +
-
-          '<label style="display:block; font-weight:bold; margin-top:8px; margin-bottom:4px;">ที่อยู่</label>' +
-          '<textarea id="foamEditAddress" rows="2">' + escape(snapshotData.address || '') + '</textarea>' +
-
-          '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">' +
-            '<div><label style="display:block; font-weight:bold; margin-bottom:4px;">แขวง/ตำบล</label><input id="foamEditSubdistrict" type="text" value="' + escape(snapshotData.subdistrict || '') + '"></div>' +
-            '<div><label style="display:block; font-weight:bold; margin-bottom:4px;">เขต/อำเภอ</label><input id="foamEditDistrict" type="text" value="' + escape(snapshotData.district || '') + '"></div>' +
+          '<div style="background:#fff; border:1px solid #e9ecef; border-radius:10px; padding:14px;">' +
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">' +
+              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">ชื่อลูกค้า</label><input id="foamEditName" type="text" value="' + escape(name) + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
+              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">เบอร์โทรศัพท์</label><input id="foamEditPhone" type="text" value="' + escape(snapshotData.phone || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
+            '</div>' +
+            '<div style="margin-top:10px;"><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">ที่อยู่</label><textarea id="foamEditAddress" rows="2" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box; resize:vertical;">' + escape(snapshotData.address || '') + '</textarea></div>' +
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">' +
+              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">แขวง/ตำบล</label><input id="foamEditSubdistrict" type="text" value="' + escape(snapshotData.subdistrict || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
+              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">เขต/อำเภอ</label><input id="foamEditDistrict" type="text" value="' + escape(snapshotData.district || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
+            '</div>' +
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">' +
+              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">จังหวัด</label><input id="foamEditProvince" type="text" value="' + escape(snapshotData.province || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
+              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">รหัสไปรษณีย์</label><input id="foamEditPostal" type="text" value="' + escape(snapshotData.postalCode || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
+            '</div>' +
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">' +
+              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">ขนส่ง</label><input id="foamEditShipping" type="text" value="' + escape(snapshotData.shipping || '') + '" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box;"></div>' +
+              '<div><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">จำนวนลัง</label><select id="foamEditBoxCount" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box; font-weight:bold;">' +
+                '<option value="1" ' + ((request.boxCount || 1) === 1 ? 'selected' : '') + '>1 ลัง</option>' +
+                '<option value="2" ' + ((request.boxCount || 1) === 2 ? 'selected' : '') + '>2 ลัง</option>' +
+                '<option value="3" ' + ((request.boxCount || 1) === 3 ? 'selected' : '') + '>3 ลัง</option>' +
+              '</select></div>' +
+            '</div>' +
+            '<div style="margin-top:10px;"><label style="display:block; font-size:13px; color:#555; margin-bottom:3px;">หมายเหตุ</label><textarea id="foamEditNote" rows="2" style="width:100%; padding:8px 10px; border:1px solid #d0d5dd; border-radius:6px; font-size:14px; box-sizing:border-box; resize:vertical;">' + escape(snapshotData.note || request.note || '') + '</textarea></div>' +
           '</div>' +
-
-          '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">' +
-            '<div><label style="display:block; font-weight:bold; margin-bottom:4px;">จังหวัด</label><input id="foamEditProvince" type="text" value="' + escape(snapshotData.province || '') + '"></div>' +
-            '<div><label style="display:block; font-weight:bold; margin-bottom:4px;">รหัสไปรษณีย์</label><input id="foamEditPostal" type="text" value="' + escape(snapshotData.postalCode || '') + '"></div>' +
-          '</div>' +
-
-          '<label style="display:block; font-weight:bold; margin-top:8px; margin-bottom:4px;">ขนส่ง</label>' +
-          '<input id="foamEditShipping" type="text" value="' + escape(snapshotData.shipping || '') + '">' +
-
-          '<label style="display:block; font-weight:bold; margin-top:8px; margin-bottom:4px;">หมายเหตุ</label>' +
-          '<textarea id="foamEditNote" rows="2">' + escape(snapshotData.note || request.note || '') + '</textarea>' +
-
-          '<label style="display:block; font-weight:bold; margin-top:8px; margin-bottom:4px;">จำนวนลัง</label>' +
-          '<select id="foamEditBoxCount" style="font-weight:bold;">' +
-            '<option value="1" ' + ((request.boxCount || 1) === 1 ? 'selected' : '') + '>1 ลัง</option>' +
-            '<option value="2" ' + ((request.boxCount || 1) === 2 ? 'selected' : '') + '>2 ลัง</option>' +
-            '<option value="3" ' + ((request.boxCount || 1) === 3 ? 'selected' : '') + '>3 ลัง</option>' +
-          '</select>' +
         '</div>' +
         '<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;">' +
           '<button class="btn-blue" onclick="foamAdminSaveSelected(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')" style="flex:1; min-width:120px;">💾 บันทึกข้อมูล</button>' +
