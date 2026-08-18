@@ -244,6 +244,37 @@ function requireFirebaseAuth() {
   var firebaseUser = firebase.auth().currentUser;
   if (firebaseUser) return true;
 
+  // Try to recover the session using stored credentials before giving up
+  var stored = PinThipSafe.session.getStoredSession();
+  if (stored) {
+    recoverFirebaseSession().then(function(recovered) {
+      if (recovered) {
+        console.log('Session recovered in requireFirebaseAuth.');
+        // Re-render the appropriate dashboard
+        var restored = PinThipSafe.session.restoreSession();
+        if (restored.isAdmin) {
+          isAdmin = true;
+          window.isAdmin = true;
+          currentUser = null;
+          window.currentUser = null;
+          if (typeof showAdminDashboard === 'function') showAdminDashboard();
+        } else if (restored.currentUser && restored.currentUser.empId) {
+          currentUser = restored.currentUser;
+          window.currentUser = currentUser;
+          isAdmin = false;
+          window.isAdmin = false;
+          if (typeof showDashboard === 'function') showDashboard();
+        }
+      } else {
+        console.warn('Firebase Auth session is required before accessing protected data.');
+        resetExpiredAuthSession();
+        if (typeof showLoginForm === 'function') showLoginForm();
+        window.alert('เซสชันเข้าสู่ระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+      }
+    });
+    return false;
+  }
+
   console.warn('Firebase Auth session is required before accessing protected data.');
   resetExpiredAuthSession();
   if (typeof showLoginForm === 'function') showLoginForm();
@@ -252,6 +283,49 @@ function requireFirebaseAuth() {
 }
 
 window.PinThipSafe.requireFirebaseAuth = requireFirebaseAuth;
+
+// ===== Session Recovery =====
+async function recoverFirebaseSession() {
+  var stored = PinThipSafe.session.getStoredSession();
+  if (!stored) return false;
+
+  try {
+    var deviceId = window.PinThipSafe.utils.getDeviceId();
+    var deviceInfo = window.PinThipSafe.utils.getDeviceInfo();
+
+    if (stored.isAdmin && stored.credentials && stored.credentials.username && stored.credentials.pin) {
+      // Re-authenticate admin
+      var adminCallable = firebase.functions().httpsCallable('adminLogin');
+      var adminResult = await adminCallable({
+        username: stored.credentials.username,
+        pin: stored.credentials.pin,
+        deviceId: deviceId,
+        deviceInfo: deviceInfo
+      });
+      await firebase.auth().signInWithCustomToken(adminResult.data.token);
+      console.log('Admin session recovered successfully.');
+      return true;
+    }
+
+    if (!stored.isAdmin && stored.credentials && stored.credentials.empId && stored.credentials.pin) {
+      // Re-authenticate employee
+      var callable = firebase.functions().httpsCallable('loginWithPin');
+      var result = await callable({
+        empId: stored.credentials.empId,
+        pin: stored.credentials.pin,
+        deviceId: deviceId,
+        deviceInfo: deviceInfo
+      });
+      await firebase.auth().signInWithCustomToken(result.data.token);
+      console.log('Employee session recovered successfully.');
+      return true;
+    }
+  } catch (e) {
+    console.warn('Session recovery failed:', e);
+  }
+
+  return false;
+}
 
 // ===== Init App =====
 function initApp() {
@@ -271,7 +345,7 @@ function initApp() {
   firebase.auth().onIdTokenChanged(function(firebaseUser) {
     if (!isInitialAuthState) {
       if (!firebaseUser) {
-        console.warn('Firebase Auth session dropped \u2014 attempting token refresh...');
+        console.warn('Firebase Auth session dropped \u2014 attempting recovery...');
         // Try to force a token refresh before clearing the session.
         // This handles transient failures and iOS PWA IndexedDB issues:
         // firebase.auth().currentUser may still be in memory even when
@@ -282,13 +356,23 @@ function initApp() {
             console.log('Session recovered after token refresh.');
           }).catch(function(err) {
             console.warn('Token refresh recovery failed:', err);
-            resetExpiredAuthSession();
-            if (typeof showLoginForm === 'function') showLoginForm();
+            // Try to re-authenticate using stored credentials
+            recoverFirebaseSession().then(function(recovered) {
+              if (!recovered) {
+                resetExpiredAuthSession();
+                if (typeof showLoginForm === 'function') showLoginForm();
+              }
+            });
           });
         } else {
-          console.warn('Firebase Auth session ended (no currentUser).');
-          resetExpiredAuthSession();
-          if (typeof showLoginForm === 'function') showLoginForm();
+          // No currentUser in memory — try to re-authenticate using stored credentials
+          recoverFirebaseSession().then(function(recovered) {
+            if (!recovered) {
+              console.warn('Firebase Auth session ended (no currentUser).');
+              resetExpiredAuthSession();
+              if (typeof showLoginForm === 'function') showLoginForm();
+            }
+          });
         }
       }
       return;
@@ -313,25 +397,40 @@ function initApp() {
           if (typeof showAdminDashboard === 'function') showAdminDashboard();
           if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
         } else {
-          console.warn('Admin Firebase Auth session expired');
-          resetExpiredAuthSession();
-          if (typeof showLoginForm === 'function') showLoginForm();
+          // Admin session stored but Firebase Auth not yet ready — try to recover
+          console.warn('Admin Firebase Auth session expired, attempting recovery...');
+          recoverFirebaseSession().then(function(recovered) {
+            if (!recovered) {
+              resetExpiredAuthSession();
+              if (typeof showLoginForm === 'function') showLoginForm();
+            }
+          });
         }
-      } else if (firebaseUser && restored.currentUser && restored.currentUser.empId) {
-        currentUser = restored.currentUser;
-        window.currentUser = currentUser;
-        isAdmin = false;
-        window.isAdmin = false;
-        if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
-        if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(true);
-        if (typeof startDevicePresence === 'function') {
-          startDevicePresence(window.PinThipSafe.utils.getDeviceId(), currentUser.empName, 'employee');
+      } else if (restored.currentUser && restored.currentUser.empId) {
+        if (firebaseUser) {
+          currentUser = restored.currentUser;
+          window.currentUser = currentUser;
+          isAdmin = false;
+          window.isAdmin = false;
+          if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
+          if (typeof showDesktopNotificationControl === 'function') showDesktopNotificationControl(true);
+          if (typeof startDevicePresence === 'function') {
+            startDevicePresence(window.PinThipSafe.utils.getDeviceId(), currentUser.empName, 'employee');
+          }
+          if (typeof showDashboard === 'function') showDashboard();
+          if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
+          if (typeof startEmployeeNotificationListener === 'function') startEmployeeNotificationListener();
+        } else {
+          // Employee session stored but Firebase Auth not yet ready — try to recover
+          console.warn('Employee Firebase Auth session expired, attempting recovery...');
+          recoverFirebaseSession().then(function(recovered) {
+            if (!recovered) {
+              resetExpiredAuthSession();
+              if (typeof showLoginForm === 'function') showLoginForm();
+            }
+          });
         }
-        if (typeof showDashboard === 'function') showDashboard();
-        if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
-        if (typeof startEmployeeNotificationListener === 'function') startEmployeeNotificationListener();
       } else {
-        if (restored.currentUser && !firebaseUser) console.warn('Employee Firebase Auth session expired');
         resetExpiredAuthSession();
         if (typeof showLoginForm === 'function') showLoginForm();
       }

@@ -43,7 +43,10 @@ async function handleLogin() {
     await firebase.auth().signInWithCustomToken(adminResult.data.token);
 
     setStatusText('status', '');
-    var sessionState = PinThipSafe.session.setAdminSession();
+    var sessionState = PinThipSafe.session.setAdminSession({
+      username: inputId,
+      pin: inputPin
+    });
     isAdmin = sessionState.isAdmin;
     window.isAdmin = isAdmin;
     currentUser = sessionState.currentUser;
@@ -95,7 +98,10 @@ async function handleLogin() {
         pin: foundUser.pin,
         role: foundUser.role || 'employee'
       });
-      var sessionState = PinThipSafe.session.setUserSession(currentUser);
+      var sessionState = PinThipSafe.session.setUserSession(currentUser, {
+        empId: inputId,
+        pin: inputPin
+      });
       currentUser = sessionState.currentUser;
       window.currentUser = currentUser;
       isAdmin = sessionState.isAdmin;
@@ -141,7 +147,10 @@ async function handleCustomAuthLogin(inputId, inputPin) {
         canSendFoamLabels: foundUser.canSendFoamLabels || false,
         role: foundUser.role || 'employee'
       });
-      var sessionState = PinThipSafe.session.setUserSession(currentUser);
+      var sessionState = PinThipSafe.session.setUserSession(currentUser, {
+        empId: inputId,
+        pin: inputPin
+      });
       currentUser = sessionState.currentUser;
       window.currentUser = currentUser;
       isAdmin = false;

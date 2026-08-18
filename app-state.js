@@ -63,47 +63,90 @@
     remove(SESSION_KEYS.user);
   }
 
-  function restoreSession() {
+  function getStoredSession() {
     const rawAdminFlag = read(SESSION_KEYS.admin, false);
     const adminFlag = unwrapSessionPayload(rawAdminFlag, false);
     const rawUser = read(SESSION_KEYS.user, null);
     const user = unwrapSessionPayload(rawUser, null);
 
-    if (adminFlag === true || adminFlag === 'true') {
-      return { isAdmin: true, currentUser: null };
+    // Admin session: stored as { isAdmin: true, credentials: {...} }
+    if (adminFlag && typeof adminFlag === 'object' && adminFlag.isAdmin === true) {
+      return {
+        isAdmin: true,
+        currentUser: null,
+        credentials: adminFlag.credentials || null
+      };
     }
 
+    // Backward-compatible: old format stored as boolean true
+    if (adminFlag === true || adminFlag === 'true') {
+      return { isAdmin: true, currentUser: null, credentials: null };
+    }
+
+    // User session: stored as { user: {...}, credentials: {...} }
+    if (user && typeof user === 'object' && user.user && user.user.empId) {
+      return {
+        isAdmin: false,
+        currentUser: user.user,
+        credentials: user.credentials || null
+      };
+    }
+
+    // Backward-compatible: old format stored user object directly
     if (user && user.empId) {
-      return { isAdmin: false, currentUser: user };
+      return { isAdmin: false, currentUser: user, credentials: null };
+    }
+
+    return null;
+  }
+
+  function hasStoredSession() {
+    return getStoredSession() !== null;
+  }
+
+  function restoreSession() {
+    const stored = getStoredSession();
+    if (stored) {
+      return {
+        isAdmin: stored.isAdmin,
+        currentUser: stored.currentUser,
+        credentials: stored.credentials
+      };
     }
 
     clearAuthState();
-    return { isAdmin: false, currentUser: null };
+    return { isAdmin: false, currentUser: null, credentials: null };
   }
 
-  function setAdminSession() {
+  function setAdminSession(credentials) {
     const ttlMs = getSessionTtlMs();
     write(SESSION_KEYS.admin, {
-      value: true,
+      value: {
+        isAdmin: true,
+        credentials: credentials || null
+      },
       expiresAt: Date.now() + ttlMs
     });
     remove(SESSION_KEYS.user);
-    return { isAdmin: true, currentUser: null };
+    return { isAdmin: true, currentUser: null, credentials: credentials || null };
   }
 
-  function setUserSession(user) {
+  function setUserSession(user, credentials) {
     const ttlMs = getSessionTtlMs();
     if (!user || !user.empId) {
       clearAuthState();
-      return { isAdmin: false, currentUser: null };
+      return { isAdmin: false, currentUser: null, credentials: null };
     }
 
     remove(SESSION_KEYS.admin);
     write(SESSION_KEYS.user, {
-      value: user,
+      value: {
+        user: user,
+        credentials: credentials || null
+      },
       expiresAt: Date.now() + ttlMs
     });
-    return { isAdmin: false, currentUser: user };
+    return { isAdmin: false, currentUser: user, credentials: credentials || null };
   }
 
   window.PinThipSafe = window.PinThipSafe || {};
@@ -113,6 +156,8 @@
     remove,
     clearAuthState,
     restoreSession,
+    getStoredSession,
+    hasStoredSession,
     setAdminSession,
     setUserSession
   };
