@@ -7,10 +7,14 @@
         ".read": "auth != null && auth.token.role === 'admin'",
         ".write": "!data.exists() || (auth != null && auth.token.role === 'admin')"
       },
-      "deviceAccessAutoApprove": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.token.role === 'admin'"
-      }
+       "deviceAccessAutoApprove": {
+         ".read": "auth != null",
+         ".write": "auth != null && auth.token.role === 'admin'"
+       },
+       "globalLateTime": {
+         ".read": "auth != null",
+         ".write": "auth != null && auth.token.role === 'admin'"
+       }
     },
     "employees": {
       ".read": "auth != null",
