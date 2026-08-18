@@ -31,6 +31,9 @@ temp/
 tmp/
 .cache
 
+# Test results
+test-results/
+
 # Firebase
 .firebase/
 .firebaserc

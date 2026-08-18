@@ -88,6 +88,8 @@ function playNotificationSound() {
 }
 
 function playNotificationAlert(message) {
+  // `message` is reserved for future logging/notification text use.
+  void message;
   if (notificationSoundEnabled) playNotificationSound();
 }
 

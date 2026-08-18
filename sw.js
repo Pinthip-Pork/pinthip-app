@@ -23,10 +23,6 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-self.addEventListener('controllerchange', () => {
-  if (self.registration.active) window.location.reload();
-});
-
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;

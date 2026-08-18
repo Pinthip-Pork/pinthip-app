@@ -5,7 +5,11 @@
     customAuthEnabled: true
   };
 
-  const firebaseConfig = {
+  // Default Firebase config — can be overridden per-environment via
+  // local-admin-config.js (window.__PINTHIP_FIREBASE_CONFIG__) so secrets/keys
+  // need not live in the repo. The values below are the public web config that
+  // is safe to commit (Firebase security is enforced by rules + Cloud Functions).
+  const defaultFirebaseConfig = {
     apiKey: 'AIzaSyBeBOyADRqJPLfGGREE8vNWBW051hQJKCo',
     authDomain: 'pinthip-checkin.firebaseapp.com',
     databaseURL: 'https://pinthip-checkin-default-rtdb.asia-southeast1.firebasedatabase.app',
@@ -14,6 +18,11 @@
     messagingSenderId: '281531263382',
     appId: '1:281531263382:web:282eaac91c9d64249695b7',
     measurementId: 'G-FWKZ4L2LST'
+  };
+
+  const firebaseConfig = {
+    ...defaultFirebaseConfig,
+    ...(window.__PINTHIP_FIREBASE_CONFIG__ || {})
   };
 
   const defaultAdminCredentials = {

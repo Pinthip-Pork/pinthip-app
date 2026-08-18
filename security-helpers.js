@@ -1,3 +1,7 @@
+// Security helpers — ES module variant used by Node.js tests.
+// The browser loads the IIFE variant in security-helpers-browser.js (same logic,
+// attaches to globalThis.PinThipSafe). Keep both files in sync when editing.
+
 const root = globalThis;
 
 const safeStorage = {
@@ -55,14 +59,9 @@ function safeText(value) {
   return escapeHtml(value);
 }
 
-function isTruthyAdminFlag(value) {
-  return value === true || value === 'true';
-}
-
 root.PinThipSafe = root.PinThipSafe || {};
 root.PinThipSafe.storage = safeStorage;
 root.PinThipSafe.escapeHtml = escapeHtml;
 root.PinThipSafe.safeText = safeText;
-root.PinThipSafe.isTruthyAdminFlag = isTruthyAdminFlag;
 
-export { safeStorage, escapeHtml, safeText, isTruthyAdminFlag };
+export { safeStorage, escapeHtml, safeText };

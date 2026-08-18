@@ -1,5 +1,9 @@
+// Security helpers — IIFE variant loaded by the browser via <script>.
+// The Node.js test variant lives in security-helpers.js (ES module, same logic,
+// named exports). Keep both files in sync when editing.
+
 (function () {
-  const root = window;
+  const root = globalThis;
 
   const safeStorage = {
     get(key, fallback = null) {
@@ -50,13 +54,8 @@
     return escapeHtml(value);
   }
 
-  function isTruthyAdminFlag(value) {
-    return value === true || value === 'true';
-  }
-
   root.PinThipSafe = root.PinThipSafe || {};
   root.PinThipSafe.storage = safeStorage;
   root.PinThipSafe.escapeHtml = escapeHtml;
   root.PinThipSafe.safeText = safeText;
-  root.PinThipSafe.isTruthyAdminFlag = isTruthyAdminFlag;
 })();

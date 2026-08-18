@@ -13,38 +13,6 @@
     };
   }
 
-  function isAdminLoginEnabled() {
-    const adminConfig = getAdminConfig();
-    return Boolean(adminConfig.enabled && adminConfig.username && adminConfig.pin);
-  }
-
-  function tryLoginAdmin(inputId, inputPin) {
-    const adminConfig = getAdminConfig();
-    const normalizedInputId = String(inputId || '').trim().toLowerCase();
-    const normalizedUser = String(adminConfig.username || '').trim().toLowerCase();
-    const normalizedPin = String(inputPin || '').trim();
-
-    if (!isAdminLoginEnabled()) {
-      return {
-        allowed: false,
-        reason: 'Admin login is disabled. Configure secure admin credentials in app-config.js.'
-      };
-    }
-
-    if (normalizedInputId !== normalizedUser) {
-      return { allowed: false, reason: 'Invalid admin username.' };
-    }
-
-    // Note: This is only a client-side pre-check. Real validation happens in Cloud Function.
-    // The client-side config may have a plain PIN for legacy setups, but the authoritative
-    // check is in functions/index.js which handles both plain and hashed PINs.
-    if (normalizedPin !== String(adminConfig.pin)) {
-      return { allowed: false, reason: 'Invalid admin PIN.' };
-    }
-
-    return { allowed: true, reason: 'Admin login successful.' };
-  }
-
   // Check PIN against employee record — supports both legacy plain PIN and hashed PIN
   function checkPinMatch(employee, inputPin) {
     if (!employee || !employee.pin) return false;
@@ -106,8 +74,6 @@
   window.PinThipSafe = window.PinThipSafe || {};
   window.PinThipSafe.auth = {
     getAdminConfig,
-    isAdminLoginEnabled,
-    tryLoginAdmin,
     findEmployeeByCredentials,
     findEmployeeByEmpId,
     normalizeSessionUser,
