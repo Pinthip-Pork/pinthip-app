@@ -62,8 +62,15 @@ async function handleLogin() {
     return;
   } catch (adminError) {
     var errCode = adminError?.code || adminError?.details?.code || '';
+    var errMessage = adminError?.message || adminError?.details?.message || '';
     var isNotAdmin = errCode === 'unauthenticated' || errCode === 'permission-denied';
-    if (!isNotAdmin && !adminError?.message?.includes('unauthenticated') && !adminError?.message?.includes('permission-denied')) {
+    // If admin login failed due to device lock, show the admin-specific message
+    // instead of falling through to employee login.
+    if (errCode === 'permission-denied' && (errMessage.indexOf('device') !== -1 || errMessage.indexOf('approved') !== -1 || errMessage.indexOf('blocked') !== -1)) {
+      setStatusText('status', '\u274C ' + errMessage);
+      return;
+    }
+    if (!isNotAdmin && !errMessage.includes('unauthenticated') && !errMessage.includes('permission-denied')) {
       console.warn('Admin login error:', adminError);
     }
   }
