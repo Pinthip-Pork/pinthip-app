@@ -481,8 +481,8 @@ exports.approveAdminDevice = onCall(async (request) => {
   if (!callerUid) {
     throw new HttpsError('unauthenticated', 'You must be logged in as an admin.');
   }
-  const callerUser = await auth.getUser(callerUid);
-  if (String(callerUser.customClaims?.role || '') !== 'admin') {
+  const callerRole = String(request.auth?.token?.role || '');
+  if (callerRole !== 'admin') {
     throw new HttpsError('permission-denied', 'Only approved admins can approve devices.');
   }
 
@@ -532,8 +532,8 @@ exports.revokeAdminDevice = onCall(async (request) => {
   if (!callerUid) {
     throw new HttpsError('unauthenticated', 'You must be logged in as an admin.');
   }
-  const callerUser = await auth.getUser(callerUid);
-  if (String(callerUser.customClaims?.role || '') !== 'admin') {
+  const callerRole = String(request.auth?.token?.role || '');
+  if (callerRole !== 'admin') {
     throw new HttpsError('permission-denied', 'Only approved admins can revoke devices.');
   }
 
