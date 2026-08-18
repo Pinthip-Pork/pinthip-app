@@ -249,21 +249,7 @@ function requireFirebaseAuth() {
     recoverFirebaseSession().then(function(recovered) {
       if (recovered) {
         console.log('Session recovered in requireFirebaseAuth.');
-        // Re-render the appropriate dashboard
-        var restored = PinThipSafe.session.restoreSession();
-        if (restored.isAdmin) {
-          isAdmin = true;
-          window.isAdmin = true;
-          currentUser = null;
-          window.currentUser = null;
-          if (typeof showAdminDashboard === 'function') showAdminDashboard();
-        } else if (restored.currentUser && restored.currentUser.empId) {
-          currentUser = restored.currentUser;
-          window.currentUser = currentUser;
-          isAdmin = false;
-          window.isAdmin = false;
-          if (typeof showDashboard === 'function') showDashboard();
-        }
+        // recoverFirebaseSession() already re-renders the appropriate dashboard
       } else {
         console.warn('Firebase Auth session is required before accessing protected data.');
         resetExpiredAuthSession();
@@ -302,6 +288,23 @@ async function recoverFirebaseSession() {
         deviceInfo: deviceInfo
       });
       await firebase.auth().signInWithCustomToken(adminResult.data.token);
+
+      // Refresh the stored session (reset expiry)
+      PinThipSafe.session.setAdminSession(stored.credentials);
+
+      // Re-render the admin dashboard
+      isAdmin = true;
+      window.isAdmin = true;
+      currentUser = null;
+      window.currentUser = null;
+      if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
+      if (typeof startDevicePresence === 'function') {
+        startDevicePresence('admin-' + deviceId, 'Admin', 'admin');
+      }
+      if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
+      if (typeof showAdminDashboard === 'function') showAdminDashboard();
+      if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
+
       console.log('Admin session recovered successfully.');
       return true;
     }
@@ -316,6 +319,23 @@ async function recoverFirebaseSession() {
         deviceInfo: deviceInfo
       });
       await firebase.auth().signInWithCustomToken(result.data.token);
+
+      // Refresh the stored session (reset expiry)
+      PinThipSafe.session.setUserSession(stored.currentUser, stored.credentials);
+
+      // Re-render the employee dashboard
+      currentUser = stored.currentUser;
+      window.currentUser = currentUser;
+      isAdmin = false;
+      window.isAdmin = false;
+      if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
+      if (typeof startDevicePresence === 'function') {
+        startDevicePresence(deviceId, currentUser.empName, 'employee');
+      }
+      if (typeof showDashboard === 'function') showDashboard();
+      if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
+      if (typeof startEmployeeNotificationListener === 'function') startEmployeeNotificationListener();
+
       console.log('Employee session recovered successfully.');
       return true;
     }
