@@ -1,7 +1,7 @@
 {
   "rules": {
     "settings": {
-      ".read": "auth != null",
+      ".read": false,
       ".write": "auth != null && auth.token.role === 'admin'",
       "admin": {
         ".read": "auth != null && auth.token.role === 'admin'",

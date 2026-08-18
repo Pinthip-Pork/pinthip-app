@@ -350,7 +350,15 @@ exports.adminLogin = onCall(async (request) => {
     adminConfig = {
       enabled: true,
       username: String(setupUsername).trim(),
-      pin: hashPin(String(setupPin).trim())
+      pin: hashPin(String(setupPin).trim()),
+      // First device to set up becomes the root admin device
+      approvedDevices: {
+        [deviceId]: {
+          approvedAt: Date.now(),
+          deviceInfo,
+          root: true
+        }
+      }
     };
 
     await database.ref('settings/admin').set(adminConfig);
@@ -381,6 +389,33 @@ exports.adminLogin = onCall(async (request) => {
   if (!pinValid) {
     await recordFailedAttempt(database, `admin_${username}`);
     throw new HttpsError('unauthenticated', 'Invalid admin credentials.');
+  }
+
+  // ===== Admin Device Lock (approvedDevices) =====
+  // Even with valid PIN, only approved devices may log in as admin.
+  // The first device (root) is auto-approved during setup.
+  const approvedDevices = adminConfig.approvedDevices || {};
+  const isApproved = Boolean(approvedDevices[deviceId]);
+
+  if (!isApproved) {
+    // Record this device as pending approval (so an existing admin can approve it)
+    const now = new Date().toISOString();
+    const monthKey = now.slice(0, 7);
+    await database.ref(`settings/admin/pendingDevices/${deviceId}`).set({
+      deviceInfo,
+      requestedAt: Date.now(),
+      lastAttemptAt: now
+    });
+    // Log the attempt
+    await database.ref(`logs/device-access/${monthKey}`).push({
+      type: 'admin_device_pending_approval',
+      deviceId,
+      deviceInfo,
+      username,
+      role: 'admin',
+      timestamp: now
+    });
+    throw new HttpsError('permission-denied', 'This device is not approved for admin login. Contact an existing admin to approve it.');
   }
 
   // Clear rate limit on successful login
@@ -429,6 +464,112 @@ exports.adminLogin = onCall(async (request) => {
   });
 
   return { token, uid, expiresIn: 3600, sessionToken };
+});
+
+// ===== Admin Device Management =====
+// Approve a pending device as an admin device (only callable by an approved admin device)
+exports.approveAdminDevice = onCall(async (request) => {
+  const auth = getAuth();
+  const database = getDatabase();
+
+  const deviceId = requireText(request.data?.deviceId, 'deviceId');
+  const deviceInfo = String(request.data?.deviceInfo || 'Unknown device').slice(0, 120);
+
+  // Verify the caller is an approved admin (auth.token.role === 'admin')
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError('unauthenticated', 'You must be logged in as an admin.');
+  }
+  const callerUser = await auth.getUser(callerUid);
+  if (String(callerUser.customClaims?.role || '') !== 'admin') {
+    throw new HttpsError('permission-denied', 'Only approved admins can approve devices.');
+  }
+
+  const adminConfigSnapshot = await database.ref('settings/admin').once('value');
+  const adminConfig = adminConfigSnapshot.val();
+  if (!adminConfig) {
+    throw new HttpsError('failed-precondition', 'Admin is not set up yet.');
+  }
+
+  // Add to approvedDevices
+  const approvedDevices = adminConfig.approvedDevices || {};
+  if (approvedDevices[deviceId]) {
+    throw new HttpsError('already-exists', 'This device is already approved.');
+  }
+  approvedDevices[deviceId] = {
+    approvedAt: Date.now(),
+    deviceInfo,
+    root: false
+  };
+
+  await database.ref('settings/admin/approvedDevices').set(approvedDevices);
+  await database.ref(`settings/admin/pendingDevices/${deviceId}`).remove();
+
+  // Log the approval
+  const now = new Date().toISOString();
+  const monthKey = now.slice(0, 7);
+  await database.ref(`logs/device-access/${monthKey}`).push({
+    type: 'admin_device_approved',
+    deviceId,
+    deviceInfo,
+    approvedBy: callerUid,
+    timestamp: now
+  });
+
+  return { success: true, deviceId };
+});
+
+// Revoke an approved admin device (only callable by an approved admin device, cannot revoke root)
+exports.revokeAdminDevice = onCall(async (request) => {
+  const auth = getAuth();
+  const database = getDatabase();
+
+  const deviceId = requireText(request.data?.deviceId, 'deviceId');
+
+  // Verify the caller is an approved admin
+  const callerUid = request.auth?.uid;
+  if (!callerUid) {
+    throw new HttpsError('unauthenticated', 'You must be logged in as an admin.');
+  }
+  const callerUser = await auth.getUser(callerUid);
+  if (String(callerUser.customClaims?.role || '') !== 'admin') {
+    throw new HttpsError('permission-denied', 'Only approved admins can revoke devices.');
+  }
+
+  const adminConfigSnapshot = await database.ref('settings/admin').once('value');
+  const adminConfig = adminConfigSnapshot.val();
+  if (!adminConfig) {
+    throw new HttpsError('failed-precondition', 'Admin is not set up yet.');
+  }
+
+  const approvedDevices = adminConfig.approvedDevices || {};
+  if (!approvedDevices[deviceId]) {
+    throw new HttpsError('not-found', 'This device is not approved.');
+  }
+  if (approvedDevices[deviceId].root) {
+    throw new HttpsError('permission-denied', 'Cannot revoke the root admin device.');
+  }
+
+  delete approvedDevices[deviceId];
+  await database.ref('settings/admin/approvedDevices').set(approvedDevices);
+
+  // Also block the device in device_access so it can't use the session
+  await database.ref(`device_access/${deviceId}`).update({
+    status: 'blocked',
+    blockedAt: Date.now()
+  });
+
+  // Log the revocation
+  const now = new Date().toISOString();
+  const monthKey = now.slice(0, 7);
+  await database.ref(`logs/device-access/${monthKey}`).push({
+    type: 'admin_device_revoked',
+    deviceId,
+    revokedBy: callerUid,
+    timestamp: now
+  });
+
+  return { success: true, deviceId };
 });
 
 // ===== Refresh Session (re-auth without PIN) =====
