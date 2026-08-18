@@ -6,5 +6,39 @@
   },
   "database": {
     "rules": "firebase.rules.json"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firebase.rules.json",
+      "local-admin-config.js",
+      "functions/**",
+      "tests/**",
+      "test-results/**",
+      "node_modules/**",
+      ".git/**",
+      "*.md"
+    ],
+    "headers": [
+      {
+        "source": "/sw.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        ]
+      },
+      {
+        "source": "**/*.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      }
+    ]
   }
 }
