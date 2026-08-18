@@ -24,8 +24,9 @@
       window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, todayStr, todayStr),
       window.db.ref('leaves').once('value'),
       window.db.ref('fuel_requests').once('value'),
-      window.db.ref('settings/globalLateTime').once('value')
-    ]).then(([empSnap, logsObj, leaveSnap, fuelSnap, settingsSnap]) => {
+      window.db.ref('settings/globalLateTime').once('value'),
+      window.db.ref('foam_delivery_requests/' + todayStr).once('value')
+    ]).then(([empSnap, logsObj, leaveSnap, fuelSnap, settingsSnap, foamSnap]) => {
       const employeesObj = empSnap.val() || {};
       const leavesObj = leaveSnap.val() || {};
       const fuelObj = fuelSnap.val() || {};
@@ -78,6 +79,26 @@
           }
         }
       });
+
+      // ---- Foam delivery pending count ----
+      let pendingFoam = 0;
+      const foamObj = foamSnap.val() || {};
+      Object.values(foamObj).forEach(function (f) {
+        if (f.status === 'pending_review' || f.status === 'pending_duplicate_approval') {
+          pendingFoam++;
+        }
+      });
+
+      // Update drawer badge
+      const foamBadge = document.getElementById('pendingFoamBadge');
+      if (foamBadge) {
+        if (pendingFoam > 0) {
+          foamBadge.textContent = pendingFoam;
+          foamBadge.style.display = 'inline-block';
+        } else {
+          foamBadge.style.display = 'none';
+        }
+      }
 
           const todayFuelAndRepairTotal = todayFuelOnlyTotal + todayRepairOnlyTotal;
           const grandTotalToday = todaySalaryTotal + todayFuelAndRepairTotal;
@@ -184,7 +205,10 @@
                     <div class="menu-card-header">
                       <div class="menu-card-icon blue">📦</div>
                       <div>
-                        <div class="menu-card-title">จัดการป้ายลังโฟม</div>
+                        <div class="menu-card-title">
+                          จัดการป้ายลังโฟม
+                          ${pendingFoam > 0 ? '<span class="menu-card-badge">' + pendingFoam + '</span>' : ''}
+                        </div>
                         <div class="menu-card-desc">ออกและพิมพ์ป้ายพัสดุสำหรับขนส่ง</div>
                       </div>
                     </div>
