@@ -738,7 +738,7 @@ function isRejectedStatus(status) {
 
 // ===== Notification Triggers (Admin → new requests) =====
 // Notify admins when an employee submits a leave request.
-exports.onLeaveRequestCreated = onValueWritten({ ref: '/leaves/{key}' }, async (event) => {
+exports.onLeaveRequestCreated = onValueWritten({ ref: '/leaves/{key}', region: 'asia-southeast1', instance: 'pinthip-checkin-default-rtdb' }, async (event) => {
   const before = event.data.before.val();
   const after = event.data.after.val();
 
@@ -756,7 +756,7 @@ exports.onLeaveRequestCreated = onValueWritten({ ref: '/leaves/{key}' }, async (
 });
 
 // Notify admins when an employee submits a fuel/repair request.
-exports.onFuelRequestCreated = onValueWritten({ ref: '/fuel_requests/{key}' }, async (event) => {
+exports.onFuelRequestCreated = onValueWritten({ ref: '/fuel_requests/{key}', region: 'asia-southeast1', instance: 'pinthip-checkin-default-rtdb' }, async (event) => {
   const before = event.data.before.val();
   const after = event.data.after.val();
 
@@ -773,7 +773,7 @@ exports.onFuelRequestCreated = onValueWritten({ ref: '/fuel_requests/{key}' }, a
 });
 
 // Notify admins when staff submits a foam label delivery request.
-exports.onFoamRequestCreated = onValueWritten({ ref: '/foam_delivery_requests/{dateKey}/{key}' }, async (event) => {
+exports.onFoamRequestCreated = onValueWritten({ ref: '/foam_delivery_requests/{dateKey}/{key}', region: 'asia-southeast1', instance: 'pinthip-checkin-default-rtdb' }, async (event) => {
   const before = event.data.before.val();
   const after = event.data.after.val();
 
@@ -794,7 +794,7 @@ exports.onFoamRequestCreated = onValueWritten({ ref: '/foam_delivery_requests/{d
 
 // ===== Notification Triggers (Admin approval → Employee) =====
 // Notify the employee when their leave request is approved or rejected.
-exports.onLeaveStatusChanged = onValueWritten({ ref: '/leaves/{key}' }, async (event) => {
+exports.onLeaveStatusChanged = onValueWritten({ ref: '/leaves/{key}', region: 'asia-southeast1', instance: 'pinthip-checkin-default-rtdb' }, async (event) => {
   const before = event.data.before.val();
   const after = event.data.after.val();
 
@@ -828,7 +828,7 @@ exports.onLeaveStatusChanged = onValueWritten({ ref: '/leaves/{key}' }, async (e
 });
 
 // Notify the employee when their fuel/repair request is approved or rejected.
-exports.onFuelStatusChanged = onValueWritten({ ref: '/fuel_requests/{key}' }, async (event) => {
+exports.onFuelStatusChanged = onValueWritten({ ref: '/fuel_requests/{key}', region: 'asia-southeast1', instance: 'pinthip-checkin-default-rtdb' }, async (event) => {
   const before = event.data.before.val();
   const after = event.data.after.val();
 
@@ -862,7 +862,7 @@ exports.onFuelStatusChanged = onValueWritten({ ref: '/fuel_requests/{key}' }, as
 });
 
 // Notify the employee when their foam delivery request is approved or cancelled.
-exports.onFoamStatusChanged = onValueWritten({ ref: '/foam_delivery_requests/{dateKey}/{key}' }, async (event) => {
+exports.onFoamStatusChanged = onValueWritten({ ref: '/foam_delivery_requests/{dateKey}/{key}', region: 'asia-southeast1', instance: 'pinthip-checkin-default-rtdb' }, async (event) => {
   const before = event.data.before.val();
   const after = event.data.after.val();
 
