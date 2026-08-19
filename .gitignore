@@ -42,5 +42,8 @@ test-results/
 local-admin-config.js
 .env.local
 
+# Nested duplicate repository (pinthip-app/pinthip-app)
+pinthip-app/
+
 # OS files
 Thumbs.db
