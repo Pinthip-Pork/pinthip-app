@@ -128,15 +128,19 @@
 
     try {
       var registration = await getServiceWorkerRegistration();
+      console.log('FCM: Service worker registration:', registration ? registration.scope : 'none');
       var vapidKey = (window.PinThipSafe && window.PinThipSafe.config && window.PinThipSafe.config.fcmVapidKey) || null;
+      console.log('FCM: Getting token with VAPID key:', vapidKey ? 'present' : 'missing');
       var token = await fcm.getToken({
         serviceWorkerRegistration: registration,
         vapidKey: vapidKey || undefined
       });
+      console.log('FCM: Token received:', token ? token.substring(0, 20) + '...' : 'null');
       await saveToken(token);
       removePrompt();
       return Boolean(token);
     } catch (error) {
+      console.error('FCM: Token registration failed:', error.message || error);
       // 403 PERMISSION_DENIED from Firebase Installations API means the API
       // is blocked in Firebase Console. This is a server-side config issue,
       // not a code bug. Push notifications won't work until it's enabled,
