@@ -121,7 +121,15 @@
       removePrompt();
       return Boolean(token);
     } catch (error) {
-      console.warn('FCM token registration failed:', error);
+      // 403 PERMISSION_DENIED from Firebase Installations API means the API
+      // is blocked in Firebase Console. This is a server-side config issue,
+      // not a code bug. Push notifications won't work until it's enabled,
+      // but login and all other features are unaffected.
+      if (String(error.message || '').indexOf('403') !== -1 || String(error.message || '').indexOf('PERMISSION_DENIED') !== -1) {
+        console.warn('FCM: Firebase Installations API is blocked (403). Push notifications disabled. Enable the API in Firebase Console → Project Settings → Cloud Messaging.');
+      } else {
+        console.warn('FCM token registration failed:', error);
+      }
       return false;
     }
   }
