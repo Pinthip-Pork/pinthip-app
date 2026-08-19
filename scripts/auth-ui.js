@@ -53,8 +53,10 @@ async function handleLogin() {
     window.currentUser = currentUser;
     if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
     if (typeof enableNotificationSound === 'function') enableNotificationSound();
+    // Defer device presence (which triggers FCM init) to prevent FCM service
+    // worker errors from blocking the login flow.
     if (typeof startDevicePresence === 'function') {
-      startDevicePresence('admin-' + deviceId, 'Admin', 'admin');
+      setTimeout(function () { startDevicePresence('admin-' + deviceId, 'Admin', 'admin'); }, 0);
     }
     if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
     if (typeof showAdminDashboard === 'function') showAdminDashboard();

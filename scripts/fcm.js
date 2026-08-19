@@ -7,14 +7,30 @@
   var currentEmpId = null;
   var registrationPromise = null;
   var promptId = 'pushPermissionPrompt';
+  var messagingSdkLoading = null;
+
+  function loadMessagingSdk() {
+    if (messagingSdkLoading) return messagingSdkLoading;
+    messagingSdkLoading = new Promise(function (resolve, reject) {
+      if (window.firebase && typeof firebase.messaging === 'function') {
+        resolve();
+        return;
+      }
+      var script = document.createElement('script');
+      script.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js';
+      script.onload = function () { resolve(); };
+      script.onerror = function () { reject(new Error('Failed to load firebase-messaging-compat.js')); };
+      document.head.appendChild(script);
+    });
+    return messagingSdkLoading;
+  }
 
   function supported() {
     return Boolean(
       window.isSecureContext &&
       'serviceWorker' in navigator &&
       'Notification' in window &&
-      window.firebase &&
-      typeof firebase.messaging === 'function'
+      window.firebase
     );
   }
 
@@ -25,9 +41,10 @@
     return registrationPromise;
   }
 
-  function getMessaging() {
+  async function getMessaging() {
     if (!messaging && supported()) {
       try {
+        await loadMessagingSdk();
         messaging = firebase.messaging();
       } catch (error) {
         console.warn('FCM initialization failed:', error);
@@ -90,7 +107,7 @@
       return false;
     }
 
-    var fcm = getMessaging();
+    var fcm = await getMessaging();
     if (!fcm) return false;
 
     try {
@@ -119,7 +136,7 @@
     if (!supported()) return false;
 
     try {
-      var fcm = getMessaging();
+      var fcm = await getMessaging();
       if (fcm && !fcm.__pinthipForegroundHandler) {
         fcm.onMessage(function (payload) {
           var data = payload && payload.data ? payload.data : {};
