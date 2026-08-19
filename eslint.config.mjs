@@ -24,16 +24,37 @@ export default [
         location: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
+        Notification: 'readonly',
         updatePendingDevicesBadge: 'readonly',
-        isAdmin: 'readonly',
-        currentUser: 'readonly',
+        isAdmin: 'writable',
+        currentUser: 'writable',
         localTodayStr: 'readonly',
-        getLocalDateTimeString: 'readonly'
+        getLocalDateTimeString: 'readonly',
+        db: 'readonly',
+        i18n: 'readonly',
+        currentLang: 'readonly',
+        PinThipSafe: 'readonly',
+        setStatusText: 'readonly',
+        safeText: 'readonly',
+        showNotificationSoundControl: 'readonly',
+        enableNotificationSound: 'readonly',
+        startDevicePresence: 'readonly',
+        startDeviceAccessGuard: 'readonly',
+        showAdminDashboard: 'readonly',
+        startAdminNotificationListener: 'readonly',
+        isCustomAuthEnabled: 'readonly',
+        checkDeviceAccess: 'readonly',
+        showDashboard: 'readonly',
+        showLoginForm: 'readonly',
+        handleLogin: 'readonly',
+        validateUsernameLength: 'readonly',
+        showNotification: 'readonly'
       }
     },
     rules: {
       'no-console': 'off',
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-useless-escape': 'off'
     }
   }
 ];

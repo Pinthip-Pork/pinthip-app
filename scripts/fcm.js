@@ -1,4 +1,3 @@
-/* global db, isAdmin, currentUser, Notification */
 (function () {
   'use strict';
 
