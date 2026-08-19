@@ -134,39 +134,28 @@
     }
   }
 
-  async function initPushNotifications(options) {
+  // initPushNotifications is now lightweight — it only stores device info
+  // and renders the "🔔 เปิดการแจ้งเตือน" button. The actual FCM SDK loading
+  // and token registration happen only when the user clicks the button
+  // (via enablePushNotifications). This prevents FCM from interfering
+  // with the login flow on mobile devices.
+  function initPushNotifications(options) {
     options = options || {};
     currentDeviceId = String(options.deviceId || '').trim();
     currentRole = String(options.role || (isAdmin ? 'admin' : 'employee'));
     currentEmpId = String(options.empId || (currentUser && currentUser.empId) || '').trim();
-    if (!currentDeviceId) return false;
+    if (!currentDeviceId || !supported()) return false;
 
-    if (!supported()) return false;
-
-    try {
-      var fcm = await getMessaging();
-      if (fcm && !fcm.__pinthipForegroundHandler) {
-        fcm.onMessage(function (payload) {
-          var data = payload && payload.data ? payload.data : {};
-          var title = data.title || 'ปิ่นทิพย์ เช็กอิน';
-          var body = data.body || 'มีการแจ้งเตือนใหม่';
-          if (typeof window.showNotification === 'function') {
-            window.showNotification(title + ': ' + body);
-          } else if (Notification.permission === 'granted') {
-            new Notification(title, { body: body, icon: './icon-192.png' });
-          }
-        });
-        fcm.__pinthipForegroundHandler = true;
-      }
-
-      if (Notification.permission === 'granted') {
-        return await enablePushNotifications();
-      }
+    // If permission is already granted, register the foreground message
+    // handler and get a token. Otherwise, just show the prompt button.
+    if (Notification.permission === 'granted') {
+      enablePushNotifications().catch(function (error) {
+        console.warn('Push notification setup skipped:', error);
+      });
+    } else {
       renderPrompt();
-    } catch (error) {
-      console.warn('Push notification init failed (non-blocking):', error);
     }
-    return false;
+    return true;
   }
 
   function stopPushNotifications() {

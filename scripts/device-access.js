@@ -38,21 +38,9 @@ function startDevicePresence(key, name, role) {
   };
   presenceRef.onDisconnect().update({ online: false });
   updatePresence();
-  // Push notification setup is best-effort — it must never block login.
-  // FCM may fail if the messaging service worker is unavailable (e.g. on
-  // GitHub Pages or other non-Firebase hosting). We catch and suppress.
-  if (typeof window.initPushNotifications === 'function') {
-    try {
-      Promise.resolve(window.initPushNotifications({
-        deviceId: key,
-        role: role
-      })).catch(function (error) {
-        console.warn('Push notification setup skipped:', error);
-      });
-    } catch (e) {
-      console.warn('Push notification init skipped:', e);
-    }
-  }
+  // FCM push notifications are NOT initialized here to avoid blocking login
+  // on mobile devices. Users can enable push notifications manually via the
+  // "🔔 เปิดการแจ้งเตือน" button. See fcm.js → enablePushNotifications().
   devicePresenceInterval = window.setInterval(updatePresence, 30000);
 }
 

@@ -53,14 +53,19 @@ async function handleLogin() {
     window.currentUser = currentUser;
     if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
     if (typeof enableNotificationSound === 'function') enableNotificationSound();
-    // Defer device presence (which triggers FCM init) to prevent FCM service
-    // worker errors from blocking the login flow.
     if (typeof startDevicePresence === 'function') {
-      setTimeout(function () { startDevicePresence('admin-' + deviceId, 'Admin', 'admin'); }, 0);
+      startDevicePresence('admin-' + deviceId, 'Admin', 'admin');
     }
     if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
     if (typeof showAdminDashboard === 'function') showAdminDashboard();
     if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
+    // Show push notification button (non-blocking, no FCM SDK load until user clicks)
+    if (typeof initPushNotifications === 'function') {
+      setTimeout(function () {
+        try { initPushNotifications({ deviceId: 'admin-' + deviceId, role: 'admin' }); }
+        catch (e) { console.warn('Push notification prompt skipped:', e); }
+      }, 1000);
+    }
     return;
   } catch (adminError) {
     var errCode = adminError?.code || adminError?.details?.code || '';
