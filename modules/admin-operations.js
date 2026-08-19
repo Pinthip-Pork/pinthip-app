@@ -149,6 +149,16 @@
       });
 
       container.innerHTML = html;
+    }).catch((err) => {
+      if (container) container.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('attendanceSummaryResultContainer', {
+          message: 'ไม่สามารถโหลดข้อมูลสถิติพนักงานได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: renderAttendanceSummaryList
+        });
+      }
+      console.error('Attendance summary load failed:', err);
     });
   }
 
@@ -234,6 +244,16 @@
       html += '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>';
       const mainContent = document.getElementById('mainContent');
       if (mainContent) mainContent.innerHTML = html;
+    }).catch((err) => {
+      if (status) status.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('mainContent', {
+          message: 'ไม่สามารถโหลดข้อมูลพิกัด GPS ได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: showLocationManagement
+        });
+      }
+      console.error('Location management load failed:', err);
     });
   }
 
@@ -507,6 +527,16 @@
       html += '<button class="btn-back" onclick="showAdminDashboard()">⬅️ กลับหน้าแดสบอร์ด</button>';
       const mainContent = document.getElementById('mainContent');
       if (mainContent) mainContent.innerHTML = html;
+    }, (err) => {
+      console.error('Admin fuel requests load failed:', err);
+      if (status) status.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('mainContent', {
+          message: 'ไม่สามารถโหลดรายการขอเบิกจ่ายได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: showAdminFuelRequests
+        });
+      }
     });
   }
 
@@ -612,6 +642,16 @@
         `;
       });
       container.innerHTML = html;
+    }, (err) => {
+      console.error('Car plates management load failed:', err);
+      container.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('carPlatesListContainer', {
+          message: 'ไม่สามารถโหลดทะเบียนรถได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: loadCarPlatesManagementList
+        });
+      }
     });
   }
 
@@ -659,66 +699,88 @@
     container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
 
     window.db.ref('fuel_requests').once('value', (snapshot) => {
-      const fuelObj = snapshot.val() || {};
-      const list = Object.keys(fuelObj).map((k) => ({ key: k, ...fuelObj[k] }));
+      try {
+        const fuelObj = snapshot.val() || {};
+        const list = Object.keys(fuelObj).map((k) => ({ key: k, ...fuelObj[k] }));
 
-      currentFuelFilteredList = list.filter((item) => item.date && item.date >= startDate && item.date <= endDate);
+        currentFuelFilteredList = list.filter((item) => item.date && item.date >= startDate && item.date <= endDate);
 
-      let totalFuelOnly = 0;
-      let totalRepairOnly = 0;
+        let totalFuelOnly = 0;
+        let totalRepairOnly = 0;
 
-      currentFuelFilteredList.forEach((item) => {
-        const statusStr = String(item.status || '');
-        const reqType = item.requestType || 'เบิกค่าน้ำมัน';
-        if (statusStr.includes('อนุมัติแล้ว')) {
-          const amt = Number(item.amount || 0);
-          if (reqType.includes('ซ่อม')) {
-            totalRepairOnly += amt;
-          } else {
-            totalFuelOnly += amt;
+        currentFuelFilteredList.forEach((item) => {
+          const statusStr = String(item.status || '');
+          const reqType = item.requestType || 'เบิกค่าน้ำมัน';
+          if (statusStr.includes('อนุมัติแล้ว')) {
+            const amt = Number(item.amount || 0);
+            if (reqType.includes('ซ่อม')) {
+              totalRepairOnly += amt;
+            } else {
+              totalFuelOnly += amt;
+            }
           }
-        }
-      });
+        });
 
-      const grandTotalApproved = totalFuelOnly + totalRepairOnly;
+        const grandTotalApproved = totalFuelOnly + totalRepairOnly;
 
-      let html = `
-        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #e67e22; color: #333; padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
-          <b>📊 สรุปยอดเบิกจ่ายช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-          • ⛽ ค่าน้ำมันรวม: <b style="color: #e67e22;">${totalFuelOnly.toLocaleString()} บาท</b><br>
-          • 🔧 ค่าซ่อมรถรวม: <b style="color: #d9534f;">${totalRepairOnly.toLocaleString()} บาท</b><br>
-          💰 รวมยอดอนุมัติจ่ายทั้งหมด: <b style="color: #2c3e50; font-size: 16px;">${grandTotalApproved.toLocaleString()} บาท</b> (${currentFuelFilteredList.length} รายการ)
-        </div>
-      `;
+        let html = `
+          <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #e67e22; color: #333; padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
+            <b>📊 สรุปยอดเบิกจ่ายช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
+            • ⛽ ค่าน้ำมันรวม: <b style="color: #e67e22;">${totalFuelOnly.toLocaleString()} บาท</b><br>
+            • 🔧 ค่าซ่อมรถรวม: <b style="color: #d9534f;">${totalRepairOnly.toLocaleString()} บาท</b><br>
+            💰 รวมยอดอนุมัติจ่ายทั้งหมด: <b style="color: #2c3e50; font-size: 16px;">${grandTotalApproved.toLocaleString()} บาท</b> (${currentFuelFilteredList.length} รายการ)
+          </div>
+        `;
 
-      if (currentFuelFilteredList.length === 0) {
-        html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายในช่วงเวลาดังกล่าว</div>';
-      } else {
-        currentFuelFilteredList.slice().reverse().forEach((item) => {
-          const statusBadge = String(item.status || '').includes('อนุมัติแล้ว') ? '🟢 อนุมัติแล้ว' : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รออนุมัติ');
-          const badgeType = window.PinThipSafe.safeText(item.requestType || '⛽ เบิกค่าน้ำมัน');
-          const safeEmpName = window.PinThipSafe.safeText(item.empName);
-          const safeEmpId = window.PinThipSafe.safeText(item.empId);
-          const safeCarPlate = window.PinThipSafe.safeText(item.carPlate || '');
-          const safeRoute = window.PinThipSafe.safeText(item.route || '-');
-          const plateText = item.carPlate ? `🚗 ทะเบียน: ${safeCarPlate} | ` : '';
-          const typeColor = badgeType.includes('ซ่อม') ? '#d9534f' : '#e67e22';
+        if (currentFuelFilteredList.length === 0) {
+          html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายในช่วงเวลาดังกล่าว</div>';
+        } else {
+          currentFuelFilteredList.slice().reverse().forEach((item) => {
+            const statusBadge = String(item.status || '').includes('อนุมัติแล้ว') ? '🟢 อนุมัติแล้ว' : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รออนุมัติ');
+            const badgeType = window.PinThipSafe.safeText(item.requestType || '⛽ เบิกค่าน้ำมัน');
+            const safeEmpName = window.PinThipSafe.safeText(item.empName);
+            const safeEmpId = window.PinThipSafe.safeText(item.empId);
+            const safeCarPlate = window.PinThipSafe.safeText(item.carPlate || '');
+            const safeRoute = window.PinThipSafe.safeText(item.route || '-');
+            const plateText = item.carPlate ? `🚗 ทะเบียน: ${safeCarPlate} | ` : '';
+            const typeColor = badgeType.includes('ซ่อม') ? '#d9534f' : '#e67e22';
 
-          html += `
-            <div class="history-item">
-              <b>👤 ${safeEmpName} (${safeEmpId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b><br>
-              ${plateText}📍 รายละเอียด: ${safeRoute} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
-              📅 วันที่: ${window.PinThipSafe.safeText(item.date)}<br>
-              <div style="margin-top:8px; display:flex; gap:6px;">
-                <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${window.PinThipSafe.safeText(item.key)}', '${safeCarPlate}', '${safeRoute}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
-                <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${window.PinThipSafe.safeText(item.key)}', '${safeEmpName}')">🗑️ ลบ</button>
+            html += `
+              <div class="history-item">
+                <b>👤 ${safeEmpName} (${safeEmpId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b><br>
+                ${plateText}📍 รายละเอียด: ${safeRoute} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
+                📅 วันที่: ${window.PinThipSafe.safeText(item.date)}<br>
+                <div style="margin-top:8px; display:flex; gap:6px;">
+                  <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${window.PinThipSafe.safeText(item.key)}', '${safeCarPlate}', '${safeRoute}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
+                  <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${window.PinThipSafe.safeText(item.key)}', '${safeEmpName}')">🗑️ ลบ</button>
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          });
+        }
+        container.innerHTML = html;
+        window.renderCarExpenseChart();
+      } catch (innerErr) {
+        console.error('Fuel history load failed:', innerErr);
+        if (container) container.innerHTML = '';
+        if (window.PinThipSafe?.ui?.showAsyncError) {
+          window.PinThipSafe.ui.showAsyncError('fuelHistoryContainer', {
+            message: 'ไม่สามารถโหลดข้อมูลประวัติการเบิกจ่ายได้',
+            detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+            retryFn: renderFuelHistoryList
+          });
+        }
+      }
+    }, (dbErr) => {
+      console.error('Fuel history read failed:', dbErr);
+      if (container) container.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('fuelHistoryContainer', {
+          message: 'ไม่สามารถโหลดข้อมูลประวัติการเบิกจ่ายได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: renderFuelHistoryList
         });
       }
-      container.innerHTML = html;
-      window.renderCarExpenseChart();
     });
   }
 
@@ -842,6 +904,10 @@
       `;
       const mainContent = document.getElementById('mainContent');
       if (mainContent) mainContent.innerHTML = html;
+    }, (err) => {
+      console.error('Edit fuel modal plates load failed:', err);
+      window.alert('โหลดรายการทะเบียนรถไม่สำเร็จ กรุณาลองอีกครั้ง');
+      window.showAdminFuelHistory();
     });
   }
 
@@ -934,6 +1000,15 @@
       html += '<button class="btn-back" onclick="showAdminDashboard()">⬅️ กลับหน้าแดสบอร์ด</button>';
       const mainContent = document.getElementById('mainContent');
       if (mainContent) mainContent.innerHTML = html;
+    }, (err) => {
+      console.error('Admin leaves load failed:', err);
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('mainContent', {
+          message: 'ไม่สามารถโหลดรายการขอลาได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: showAdminLeaves
+        });
+      }
     });
   }
 
@@ -1048,6 +1123,16 @@
         });
       }
       container.innerHTML = html;
+    }, (err) => {
+      console.error('Leave history load failed:', err);
+      container.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('leaveHistoryContainer', {
+          message: 'ไม่สามารถโหลดประวัติการลาได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: renderLeaveHistoryList
+        });
+      }
     });
   }
 
@@ -1190,6 +1275,16 @@
         });
       }
       container.innerHTML = html;
+    }).catch((err) => {
+      console.error('Log history load failed:', err);
+      container.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('logHistoryContainer', {
+          message: 'ไม่สามารถโหลดประวัติการลงเวลาได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: renderLogHistoryList
+        });
+      }
     });
   }
 
@@ -1371,8 +1466,38 @@
           }
 
           container.innerHTML = html;
+        }, (fuelErr) => {
+          console.error('Daily payroll fuel load failed:', fuelErr);
+          container.innerHTML = '';
+          if (window.PinThipSafe?.ui?.showAsyncError) {
+            window.PinThipSafe.ui.showAsyncError('dailyPayrollResultContainer', {
+              message: 'ไม่สามารถโหลดรายการเบิกจ่ายสำหรับสรุปค่าแรงได้',
+              detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+              retryFn: renderDailyPayrollData
+            });
+          }
         });
+      }).catch((logsErr) => {
+        console.error('Daily payroll logs load failed:', logsErr);
+        container.innerHTML = '';
+        if (window.PinThipSafe?.ui?.showAsyncError) {
+          window.PinThipSafe.ui.showAsyncError('dailyPayrollResultContainer', {
+            message: 'ไม่สามารถโหลดข้อมูลการลงเวลาสำหรับสรุปค่าแรงได้',
+            detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+            retryFn: renderDailyPayrollData
+          });
+        }
       });
+    }, (empErr) => {
+      console.error('Daily payroll employees load failed:', empErr);
+      container.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('dailyPayrollResultContainer', {
+          message: 'ไม่สามารถโหลดข้อมูลพนักงานสำหรับสรุปค่าแรงได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: renderDailyPayrollData
+        });
+      }
     });
   }
 
@@ -1500,9 +1625,31 @@
               </div>
             `;
           }
+        }, (fuelErr) => {
+          console.error('Monthly fuel load failed:', fuelErr);
+          showMonthlyLoadError('ไม่สามารถโหลดรายการเบิกจ่ายสำหรับสรุปรายเดือนได้', fuelErr);
         });
+      }).catch((logsErr) => {
+        console.error('Monthly logs load failed:', logsErr);
+        showMonthlyLoadError('ไม่สามารถโหลดข้อมูลการลงเวลาสำหรับสรุปรายเดือนได้', logsErr);
       });
+    }, (empErr) => {
+      console.error('Monthly employees load failed:', empErr);
+      showMonthlyLoadError('ไม่สามารถโหลดข้อมูลพนักงานสำหรับสรุปรายเดือนได้', empErr);
     });
+  }
+
+  function showMonthlyLoadError(message, err) {
+    const repResult = document.getElementById('repResult');
+    if (repResult) repResult.innerHTML = '';
+    if (window.PinThipSafe?.ui?.showAsyncError) {
+      window.PinThipSafe.ui.showAsyncError('repResult', {
+        message,
+        detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+        retryFn: renderMonthlySummary
+      });
+    }
+    console.error('Monthly summary load failed:', err);
   }
 
   function exportMonthlyExcel() {
@@ -1581,7 +1728,27 @@
         html += '<button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>';
         const mainContent = document.getElementById('mainContent');
         if (mainContent) mainContent.innerHTML = html;
+      }, (empErr) => {
+        console.error('Employee list load failed:', empErr);
+        if (status) status.innerHTML = '';
+        if (window.PinThipSafe?.ui?.showAsyncError) {
+          window.PinThipSafe.ui.showAsyncError('mainContent', {
+            message: 'ไม่สามารถโหลดรายชื่อพนักงานได้',
+            detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+            retryFn: showEmpManagement
+          });
+        }
       });
+    }, (settingsErr) => {
+      console.error('Employee settings load failed:', settingsErr);
+      if (status) status.innerHTML = '';
+      if (window.PinThipSafe?.ui?.showAsyncError) {
+        window.PinThipSafe.ui.showAsyncError('mainContent', {
+          message: 'ไม่สามารถโหลดการตั้งค่าเวลาทำงานได้',
+          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+          retryFn: showEmpManagement
+        });
+      }
     });
   }
 
@@ -1657,6 +1824,9 @@
           window.showModal('🎉 สำเร็จ', 'เพิ่มพนักงานเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
         }
       });
+    }, (empErr) => {
+      console.error('Add employee duplicate-check failed:', empErr);
+      window.alert('ตรวจสอบรหัสพนักงานซ้ำไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง');
     });
   }
 
