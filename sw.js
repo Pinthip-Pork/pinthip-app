@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pinthip-cache-v20260819-9';
+const CACHE_NAME = 'pinthip-cache-v20260819-10';
 const APP_ASSETS = [
   './',
   './index.html',
@@ -26,7 +26,7 @@ self.addEventListener('activate', (event) => {
 });
 
 // Stale-while-revalidate helper: respond immediately from cache while refreshing in
-// the background — keeps navigation fast and offline-capable without waiting on the
+// the background - keeps navigation fast and offline-capable without waiting on the
 // network for every request.
 function staleWhileRevalidate(request) {
   return caches.open(CACHE_NAME).then((cache) => {

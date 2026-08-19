@@ -9,23 +9,17 @@
   var promptId = 'pushPermissionPrompt';
   var messagingSdkLoading = null;
 
-  // Convert base64url VAPID key to Uint8Array — required by PushManager.subscribe()
-  // on iOS Safari and some browsers that don't accept raw base64url strings.
-  function vapidKeyToUint8Array(base64urlKey) {
+  // Convert base64url VAPID key to standard base64.
+  // Firebase Cloud Messaging compat SDK expects a standard base64 string and
+  // handles the Uint8Array conversion internally. The key from Firebase Console
+  // uses base64url encoding (- and _ instead of + and /) which atob() rejects.
+  function vapidKeyToBase64(base64urlKey) {
     if (!base64urlKey) return null;
-    var base64 = String(base64urlKey).replace(/-/g, '+').replace(/_/g, '/');
+    var key = String(base64urlKey).trim();
+    var base64 = key.replace(/-/g, '+').replace(/_/g, '/');
+    // Add padding if needed
     while (base64.length % 4) base64 += '=';
-    try {
-      var rawData = atob(base64);
-      var outputArray = new Uint8Array(rawData.length);
-      for (var i = 0; i < rawData.length; i++) {
-        outputArray[i] = rawData.charCodeAt(i);
-      }
-      return outputArray;
-    } catch (e) {
-      console.warn('VAPID key conversion failed:', e);
-      return null;
-    }
+    return base64;
   }
 
   function loadMessagingSdk() {
@@ -65,7 +59,7 @@
       try {
         await loadMessagingSdk();
         messaging = firebase.messaging();
-        // Set up foreground message handler — shows in-app notification
+        // Set up foreground message handler - shows in-app notification
         // when a push arrives while the app is open.
         if (messaging && !messaging.__pinthipForegroundHandler) {
           messaging.onMessage(function (payload) {
@@ -147,14 +141,14 @@
 
     try {
       var registration = await getServiceWorkerRegistration();
-      console.log('FCM: Service worker registration:', registration ? registration.scope : 'none');
+      console.log('FCM: SW registration:', registration ? registration.scope : 'none');
       var vapidKeyStr = (window.PinThipSafe && window.PinThipSafe.config && window.PinThipSafe.config.fcmVapidKey) || null;
-      console.log('FCM: VAPID key (raw):', vapidKeyStr ? 'present' : 'missing');
-      var vapidKeyUint8 = vapidKeyToUint8Array(vapidKeyStr);
-      console.log('FCM: VAPID key (Uint8Array):', vapidKeyUint8 ? vapidKeyUint8.length + ' bytes' : 'null');
+      console.log('FCM: VAPID key (raw):', vapidKeyStr ? vapidKeyStr.substring(0, 20) + '...' : 'missing');
+      var vapidKeyBase64 = vapidKeyToBase64(vapidKeyStr);
+      console.log('FCM: VAPID key (base64):', vapidKeyBase64 ? vapidKeyBase64.substring(0, 20) + '...' : 'null');
       var token = await fcm.getToken({
         serviceWorkerRegistration: registration,
-        vapidKey: vapidKeyUint8 || undefined
+        vapidKey: vapidKeyBase64 || undefined
       });
       console.log('FCM: Token received:', token ? token.substring(0, 20) + '...' : 'null');
       await saveToken(token);
@@ -162,12 +156,8 @@
       return Boolean(token);
     } catch (error) {
       console.error('FCM: Token registration failed:', error.message || error);
-      // 403 PERMISSION_DENIED from Firebase Installations API means the API
-      // is blocked in Firebase Console. This is a server-side config issue,
-      // not a code bug. Push notifications won't work until it's enabled,
-      // but login and all other features are unaffected.
       if (String(error.message || '').indexOf('403') !== -1 || String(error.message || '').indexOf('PERMISSION_DENIED') !== -1) {
-        console.warn('FCM: Firebase Installations API is blocked (403). Push notifications disabled. Enable the API in Firebase Console → Project Settings → Cloud Messaging.');
+        console.warn('FCM: Firebase Installations API is blocked (403).');
         window.alert('⚠️ ไม่สามารถเปิดการแจ้งเตือนได้\n\nFirebase Installations API ถูกปิดอยู่ กรุณาเปิด API นี้ก่อน:\n\n1. ไปที่ https://console.cloud.google.com/\n2. เลือก project: pinthip-checkin\n3. ไปที่ APIs & Services → Library\n4. ค้นหา "Firebase Installations API"\n5. กด Enable\n\nหลังจากเปิดแล้ว ล็อกอินใหม่และกดปุ่มแจ้งเตือนอีกครั้ง');
       } else {
         console.warn('FCM token registration failed:', error);
@@ -177,7 +167,7 @@
     }
   }
 
-  // initPushNotifications is now lightweight — it only stores device info
+  // initPushNotifications is now lightweight - it only stores device info
   // and renders the "🔔 เปิดการแจ้งเตือน" button. The actual FCM SDK loading
   // and token registration happen only when the user clicks the button
   // (via enablePushNotifications). This prevents FCM from interfering
@@ -189,8 +179,6 @@
     currentEmpId = String(options.empId || (currentUser && currentUser.empId) || '').trim();
     if (!currentDeviceId || !supported()) return false;
 
-    // If permission is already granted, register the foreground message
-    // handler and get a token. Otherwise, just show the prompt button.
     if (Notification.permission === 'granted') {
       enablePushNotifications().catch(function (error) {
         console.warn('Push notification setup skipped:', error);
