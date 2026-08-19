@@ -46,6 +46,22 @@
       try {
         await loadMessagingSdk();
         messaging = firebase.messaging();
+        // Set up foreground message handler — shows in-app notification
+        // when a push arrives while the app is open.
+        if (messaging && !messaging.__pinthipForegroundHandler) {
+          messaging.onMessage(function (payload) {
+            var data = (payload && payload.data) || {};
+            var notif = (payload && payload.notification) || {};
+            var title = notif.title || data.title || 'ปิ่นทิพย์ เช็กอิน';
+            var body = notif.body || data.body || 'มีการแจ้งเตือนใหม่';
+            if (typeof window.showNotification === 'function') {
+              window.showNotification(title + ': ' + body);
+            } else if (Notification.permission === 'granted') {
+              new Notification(title, { body: body, icon: './icon-192.png' });
+            }
+          });
+          messaging.__pinthipForegroundHandler = true;
+        }
       } catch (error) {
         console.warn('FCM initialization failed:', error);
       }
