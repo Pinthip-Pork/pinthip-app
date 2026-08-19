@@ -437,6 +437,16 @@ exports.adminLogin = onCall(async (request) => {
     });
   }
 
+  // Persist custom claims on the Auth user so they survive ID token refreshes.
+  // Without this, role:'admin' only exists in the custom token and is lost
+  // when Firebase auto-refreshes the ID token (~1 hour), causing database
+  // permission errors on settings/admin/* paths.
+  await auth.setCustomUserClaims(uid, {
+    role: 'admin',
+    username,
+    deviceId
+  });
+
   // Record device access for admin presence tracking
   const now = new Date().toISOString();
   await database.ref(`device_access/${deviceId}`).update({
@@ -594,6 +604,12 @@ exports.refreshSession = onCall(async (request) => {
   let token;
   if (session.type === 'admin') {
     const uid = getAdminUid(session.username);
+    // Ensure custom claims persist across ID token refreshes
+    await getAuth().setCustomUserClaims(uid, {
+      role: 'admin',
+      username: session.username,
+      deviceId
+    });
     token = await getAuth().createCustomToken(uid, {
       role: 'admin',
       username: session.username,
