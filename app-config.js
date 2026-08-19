@@ -25,6 +25,14 @@
     ...(window.__PINTHIP_FIREBASE_CONFIG__ || {})
   };
 
+  // FCM Web Push certificate key (public VAPID key) — required for getToken().
+  // Safe to expose publicly. Generate from Firebase Console → Cloud Messaging → Web Push Certificates.
+  // Can be overridden in local-admin-config.js via window.__PINTHIP_VAPID_KEY__.
+  const fcmVapidKey = String(
+    window.__PINTHIP_VAPID_KEY__ ||
+    'BB4xLnkAl7P2Icp_7Lvpbthv9hNXhFRhVXfouXZBfB72KzYyVFUBWgVIldCMGRzXNuFn3Y7nZkGowLGT4nMKmqw'
+  );
+
   const defaultAdminCredentials = {
     enabled: false,
     username: 'admin',
@@ -56,6 +64,7 @@
     firebaseConfig,
     adminCredentials,
     sessionSettings,
-    deviceAccessPilot
+    deviceAccessPilot,
+    fcmVapidKey
   };
 })();

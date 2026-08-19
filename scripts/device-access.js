@@ -38,6 +38,14 @@ function startDevicePresence(key, name, role) {
   };
   presenceRef.onDisconnect().update({ online: false });
   updatePresence();
+  if (typeof window.initPushNotifications === 'function') {
+    Promise.resolve(window.initPushNotifications({
+      deviceId: key,
+      role: role
+    })).catch(function (error) {
+      console.warn('Push notification setup skipped:', error);
+    });
+  }
   devicePresenceInterval = window.setInterval(updatePresence, 30000);
 }
 
@@ -45,6 +53,9 @@ function stopDevicePresence() {
   if (devicePresenceInterval) {
     window.clearInterval(devicePresenceInterval);
     devicePresenceInterval = null;
+  }
+  if (typeof window.stopPushNotifications === 'function') {
+    window.stopPushNotifications();
   }
   if (devicePresenceKey) {
     var presenceUpdate = db.ref('device_access/' + devicePresenceKey).update({ online: false, lastSeenAt: new Date().toISOString() });

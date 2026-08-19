@@ -1,9 +1,11 @@
-/* global require, exports */
+/* global require, exports, Buffer */
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onValueWritten } = require('firebase-functions/v2/database');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getDatabase } = require('firebase-admin/database');
+const { getMessaging } = require('firebase-admin/messaging');
 const crypto = require('crypto');
 
 initializeApp();
@@ -470,7 +472,6 @@ exports.adminLogin = onCall(async (request) => {
 // ===== Admin Device Management =====
 // Approve a pending device as an admin device (only callable by an approved admin device)
 exports.approveAdminDevice = onCall(async (request) => {
-  const auth = getAuth();
   const database = getDatabase();
 
   const deviceId = requireText(request.data?.deviceId, 'deviceId');
@@ -522,7 +523,6 @@ exports.approveAdminDevice = onCall(async (request) => {
 
 // Revoke an approved admin device (only callable by an approved admin device, cannot revoke root)
 exports.revokeAdminDevice = onCall(async (request) => {
-  const auth = getAuth();
   const database = getDatabase();
 
   const deviceId = requireText(request.data?.deviceId, 'deviceId');
@@ -632,4 +632,267 @@ exports.logout = onCall(async (request) => {
     await revokeSessionToken(getDatabase(), sessionToken);
   }
   return { success: true };
+});
+
+// ===== Push Notification Helpers =====
+// Core multicast sender — shared by admin & employee notification paths.
+async function sendPushToTokens(tokens, title, body, tag) {
+  if (!tokens || tokens.length === 0) return { sent: 0 };
+
+  const message = {
+    data: {
+      title: String(title),
+      body: String(body),
+      tag: String(tag || 'pinthip-notification')
+    },
+    webpush: {
+      notification: {
+        title: String(title),
+        body: String(body),
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        tag: String(tag || 'pinthip-notification')
+      }
+    },
+    tokens
+  };
+
+  try {
+    const response = await getMessaging().sendEachForMulticast(message);
+    return { sent: response.successCount, response };
+  } catch (error) {
+    console.warn('sendPushToTokens failed:', error);
+    return { sent: 0 };
+  }
+}
+
+// Prune invalid FCM tokens reported by the messaging API.
+async function pruneInvalidTokens(database, devices, tokens, response) {
+  if (!response) return;
+  const invalidTokens = [];
+  response.responses.forEach((resp, index) => {
+    if (!resp.success && resp.error && (
+      resp.error.code === 'messaging/invalid-registration-token' ||
+      resp.error.code === 'messaging/registration-token-not-registered'
+    )) {
+      invalidTokens.push(tokens[index]);
+    }
+  });
+  if (invalidTokens.length > 0) {
+    await Promise.all(Object.entries(devices)
+      .filter(([, device]) => device && invalidTokens.includes(String(device.fcmToken)))
+      .map(([deviceId]) => database.ref(`device_access/${deviceId}/fcmToken`).remove()));
+  }
+}
+
+// Notify every admin device that registered an FCM token.
+async function notifyAdminDevices(title, body, tag) {
+  const database = getDatabase();
+  const snapshot = await database.ref('device_access').once('value');
+  const devices = snapshot.val() || {};
+
+  const tokens = Object.values(devices)
+    .filter((device) => device && device.role === 'admin' && device.fcmToken && device.status !== 'blocked')
+    .map((device) => String(device.fcmToken));
+
+  const { sent, response } = await sendPushToTokens(tokens, title, body, tag);
+  await pruneInvalidTokens(database, devices, tokens, response);
+  return { sent };
+}
+
+// Notify the employee(s) who submitted a request — looks up device_access by empId.
+async function notifyEmployeeDevice(empId, title, body, tag) {
+  if (!empId) return { sent: 0 };
+  const database = getDatabase();
+  const snapshot = await database.ref('device_access').once('value');
+  const devices = snapshot.val() || {};
+
+  const tokens = Object.entries(devices)
+    .filter(([, device]) => {
+      return device &&
+        device.role !== 'admin' &&
+        String(device.empId || '') === String(empId) &&
+        device.fcmToken &&
+        device.status !== 'blocked';
+    })
+    .map(([, device]) => String(device.fcmToken));
+
+  const { sent, response } = await sendPushToTokens(tokens, title, body, tag);
+  await pruneInvalidTokens(database, devices, tokens, response);
+  return { sent };
+}
+
+function isPendingStatus(status) {
+  return String(status || '').includes('รออนุมัติ') || String(status || '').toLowerCase().includes('pending');
+}
+
+function isApprovedStatus(status) {
+  const s = String(status || '');
+  return s.includes('อนุมัติแล้ว') || s.toLowerCase() === 'approved';
+}
+
+function isRejectedStatus(status) {
+  const s = String(status || '');
+  return s.includes('ไม่อนุมัติ') || s.toLowerCase() === 'rejected' || s.toLowerCase() === 'cancelled';
+}
+
+// ===== Notification Triggers (Admin → new requests) =====
+// Notify admins when an employee submits a leave request.
+exports.onLeaveRequestCreated = onValueWritten({ ref: '/leaves/{key}' }, async (event) => {
+  const before = event.data.before.val();
+  const after = event.data.after.val();
+
+  // Only notify on NEW pending requests (not on status updates)
+  if (!after || !isPendingStatus(after.status)) return;
+  if (before && isPendingStatus(before.status)) return;
+
+  const empName = String(after.empName || after.empId || 'พนักงาน');
+  const leaveType = String(after.leaveType || after.type || 'ลา');
+  await notifyAdminDevices(
+    '🌴 คำขอลาใหม่รออนุมัติ',
+    `${empName} ขอ${leaveType} — แตะเพื่อตรวจสอบ`,
+    `leave-${event.params.key}`
+  );
+});
+
+// Notify admins when an employee submits a fuel/repair request.
+exports.onFuelRequestCreated = onValueWritten({ ref: '/fuel_requests/{key}' }, async (event) => {
+  const before = event.data.before.val();
+  const after = event.data.after.val();
+
+  if (!after || !isPendingStatus(after.status)) return;
+  if (before && isPendingStatus(before.status)) return;
+
+  const empName = String(after.empName || after.empId || 'พนักงาน');
+  const requestType = String(after.requestType || 'เบิกค่าน้ำมัน/ค่าซ่อม');
+  await notifyAdminDevices(
+    '⛽ คำขอเบิกจ่ายใหม่รออนุมัติ',
+    `${empName} — ${requestType} — แตะเพื่อตรวจสอบ`,
+    `fuel-${event.params.key}`
+  );
+});
+
+// Notify admins when staff submits a foam label delivery request.
+exports.onFoamRequestCreated = onValueWritten({ ref: '/foam_delivery_requests/{dateKey}/{key}' }, async (event) => {
+  const before = event.data.before.val();
+  const after = event.data.after.val();
+
+  if (!after) return;
+  const afterStatus = String(after.status || '').toLowerCase();
+  if (afterStatus !== 'pending_review' && afterStatus !== 'pending_duplicate_approval') return;
+  if (before) return; // only notify on new entries
+
+  const customerName = String(
+    (after.customerSnapshot && after.customerSnapshot.name) || after.customerName || 'ลูกค้าใหม่'
+  );
+  await notifyAdminDevices(
+    '📦 รายการป้ายลังโฟมรอยืนยัน',
+    `${customerName} — ${event.params.dateKey} — แตะเพื่อตรวจสอบ`,
+    `foam-${event.params.dateKey}-${event.params.key}`
+  );
+});
+
+// ===== Notification Triggers (Admin approval → Employee) =====
+// Notify the employee when their leave request is approved or rejected.
+exports.onLeaveStatusChanged = onValueWritten({ ref: '/leaves/{key}' }, async (event) => {
+  const before = event.data.before.val();
+  const after = event.data.after.val();
+
+  if (!after) return; // deleted
+  const beforeStatus = String(before?.status || '');
+  const afterStatus = String(after.status || '');
+
+  // Only fire when transitioning FROM pending TO approved/rejected
+  if (!isPendingStatus(beforeStatus)) return;
+  if (!isApprovedStatus(afterStatus) && !isRejectedStatus(afterStatus)) return;
+
+  const empId = String(after.empId || '');
+  const empName = String(after.empName || empId || 'พนักงาน');
+  const leaveType = String(after.leaveType || after.type || 'ลา');
+
+  if (isApprovedStatus(afterStatus)) {
+    await notifyEmployeeDevice(
+      empId,
+      '✅ คำขอลาได้รับการอนุมัติ',
+      `${empName} — คำขอ${leaveType}ของคุณได้รับการอนุมัติแล้ว`,
+      `leave-result-${event.params.key}`
+    );
+  } else {
+    await notifyEmployeeDevice(
+      empId,
+      '❌ คำขอลาไม่อนุมัติ',
+      `${empName} — คำขอ${leaveType}ของคุณไม่ได้รับการอนุมัติ กรุณาติดต่อแอดมิน`,
+      `leave-result-${event.params.key}`
+    );
+  }
+});
+
+// Notify the employee when their fuel/repair request is approved or rejected.
+exports.onFuelStatusChanged = onValueWritten({ ref: '/fuel_requests/{key}' }, async (event) => {
+  const before = event.data.before.val();
+  const after = event.data.after.val();
+
+  if (!after) return; // deleted
+  const beforeStatus = String(before?.status || '');
+  const afterStatus = String(after.status || '');
+
+  if (!isPendingStatus(beforeStatus)) return;
+  if (!isApprovedStatus(afterStatus) && !isRejectedStatus(afterStatus)) return;
+
+  const empId = String(after.empId || '');
+  const empName = String(after.empName || empId || 'พนักงาน');
+  const requestType = String(after.requestType || 'เบิกจ่าย');
+  const amount = after.amount ? ` ${Number(after.amount).toLocaleString()} บาท` : '';
+
+  if (isApprovedStatus(afterStatus)) {
+    await notifyEmployeeDevice(
+      empId,
+      '✅ คำขอเบิกจ่ายได้รับการอนุมัติ',
+      `${empName} — ${requestType}${amount} — อนุมัติแล้ว`,
+      `fuel-result-${event.params.key}`
+    );
+  } else {
+    await notifyEmployeeDevice(
+      empId,
+      '❌ คำขอเบิกจ่ายไม่อนุมัติ',
+      `${empName} — ${requestType} — ไม่ได้รับการอนุมัติ กรุณาติดต่อแอดมิน`,
+      `fuel-result-${event.params.key}`
+    );
+  }
+});
+
+// Notify the employee when their foam delivery request is approved or cancelled.
+exports.onFoamStatusChanged = onValueWritten({ ref: '/foam_delivery_requests/{dateKey}/{key}' }, async (event) => {
+  const before = event.data.before.val();
+  const after = event.data.after.val();
+
+  if (!after) return; // deleted
+  const beforeStatus = String(before?.status || '');
+  const afterStatus = String(after.status || '').toLowerCase();
+
+  // Only fire when transitioning from a pending state to approved/cancelled
+  const wasPending = beforeStatus === 'pending_review' || beforeStatus === 'pending_duplicate_approval' || beforeStatus === '';
+  if (!wasPending) return;
+  if (afterStatus !== 'approved' && afterStatus !== 'cancelled') return;
+
+  const empId = String(after.employeeId || after.empId || '');
+  const customerName = String(
+    (after.customerSnapshot && after.customerSnapshot.name) || after.customerName || 'ลูกค้า'
+  );
+
+  if (afterStatus === 'approved') {
+    await notifyEmployeeDevice(
+      empId,
+      '✅ รายการป้ายลังโฟมได้รับการอนุมัติ',
+      `${customerName} — ${event.params.dateKey} — อนุมัติแล้ว พร้อมพิมพ์ป้าย`,
+      `foam-result-${event.params.dateKey}-${event.params.key}`
+    );
+  } else {
+    await notifyEmployeeDevice(
+      empId,
+      '❌ รายการป้ายลังโฟมถูกยกเลิก',
+      `${customerName} — ${event.params.dateKey} — รายการถูกยกเลิก กรุณาติดต่อแอดมิน`,
+      `foam-result-${event.params.dateKey}-${event.params.key}`
+    );
+  }
 });
