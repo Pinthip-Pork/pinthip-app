@@ -119,25 +119,29 @@
 
     if (!supported()) return false;
 
-    var fcm = getMessaging();
-    if (fcm && !fcm.__pinthipForegroundHandler) {
-      fcm.onMessage(function (payload) {
-        var data = payload && payload.data ? payload.data : {};
-        var title = data.title || 'ปิ่นทิพย์ เช็กอิน';
-        var body = data.body || 'มีการแจ้งเตือนใหม่';
-        if (typeof window.showNotification === 'function') {
-          window.showNotification(title + ': ' + body);
-        } else if (Notification.permission === 'granted') {
-          new Notification(title, { body: body, icon: './icon-192.png' });
-        }
-      });
-      fcm.__pinthipForegroundHandler = true;
-    }
+    try {
+      var fcm = getMessaging();
+      if (fcm && !fcm.__pinthipForegroundHandler) {
+        fcm.onMessage(function (payload) {
+          var data = payload && payload.data ? payload.data : {};
+          var title = data.title || 'ปิ่นทิพย์ เช็กอิน';
+          var body = data.body || 'มีการแจ้งเตือนใหม่';
+          if (typeof window.showNotification === 'function') {
+            window.showNotification(title + ': ' + body);
+          } else if (Notification.permission === 'granted') {
+            new Notification(title, { body: body, icon: './icon-192.png' });
+          }
+        });
+        fcm.__pinthipForegroundHandler = true;
+      }
 
-    if (Notification.permission === 'granted') {
-      return enablePushNotifications();
+      if (Notification.permission === 'granted') {
+        return await enablePushNotifications();
+      }
+      renderPrompt();
+    } catch (error) {
+      console.warn('Push notification init failed (non-blocking):', error);
     }
-    renderPrompt();
     return false;
   }
 

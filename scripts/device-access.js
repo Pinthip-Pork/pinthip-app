@@ -38,13 +38,20 @@ function startDevicePresence(key, name, role) {
   };
   presenceRef.onDisconnect().update({ online: false });
   updatePresence();
+  // Push notification setup is best-effort — it must never block login.
+  // FCM may fail if the messaging service worker is unavailable (e.g. on
+  // GitHub Pages or other non-Firebase hosting). We catch and suppress.
   if (typeof window.initPushNotifications === 'function') {
-    Promise.resolve(window.initPushNotifications({
-      deviceId: key,
-      role: role
-    })).catch(function (error) {
-      console.warn('Push notification setup skipped:', error);
-    });
+    try {
+      Promise.resolve(window.initPushNotifications({
+        deviceId: key,
+        role: role
+      })).catch(function (error) {
+        console.warn('Push notification setup skipped:', error);
+      });
+    } catch (e) {
+      console.warn('Push notification init skipped:', e);
+    }
   }
   devicePresenceInterval = window.setInterval(updatePresence, 30000);
 }

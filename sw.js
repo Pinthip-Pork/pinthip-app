@@ -1,9 +1,10 @@
-const CACHE_NAME = 'pinthip-cache-v20260819-3';
+const CACHE_NAME = 'pinthip-cache-v20260819-4';
 const APP_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png'
+  './icon-192.png',
+  './firebase-messaging-sw.js'
 ];
 
 // Pre-cache the app shell on install so the first load after SW activation is instant.
