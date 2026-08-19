@@ -9,19 +9,6 @@
   var promptId = 'pushPermissionPrompt';
   var messagingSdkLoading = null;
 
-  // Convert base64url VAPID key to standard base64.
-  // Firebase Cloud Messaging compat SDK expects a standard base64 string and
-  // handles the Uint8Array conversion internally. The key from Firebase Console
-  // uses base64url encoding (- and _ instead of + and /) which atob() rejects.
-  function vapidKeyToBase64(base64urlKey) {
-    if (!base64urlKey) return null;
-    var key = String(base64urlKey).trim();
-    var base64 = key.replace(/-/g, '+').replace(/_/g, '/');
-    // Add padding if needed
-    while (base64.length % 4) base64 += '=';
-    return base64;
-  }
-
   function loadMessagingSdk() {
     if (messagingSdkLoading) return messagingSdkLoading;
     messagingSdkLoading = new Promise(function (resolve, reject) {
@@ -59,8 +46,6 @@
       try {
         await loadMessagingSdk();
         messaging = firebase.messaging();
-        // Set up foreground message handler - shows in-app notification
-        // when a push arrives while the app is open.
         if (messaging && !messaging.__pinthipForegroundHandler) {
           messaging.onMessage(function (payload) {
             var data = (payload && payload.data) || {};
@@ -69,14 +54,12 @@
             var body = notif.body || data.body || 'มีการแจ้งเตือนใหม่';
             if (typeof window.showNotification === 'function') {
               window.showNotification(title + ': ' + body);
-            } else if (Notification.permission === 'granted') {
-              new Notification(title, { body: body, icon: './icon-192.png' });
             }
           });
           messaging.__pinthipForegroundHandler = true;
         }
       } catch (error) {
-        console.warn('FCM initialization failed:', error);
+        console.warn('FCM init skipped:', error);
       }
     }
     return messaging;
@@ -141,37 +124,29 @@
 
     try {
       var registration = await getServiceWorkerRegistration();
-      console.log('FCM: SW registration:', registration ? registration.scope : 'none');
-      var vapidKeyStr = (window.PinThipSafe && window.PinThipSafe.config && window.PinThipSafe.config.fcmVapidKey) || null;
-      console.log('FCM: VAPID key (raw):', vapidKeyStr ? vapidKeyStr.substring(0, 20) + '...' : 'missing');
-      var vapidKeyBase64 = vapidKeyToBase64(vapidKeyStr);
-      console.log('FCM: VAPID key (base64):', vapidKeyBase64 ? vapidKeyBase64.substring(0, 20) + '...' : 'null');
+      var vapidKey = (window.PinThipSafe && window.PinThipSafe.config && window.PinThipSafe.config.fcmVapidKey) || null;
+      // Pass the VAPID key exactly as Firebase Console provides it (base64url).
+      // The Firebase Messaging compat SDK handles the conversion internally.
       var token = await fcm.getToken({
         serviceWorkerRegistration: registration,
-        vapidKey: vapidKeyBase64 || undefined
+        vapidKey: vapidKey || undefined
       });
-      console.log('FCM: Token received:', token ? token.substring(0, 20) + '...' : 'null');
-      await saveToken(token);
-      removePrompt();
+      if (token) {
+        await saveToken(token);
+        removePrompt();
+      }
       return Boolean(token);
     } catch (error) {
-      console.error('FCM: Token registration failed:', error.message || error);
-      if (String(error.message || '').indexOf('403') !== -1 || String(error.message || '').indexOf('PERMISSION_DENIED') !== -1) {
-        console.warn('FCM: Firebase Installations API is blocked (403).');
-        window.alert('⚠️ ไม่สามารถเปิดการแจ้งเตือนได้\n\nFirebase Installations API ถูกปิดอยู่ กรุณาเปิด API นี้ก่อน:\n\n1. ไปที่ https://console.cloud.google.com/\n2. เลือก project: pinthip-checkin\n3. ไปที่ APIs & Services → Library\n4. ค้นหา "Firebase Installations API"\n5. กด Enable\n\nหลังจากเปิดแล้ว ล็อกอินใหม่และกดปุ่มแจ้งเตือนอีกครั้ง');
-      } else {
-        console.warn('FCM token registration failed:', error);
-        window.alert('⚠️ ไม่สามารถเปิดการแจ้งเตือนได้: ' + (error.message || error));
-      }
+      // Silent failure — only log to console, never show alert popup.
+      // Push notifications are optional; login and all features work without them.
+      console.warn('Push notification setup skipped:', error.message || error);
+      removePrompt();
       return false;
     }
   }
 
-  // initPushNotifications is now lightweight - it only stores device info
-  // and renders the "🔔 เปิดการแจ้งเตือน" button. The actual FCM SDK loading
-  // and token registration happen only when the user clicks the button
-  // (via enablePushNotifications). This prevents FCM from interfering
-  // with the login flow on mobile devices.
+  // Lightweight init — stores device info and shows the prompt button.
+  // Actual FCM SDK loading + token registration only happens on user click.
   function initPushNotifications(options) {
     options = options || {};
     currentDeviceId = String(options.deviceId || '').trim();
