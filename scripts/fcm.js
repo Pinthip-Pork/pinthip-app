@@ -9,6 +9,25 @@
   var promptId = 'pushPermissionPrompt';
   var messagingSdkLoading = null;
 
+  // Convert base64url VAPID key to Uint8Array — required by PushManager.subscribe()
+  // on iOS Safari and some browsers that don't accept raw base64url strings.
+  function vapidKeyToUint8Array(base64urlKey) {
+    if (!base64urlKey) return null;
+    var base64 = String(base64urlKey).replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    try {
+      var rawData = atob(base64);
+      var outputArray = new Uint8Array(rawData.length);
+      for (var i = 0; i < rawData.length; i++) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    } catch (e) {
+      console.warn('VAPID key conversion failed:', e);
+      return null;
+    }
+  }
+
   function loadMessagingSdk() {
     if (messagingSdkLoading) return messagingSdkLoading;
     messagingSdkLoading = new Promise(function (resolve, reject) {
@@ -129,11 +148,13 @@
     try {
       var registration = await getServiceWorkerRegistration();
       console.log('FCM: Service worker registration:', registration ? registration.scope : 'none');
-      var vapidKey = (window.PinThipSafe && window.PinThipSafe.config && window.PinThipSafe.config.fcmVapidKey) || null;
-      console.log('FCM: Getting token with VAPID key:', vapidKey ? 'present' : 'missing');
+      var vapidKeyStr = (window.PinThipSafe && window.PinThipSafe.config && window.PinThipSafe.config.fcmVapidKey) || null;
+      console.log('FCM: VAPID key (raw):', vapidKeyStr ? 'present' : 'missing');
+      var vapidKeyUint8 = vapidKeyToUint8Array(vapidKeyStr);
+      console.log('FCM: VAPID key (Uint8Array):', vapidKeyUint8 ? vapidKeyUint8.length + ' bytes' : 'null');
       var token = await fcm.getToken({
         serviceWorkerRegistration: registration,
-        vapidKey: vapidKey || undefined
+        vapidKey: vapidKeyUint8 || undefined
       });
       console.log('FCM: Token received:', token ? token.substring(0, 20) + '...' : 'null');
       await saveToken(token);
