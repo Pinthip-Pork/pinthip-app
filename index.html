@@ -27,7 +27,8 @@
   <!-- Core modules (no dependency on scripts/) -->
   <script src="./security-helpers-browser.js"></script>
   <script src="./app-state.js"></script>
-  <script src="./local-admin-config.js?v=1"></script>
+  <script src="./local-admin-config.js?v=1"
+    onerror="console.warn('local-admin-config.js not found — using defaults'); window.__PINTHIP_VAPID_KEY__ = window.__PINTHIP_VAPID_KEY__ || null;"></script>
   <script src="./app-config.js"></script>
   <script src="./auth.js"></script>
   <script src="./app-utils.js"></script>
@@ -140,7 +141,7 @@
   <script src="./scripts/app-globals.js?v=push-restore-20260819"></script>
   <script src="./scripts/notification.js"></script>
   <script src="./scripts/device-access.js?v=no-fcm-login-20260819"></script>
-  <script src="./scripts/fcm.js?v=debug-fcm-20260819"></script>
+  <script src="./scripts/fcm.js?v=debug-fcm-20260819c"></script>
   <script src="./scripts/auth-ui.js?v=push-emp-20260819"></script>
   <script src="./scripts/employee-ui.js?v=fuel-fix-20260819"></script>
   <script src="./scripts/admin-quick-modal.js"></script>

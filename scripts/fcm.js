@@ -147,8 +147,10 @@
       // but login and all other features are unaffected.
       if (String(error.message || '').indexOf('403') !== -1 || String(error.message || '').indexOf('PERMISSION_DENIED') !== -1) {
         console.warn('FCM: Firebase Installations API is blocked (403). Push notifications disabled. Enable the API in Firebase Console → Project Settings → Cloud Messaging.');
+        window.alert('⚠️ ไม่สามารถเปิดการแจ้งเตือนได้\n\nFirebase Installations API ถูกปิดอยู่ กรุณาเปิด API นี้ก่อน:\n\n1. ไปที่ https://console.cloud.google.com/\n2. เลือก project: pinthip-checkin\n3. ไปที่ APIs & Services → Library\n4. ค้นหา "Firebase Installations API"\n5. กด Enable\n\nหลังจากเปิดแล้ว ล็อกอินใหม่และกดปุ่มแจ้งเตือนอีกครั้ง');
       } else {
         console.warn('FCM token registration failed:', error);
+        window.alert('⚠️ ไม่สามารถเปิดการแจ้งเตือนได้: ' + (error.message || error));
       }
       return false;
     }
