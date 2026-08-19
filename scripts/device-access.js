@@ -380,14 +380,20 @@ function deleteDeviceAccess(deviceId) {
 function approveAdminDevice(deviceId, deviceInfo) {
   if (!isAdmin) return;
   if (!window.confirm('\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E40\u0E1B\u0E47\u0E19 Admin \u0E43\u0E0A\u0E48\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48? (' + deviceInfo + ')\n\n\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E08\u0E30\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16 login \u0E14\u0E49\u0E27\u0E22 admin/8888 \u0E44\u0E14\u0E49')) return;
-  firebase.functions().httpsCallable('approveAdminDevice')({ deviceId: deviceId, deviceInfo: deviceInfo })
-    .then(function() {
-      window.alert('\u2705 \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E40\u0E1B\u0E47\u0E19 Admin \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08!');
-      showDeviceAccessManagement();
-    })
-    .catch(function(err) {
-      window.alert('\u274C \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ' + err.message);
-    });
+  var approveUpdates = {};
+  approveUpdates['settings/admin/approvedDevices/' + deviceId] = {
+    approvedAt: Date.now(),
+    deviceInfo: String(deviceInfo || 'Unknown device'),
+    root: false
+  };
+  approveUpdates['settings/admin/pendingDevices/' + deviceId] = null;
+  db.ref().update(approveUpdates).then(function() {
+    logDeviceAccessEvent('admin_device_approved', deviceId, 'admin', 'Admin');
+    window.alert('\u2705 \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E2D\u0E38\u0E1B\u0E01\u0E03\u0E13\u0E4C\u0E40\u0E1B\u0E47\u0E19 Admin \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08!');
+    showDeviceAccessManagement();
+  }).catch(function(err) {
+    window.alert('\u274C \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E44\u0E21\u0E08\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ' + (err.message || err));
+  });
 }
 
 function removePendingAdminDevice(deviceId) {
@@ -402,14 +408,17 @@ function removePendingAdminDevice(deviceId) {
 function revokeAdminDevice(deviceId) {
   if (!isAdmin) return;
   if (!window.confirm('\u0E40\u0E1E\u0E34\u0E01\u0E16\u0E2D\u0E19\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C Admin \u0E02\u0E2D\u0E07\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E48\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48? (' + deviceId + ')\n\n\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E08\u0E30\u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16 login \u0E40\u0E1B\u0E47\u0E19 admin \u0E44\u0E14\u0E49\u0E2D\u0E35\u0E01')) return;
-  firebase.functions().httpsCallable('revokeAdminDevice')({ deviceId: deviceId })
-    .then(function() {
-      window.alert('\uD83D\uDEAB \u0E40\u0E1E\u0E34\u0E01\u0E16\u0E2D\u0E19\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C Admin \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08');
-      showDeviceAccessManagement();
-    })
-    .catch(function(err) {
-      window.alert('\u274C \u0E40\u0E1E\u0E34\u0E01\u0E16\u0E2D\u0E19\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ' + err.message);
-    });
+  var revokeUpdates = {};
+  revokeUpdates['settings/admin/approvedDevices/' + deviceId] = null;
+  revokeUpdates['device_access/' + deviceId + '/status'] = 'blocked';
+  revokeUpdates['device_access/' + deviceId + '/blockedAt'] = Date.now();
+  db.ref().update(revokeUpdates).then(function() {
+    logDeviceAccessEvent('admin_device_revoked', deviceId, 'admin', 'Admin');
+    window.alert('\uD83D\uDEAB \u0E40\u0E1E\u0E34\u0E01\u0E16\u0E2D\u0E19\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C Admin \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08');
+    showDeviceAccessManagement();
+  }).catch(function(err) {
+    window.alert('\u274C \u0E40\u0E1E\u0E34\u0E01\u0E16\u0E2D\u0E19\u0E44\u0E21\u0E08\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ' + (err.message || err));
+  });
 }
 
 // ===== Manual Add Device (Admin) =====
