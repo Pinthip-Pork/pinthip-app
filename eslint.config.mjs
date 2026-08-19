@@ -23,7 +23,12 @@ export default [
         clients: 'readonly',
         location: 'readonly',
         setTimeout: 'readonly',
-        clearTimeout: 'readonly'
+        clearTimeout: 'readonly',
+        updatePendingDevicesBadge: 'readonly',
+        isAdmin: 'readonly',
+        currentUser: 'readonly',
+        localTodayStr: 'readonly',
+        getLocalDateTimeString: 'readonly'
       }
     },
     rules: {
