@@ -306,6 +306,12 @@ async function recoverFirebaseSession() {
       if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
       if (typeof showAdminDashboard === 'function') showAdminDashboard();
       if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
+      if (typeof initPushNotifications === 'function') {
+        setTimeout(function () {
+          try { initPushNotifications({ deviceId: 'admin-' + deviceId, role: 'admin' }); }
+          catch (e) { console.warn('Push notification prompt skipped:', e); }
+        }, 1000);
+      }
 
       console.log('Admin session recovered successfully.');
       return true;
@@ -324,6 +330,12 @@ async function recoverFirebaseSession() {
       }
       if (typeof showDashboard === 'function') showDashboard();
       if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
+      if (typeof initPushNotifications === 'function') {
+        setTimeout(function () {
+          try { initPushNotifications({ deviceId: deviceId, role: 'employee', empId: currentUser.empId }); }
+          catch (e) { console.warn('Push notification prompt skipped:', e); }
+        }, 1000);
+      }
 
       console.log('Employee session recovered successfully.');
       return true;
@@ -403,6 +415,12 @@ function initApp() {
           if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
           if (typeof showAdminDashboard === 'function') showAdminDashboard();
           if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
+          if (typeof initPushNotifications === 'function') {
+            setTimeout(function () {
+              try { initPushNotifications({ deviceId: 'admin-' + window.PinThipSafe.utils.getDeviceId(), role: 'admin' }); }
+              catch (e) { console.warn('Push notification prompt skipped:', e); }
+            }, 1000);
+          }
         } else {
           // Admin session stored but Firebase Auth not yet ready — try to recover
           console.warn('Admin Firebase Auth session expired, attempting recovery...');
@@ -425,6 +443,12 @@ function initApp() {
           }
           if (typeof showDashboard === 'function') showDashboard();
           if (typeof startDeviceAccessGuard === 'function') startDeviceAccessGuard();
+          if (typeof initPushNotifications === 'function') {
+            setTimeout(function () {
+              try { initPushNotifications({ deviceId: window.PinThipSafe.utils.getDeviceId(), role: 'employee', empId: currentUser.empId }); }
+              catch (e) { console.warn('Push notification prompt skipped:', e); }
+            }, 1000);
+          }
         } else {
           // Employee session stored but Firebase Auth not yet ready — try to recover
           console.warn('Employee Firebase Auth session expired, attempting recovery...');
