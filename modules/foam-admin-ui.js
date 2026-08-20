@@ -592,8 +592,6 @@
       var status = statusLabel(request.status);
       var badgeColor = statusBadgeClass(request.status);
 
-      var canApprove = request.status !== 'cancelled' && request.status !== 'completed';
-
       var html = '' +
         '<div class="user-banner" style="margin-bottom:10px;">📋 รายละเอียดรายการที่เลือก</div>' +
         '<div style="background:#f8f9fa; border:1px solid #e9ecef; border-left:4px solid ' + badgeColor + '; border-radius:10px; padding:12px; text-align:left;">' +

@@ -35,7 +35,7 @@
         // Merge with defaults to ensure all keys exist
         var config = {};
         for (var key in DEFAULT_CONFIG) {
-          config[key] = parsed.hasOwnProperty(key) ? parsed[key] : DEFAULT_CONFIG[key];
+          config[key] = Object.prototype.hasOwnProperty.call(parsed, key) ? parsed[key] : DEFAULT_CONFIG[key];
         }
         return config;
       }
@@ -179,7 +179,7 @@
     function textInput(name, label) {
       return '<div class="editor-field">' +
         '<label>' + label + '</label>' +
-        '<input type="text" id="editor_' + name + '" value="' + config[name].replace(/"/g, '"') + '" style="width:100%; padding:4px 8px; font-size:14px; border:1px solid #ccc; border-radius:4px;">' +
+  '<input type="text" id="editor_' + name + '" value="' + String(config[name] || '').replace(/"/g, '&' + 'quot;') + '" style="width:100%; padding:4px 8px; font-size:14px; border:1px solid #ccc; border-radius:4px;">' +
       '</div>';
     }
 
@@ -431,7 +431,7 @@
 
   // Reset to defaults
   function resetDefaults() {
-    var config = resetConfig();
+    resetConfig();
     // Rebuild editor with defaults
     showPrintLayoutEditor();
   }

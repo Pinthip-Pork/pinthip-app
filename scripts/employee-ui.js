@@ -781,10 +781,10 @@ function showAdminNotificationModal() {
       html += '\u003Cdiv style=\"font-weight:bold; color:#0d6efd; margin-top:10px; margin-bottom:5px;\"\u003E\uD83D\uDCE6 \u0E23\u0E32\u0E22\u0E01\u0E32\u0E23\u0E1B\u0E49\u0E33\u0E22\u0E19\u0E25\u0E39\u0E1D\u0E4C\u0E21\u0E4C\u0E2D\u0E2D\u0E19 (' + pendingFoamCache.length + '):\u003C/div\u003E';
       pendingFoamCache.forEach(function(item) {
         var custName = safeText((item.customerSnapshot && item.customerSnapshot.name) || 'ลูกค้าใหม่');
-        html += '\u003Cdiv class=\"history-item\" style=\"cursor:pointer; background:#eaf3ff;\" onclick=\"closeModal(); showFoamAdminView();\"\u003E' +
-          '\u003Cb\u003E\uD83C\uDFEC ' + custName + '\u003C/b\u003E\u003Cbr\u003E' +
-          '\uD83D\uDCE6 \u0E2D\u0E32\u0E23\u0E39\u0E07\u0E40\u0E25\u0E37\u0E2D: ' + (item.boxCount || 1) + '\u003Cbr\u003E' +
-          '\uD83D\uDE9A \u0E02\u0E19\u0E31\u0E14: ' + (shipping || '-') + '\u003C/div\u003E';
+          html += '\u003Cdiv class=\"history-item\" style=\"cursor:pointer; background:#eaf3ff;\" onclick=\"closeModal(); showFoamAdminView();\"\u003E' +
+            '\u003Cb\u003E\uD83C\uDFEC ' + custName + '\u003C/b\u003E\u003Cbr\u003E' +
+            '\uD83D\uDCE6 \u0E2D\u0E32\u0E23\u0E39\u0E07\u0E40\u0E25\u0E37\u0E2D: ' + (item.boxCount || 1) + '\u003Cbr\u003E' +
+            '\uD83D\uDE9A \u0E02\u0E19\u0E31\u0E14: ' + safeText(item.shipping || '-') + '\u003C/div\u003E';
       });
     }
   }

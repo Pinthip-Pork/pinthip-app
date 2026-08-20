@@ -43,7 +43,7 @@
         var parsed = JSON.parse(saved);
         var config = {};
         for (var key in DEFAULT_CONFIG) {
-          config[key] = parsed.hasOwnProperty(key) ? parsed[key] : DEFAULT_CONFIG[key];
+          config[key] = Object.prototype.hasOwnProperty.call(parsed, key) ? parsed[key] : DEFAULT_CONFIG[key];
         }
         return config;
       }
