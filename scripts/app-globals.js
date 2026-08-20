@@ -232,6 +232,10 @@ function showLoginForm() {
 function resetExpiredAuthSession() {
   if (typeof stopDeviceAccessGuard === 'function') stopDeviceAccessGuard();
   if (typeof stopDevicePresence === 'function') stopDevicePresence();
+  if (window._tokenRefreshInterval) {
+    clearInterval(window._tokenRefreshInterval);
+    window._tokenRefreshInterval = null;
+  }
   currentUser = null;
   window.currentUser = null;
   isAdmin = false;
@@ -350,6 +354,12 @@ async function recoverFirebaseSession() {
 // ===== Init App =====
 function initApp() {
   var isInitialAuthState = true;
+
+  // Guard: clear any existing interval first to prevent stacking on re-call.
+  if (window._tokenRefreshInterval) {
+    clearInterval(window._tokenRefreshInterval);
+    window._tokenRefreshInterval = null;
+  }
 
   // Proactive token refresh every 45 minutes to keep Firebase Auth session alive
   // (Firebase custom tokens have a 1-hour TTL; refreshing before expiry prevents silent logout)

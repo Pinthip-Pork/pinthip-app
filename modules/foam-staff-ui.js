@@ -8,7 +8,7 @@
   function escape(value) {
     return window.PinThipSafe && window.PinThipSafe.escapeHtml
       ? window.PinThipSafe.escapeHtml(value)
-      : String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      : String(value || '').replace(/&/g, '&' + 'amp;').replace(/</g, '&' + 'lt;').replace(/>/g, '&' + 'gt;').replace(/"/g, '&' + 'quot;').replace(/'/g, '&#39;');
   }
 
   function getRepo() {
@@ -428,8 +428,6 @@
       return;
     }
 
-    var todayStr = getDeliveryRepo().fetchRequestsByDate ? undefined : undefined;
-    // Use the delivery repo's getTodayStr indirectly
     var dateStr = (window.PinThipSafe && window.PinThipSafe.utils && window.PinThipSafe.utils.getLocalDateTimeString)
       ? window.PinThipSafe.utils.getLocalDateTimeString()
       : new Date().toISOString().slice(0, 10);

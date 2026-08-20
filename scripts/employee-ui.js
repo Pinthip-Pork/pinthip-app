@@ -529,6 +529,12 @@ function handleLogout() {
   if (typeof stopDeviceAccessGuard === 'function') stopDeviceAccessGuard();
   if (typeof stopDevicePresence === 'function') stopDevicePresence();
   if (typeof stopAdminNotificationListener === 'function') stopAdminNotificationListener();
+  // Clear the proactive token-refresh interval so it doesn't keep firing
+  // (and potentially stack) after logout.
+  if (window._tokenRefreshInterval) {
+    clearInterval(window._tokenRefreshInterval);
+    window._tokenRefreshInterval = null;
+  }
 
   // Revoke session token on server before clearing local state
   try {
@@ -599,6 +605,11 @@ function stopAdminNotificationListener() {
   isInitialLoadFoam = true;
   isInitialLoadLeaves = true;
   isInitialLoadFuels = true;
+  // Clear notified-key maps to prevent unbounded growth when the app stays
+  // open for long periods (each new request adds an entry that is never removed).
+  notifiedFoamKeys = {};
+  notifiedLeavesKeys = {};
+  notifiedFuelsKeys = {};
 }
 
 function startAdminNotificationListener() {
@@ -631,7 +642,12 @@ function startAdminNotificationListener() {
     if (!isInitialLoadFoam && hasNewFoamItem) {
       if (typeof playNotificationAlert === 'function') playNotificationAlert('มีรายการป้ายลังโฟมรออนุมัติ');
       if (typeof showDesktopNotification === 'function') showDesktopNotification('มีรายการป้ายลังโฟม', 'รายการส่งลังโฟมใหม่รอแอดมินตรวจสอบ');
-      showModal('🔔 มีรายการป้ายลังโฟม', 'มีรายการส่งลังโฟมใหม่ที่ต้องตรวจสอบ', '<button class="btn-ok" onclick="closeModal(); showFoamAdminView();">ตกลง</button>');
+      // Don't showModal if a modal is already open — prevents UI freeze from
+      // stacked modal overlays when multiple requests arrive in quick succession.
+      var modalEl = document.getElementById('customModal');
+      if (!modalEl || modalEl.style.display !== 'flex') {
+        showModal('🔔 มีรายการป้ายลังโฟม', 'มีรายการส่งลังโฟมใหม่ที่ต้องตรวจสอบ', '<button class="btn-ok" onclick="closeModal(); showFoamAdminView();">ตกลง</button>');
+      }
     }
 
     isInitialLoadFoam = false;
@@ -658,7 +674,10 @@ function startAdminNotificationListener() {
     if (!isInitialLoadLeaves && hasNewLeave) {
       if (typeof playNotificationAlert === 'function') playNotificationAlert('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E43\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A');
       if (typeof showDesktopNotification === 'function') showDesktopNotification('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E43\u0E2B\u0E21\u0E48', '\u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E08\u0E32\u0E01\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19');
-      showModal("\uD83D\uDD14 \u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E04\u0E33\u0E02\u0E2D\u0E43\u0E2B\u0E21\u0E48", "\u0E21\u0E35\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E21\u0E32\u0E43\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E43\u0E1A\u0E25\u0E32", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E15\u0E01\u0E25\u0E07\u003C/button\u003E');
+      var modalEl2 = document.getElementById('customModal');
+      if (!modalEl2 || modalEl2.style.display !== 'flex') {
+        showModal("\uD83D\uDD14 \u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E04\u0E33\u0E02\u0E2D\u0E43\u0E2B\u0E21\u0E48", "\u0E21\u0E35\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E02\u0E2D\u0E25\u0E32\u0E21\u0E32\u0E43\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E43\u0E19\u0E40\u0E21\u0E19\u0E39\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E43\u0E1A\u0E25\u0E32", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E15\u0E01\u0E25\u0E07\u003C/button\u003E');
+      }
     }
     isInitialLoadLeaves = false;
     updateAdminBellBadgeCount();
@@ -682,9 +701,12 @@ function startAdminNotificationListener() {
     });
 
     if (!isInitialLoadFuels && hasNewFuel) {
-      if (typeof playNotificationAlert === 'function') playNotificationAlert('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E43\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A');
-      if (typeof showDesktopNotification === 'function') showDesktopNotification('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22\u0E43\u0E2B\u0E21\u0E48', '\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E23\u0E16');
-      showModal("\uD83D\uDD14 \u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22\u0E43\u0E2B\u0E21\u0E48", "\u0E21\u0E35\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E04\u0E48\u0E32\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19/\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E23\u0E16\u0E21\u0E32\u0E43\u0E2B\u0E21\u0E48", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E15\u0E01\u0E25\u0E07\u003C/button\u003E');
+      if (typeof playNotificationAlert === 'function') playNotificationAlert('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E2B\u0E21\u0E48 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A');
+      if (typeof showDesktopNotification === 'function') showDesktopNotification('\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22\u0E2B\u0E21\u0E48', '\u0E21\u0E35\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19\u0E2B\u0E23\u0E37\u0E2D\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E23\u0E16');
+      var modalEl3 = document.getElementById('customModal');
+      if (!modalEl3 || modalEl3.style.display !== 'flex') {
+        showModal("\uD83D\uDD14 \u0E41\u0E08\u0E49\u0E07\u0E40\u0E15\u0E37\u0E2D\u0E19\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22\u0E2B\u0E21\u0E48", "\u0E21\u0E35\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2A\u0E48\u0E07\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E1A\u0E34\u0E01\u0E04\u0E48\u0E32\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19/\u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21\u0E23\u0E16\u0E21\u0E32\u0E2B\u0E21\u0E48", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal()\"\u003E\u0E15\u0E01\u0E25\u0E07\u003C/button\u003E');
+      }
     }
     isInitialLoadFuels = false;
     updateAdminBellBadgeCount();

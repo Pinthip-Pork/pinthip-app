@@ -8,7 +8,7 @@
   function escape(value) {
     return window.PinThipSafe && window.PinThipSafe.escapeHtml
       ? window.PinThipSafe.escapeHtml(value)
-      : String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      : String(value || '').replace(/&/g, '&' + 'amp;').replace(/</g, '&' + 'lt;').replace(/>/g, '&' + 'gt;').replace(/"/g, '&' + 'quot;').replace(/'/g, '&#39;');
   }
 
   function getCustomerRepo() {
