@@ -30,7 +30,7 @@
   // Can be overridden in local-admin-config.js via window.__PINTHIP_VAPID_KEY__.
   const fcmVapidKey = String(
     window.__PINTHIP_VAPID_KEY__ ||
-    'BB4xLnkAl7P2Icp_7Lvpbthv9hNXhFRhVXfouXZBfB72KzYyVFUBWgVIldCMGRzXNuFn3Y7nZkGowLGT4nMKmqw'
+    'BBfcPFdeOn4iG-D316YOvX51oL6Q20t-mvIhBfQXPSwc4uzLFxUNNrRWecwA4-AlacAURywzfQDD3BsJmTGWmoc'
   );
 
   const defaultAdminCredentials = {
