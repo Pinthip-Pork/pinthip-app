@@ -27,8 +27,19 @@
   <!-- Core modules (no dependency on scripts/) -->
   <script src="./security-helpers-browser.js"></script>
   <script src="./app-state.js"></script>
-  <script src="./local-admin-config.js?v=1"
-    onerror="console.warn('local-admin-config.js not found — using defaults'); window.__PINTHIP_VAPID_KEY__ = window.__PINTHIP_VAPID_KEY__ || null;"></script>
+  <script>
+    // Dynamically load local-admin-config.js only when running locally.
+    // On GitHub Pages this file is gitignored and would 404; silently skip.
+    (function () {
+      if (location.hostname.indexOf('github.io') !== -1) return;
+      var s = document.createElement('script');
+      s.src = './local-admin-config.js?v=1';
+      s.onerror = function () {
+        console.warn('local-admin-config.js not found — using defaults');
+      };
+      document.head.appendChild(s);
+    })();
+  </script>
   <script src="./app-config.js"></script>
   <script src="./auth.js"></script>
   <script src="./app-utils.js"></script>
