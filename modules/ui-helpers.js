@@ -102,8 +102,10 @@
         '<option value="' + esc(tt.optPersonal || 'ลากิจ') + '">' + esc(tt.optPersonal || 'ลากิจ') + '</option>' +
         '<option value="' + esc(tt.optVacation || 'ลาพักร้อน / ลาหยุด') + '">' + esc(tt.optVacation || 'ลาพักร้อน / ลาหยุด') + '</option>' +
       '</select>' +
-      '<div style="text-align:left; font-size:13px; color:#555; margin:4px 0;"><b>📅 ' + esc(tt.startDate || 'เริ่มลานวันที่') + ':</b> <input type="date" id="startDate" value="' + esc(today) + '" style="margin-left:4px;"></div>' +
-      '<div style="text-align:left; font-size:13px; color:#555; margin:4px 0;"><b>📅 ' + esc(tt.endDate || 'ถึงวันที่') + ':</b> <input type="date" id="endDate" value="' + esc(today) + '" style="margin-left:4px;"></div>' +
+      '<div style="text-align:left; font-size:13px; color:#555; margin:4px 0 2px 0;"><b>📅 ' + esc(tt.startDate || 'เริ่มลานวันที่') + ':</b></div>' +
+      '<input type="date" id="startDate" value="' + esc(today) + '" style="width:100%; margin-bottom:8px;">' +
+      '<div style="text-align:left; font-size:13px; color:#555; margin:4px 0 2px 0;"><b>📅 ' + esc(tt.endDate || 'ถึงวันที่') + ':</b></div>' +
+      '<input type="date" id="endDate" value="' + esc(today) + '" style="width:100%; margin-bottom:8px;">' +
       '<div style="text-align:left; font-size:13px; color:#555; margin:4px 0;"><b>💬 ' + esc(tt.phReason || 'เหตุผลการลา') + ':</b></div>' +
       '<textarea id="leaveReason" rows="3" placeholder="' + esc(tt.phReason || 'เหตุผลการลา') + '" style="margin-bottom:8px;"></textarea>' +
       '<button class="btn-leave" onclick="handleLeaveSubmit()">📤 ' + esc(tt.btnSubmitLeave || 'ส่งใบลา') + '</button>' +

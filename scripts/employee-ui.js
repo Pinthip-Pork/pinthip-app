@@ -279,6 +279,147 @@ function switchTab(btn) {
   }
 }
 
+// ===== My Attendance History (employee's own check-in records) =====
+// Reads logs from month-partitioned paths (logs/YYYY-MM) via the shared
+// logsRepo helper, filters to the current employee, and shows check-in
+// records (type === 'เข้างาน') with date/time/location. Includes a date
+// range picker so the employee can review a custom period.
+function showMyAttendance() {
+  var t = (window.i18n && window.i18n[currentLang]) || {};
+  document.getElementById('pageTitle').innerText = t.btnMyAttendance || '📜 ประวัติการทำงานของฉัน';
+  document.getElementById('listBox').style.display = 'none';
+  document.getElementById('status').innerHTML = '';
+
+  var todayStr = (typeof getLocalDateTimeString === 'function')
+    ? getLocalDateTimeString()
+    : new Date().toISOString().slice(0, 10);
+  // Default range = current month (1st to today) so the employee immediately
+  // sees this month's check-ins without manually picking dates.
+  var monthStart = todayStr.slice(0, 8) + '01';
+  var monthEnd = todayStr;
+
+  var user = window.currentUser || {};
+  var empIdStr = String(user.empId || '');
+  var empName = String(user.empName || '');
+
+  var html =
+    '<div class="user-banner">👤 ' + safeText(empName) + ' (' + safeText(empIdStr) + ')</div>' +
+    '<div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:12px; text-align:left;">' +
+      '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">' +
+        '<div style="flex:1; min-width:130px;">' +
+          '<span style="font-size:12px; color:#555;">จากวันที่:</span>' +
+          '<input type="date" id="myAttStartDate" value="' + safeText(monthStart) + '" style="font-weight:bold; width:100%; margin:2px 0 0 0;">' +
+        '</div>' +
+        '<div style="flex:1; min-width:130px;">' +
+          '<span style="font-size:12px; color:#555;">ถึงวันที่:</span>' +
+          '<input type="date" id="myAttEndDate" value="' + safeText(monthEnd) + '" style="font-weight:bold; width:100%; margin:2px 0 0 0;">' +
+        '</div>' +
+        '<div style="flex:0 0 auto;">' +
+          '<button class="btn-blue" onclick="loadMyAttendance()" style="margin:0;">🔍 ดูประวัติ</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top:8px; text-align:center;">' +
+        '<button onclick="setMyAttendanceDateToday()" style="width:auto; padding:4px 12px; background:#6c757d; color:#fff; border:none; border-radius:6px;">📅 ตั้งวันที่เป็นวันนี้</button>' +
+      '</div>' +
+    '</div>' +
+    '<div id="myAttendanceResult"></div>' +
+    '<button class="btn-back" onclick="showDashboard()" style="margin-top:15px;">⬅️ กลับหน้าหลัก</button>';
+
+  document.getElementById('mainContent').innerHTML = html;
+  // Auto-load the default range right away.
+  loadMyAttendance();
+}
+
+function setMyAttendanceDateToday() {
+  var todayStr = (typeof getLocalDateTimeString === 'function')
+    ? getLocalDateTimeString()
+    : new Date().toISOString().slice(0, 10);
+  var startDate = document.getElementById('myAttStartDate');
+  var endDate = document.getElementById('myAttEndDate');
+  if (startDate) startDate.value = todayStr;
+  if (endDate) endDate.value = todayStr;
+  loadMyAttendance();
+}
+function loadMyAttendance() {
+  var startDate = document.getElementById('myAttStartDate');
+  var endDate = document.getElementById('myAttEndDate');
+  var container = document.getElementById('myAttendanceResult');
+  if (!container) return;
+  var sVal = startDate ? startDate.value : '';
+  var eVal = endDate ? endDate.value : '';
+  if (!sVal || !eVal) {
+    container.innerHTML = '<div style="color:#dc3545; font-size:13px;">⚠️ กรุณาเลือกช่วงวันที่</div>';
+    return;
+  }
+  if (sVal > eVal) {
+    container.innerHTML = '<div style="color:#dc3545; font-size:13px;">⚠️ วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด</div>';
+    return;
+  }
+
+  container.innerHTML = '<div style="color:#888; padding:10px;">⏳ กำลังโหลดประวัติ...</div>';
+
+  var user = window.currentUser || {};
+  var myEmpId = String(user.empId || '');
+
+  // Use the shared logsRepo helper so month-partitioned logs are read correctly.
+  if (!window.PinThipSafe || !window.PinThipSafe.logsRepo || !window.PinThipSafe.logsRepo.fetchLogsForRange || !window.db) {
+    container.innerHTML = '<div style="color:#dc3545; font-size:13px;">⚠️ ไม่สามารถอ่านข้อมูลได้ (logsRepo ไม่พร้อม)</div>';
+    return;
+  }
+
+  window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, sVal, eVal).then(function(logs) {
+    var myLogs = [];
+    Object.keys(logs).forEach(function(k) {
+      var log = logs[k];
+      if (!log || String(log.empId) !== myEmpId) return;
+      // Include all record types so the employee sees check-in and any other
+      // logged events for themselves; sort newest-first.
+      myLogs.push(log);
+    });
+
+    if (myLogs.length === 0) {
+      container.innerHTML = '<div style="color:#888; font-size:13px; padding:10px;">ยังไม่มีประวัติการทำงานในช่วงวันที่ที่เลือก</div>';
+      return;
+    }
+
+    // Sort by date desc, then time desc.
+    myLogs.sort(function(a, b) {
+      var da = String(a.date || '');
+      var dbd = String(b.date || '');
+      if (da !== dbd) return da < dbd ? 1 : -1;
+      return String(a.time || '') < String(b.time || '') ? 1 : -1;
+    });
+
+    // Quick summary stats.
+    var checkInCount = 0;
+    myLogs.forEach(function(log) {
+      if (log.type === 'เข้างาน') checkInCount++;
+    });
+
+    var html =
+      '<div class="stats-card-container" style="margin-bottom:10px;">' +
+        '<div class="stat-box" style="background:#e8f5e9; color:#2e7d32;">มาแล้ว<b>' + checkInCount + '</b></div>' +
+        '<div class="stat-box" style="background:#e3f2fd; color:#1565c0;">รวม<b>' + myLogs.length + '</b></div>' +
+      '</div>';
+
+    myLogs.forEach(function(log) {
+      var typeIcon = '📌';
+      var typeColor = '#1565c0';
+      if (log.type === 'เข้างาน') { typeIcon = '✅'; typeColor = '#2e7d32'; }
+      else if (log.type === 'ออกงาน' || (String(log.type || '').indexOf('ออก') !== -1)) { typeIcon = '🔴'; typeColor = '#c62828'; }
+      html += '<div class="history-item">' +
+        '<b style="color:' + typeColor + ';">' + typeIcon + ' ' + safeText(log.type || '-') + '</b><br>' +
+        '📅 ' + safeText(log.date || '-') + (log.time ? ' 🕐 ' + safeText(log.time) : '') +
+        (log.location ? '<br>📍 ' + safeText(log.location) : '') +
+      '</div>';
+    });
+
+    container.innerHTML = html;
+  }).catch(function(err) {
+    console.error('My attendance load failed:', err);
+    container.innerHTML = '<div style="color:#dc3545; font-size:13px;">⚠️ ไม่สามารถโหลดประวัติได้: ' + safeText(err && err.message ? err.message : '') + '</div>';
+  });
+}
 // ===== Today List (Quick Stats) =====
 var todayListRefreshTimer = null;
 // OPTIMIZATION: keep a single set of realtime listeners for today's logs + leaves so
