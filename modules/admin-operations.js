@@ -346,69 +346,17 @@
 
       if (pageTitle) pageTitle.innerText = t.pageTitleFuel || 'แบบฟอร์มขอเบิก';
       if (listBox) listBox.style.display = 'none';
-      if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+      if (status) status.innerHTML = '';
 
-      // Load the plates added by the admin, then render the dropdown.
-      // Note: firebase.rules.json allows any authenticated user to read car_plates
-      // (write stays admin-only), so employees/drivers can select from this list.
-      window.db.ref('car_plates').once('value', (snapshot) => {
-        try {
-          if (status) status.innerHTML = '';
-          const platesObj = snapshot.val() || {};
-          // Null-guard: a deleted/partial car_plates child may be null and would throw
-          // on `.plate`, silently swallowing the callback so the form never renders.
-          const platesList = Object.keys(platesObj)
-            .map((k) => platesObj[k])
-            .filter((entry) => entry && entry.plate)
-            .map((entry) => entry.plate);
-
-          let optionsHtml = '<option value="">-- เลือกทะเบียนรถ --</option>';
-          if (platesList.length === 0) {
-            optionsHtml += '<option value="รถส่วนกลาง">รถส่วนกลาง</option>';
-          } else {
-            platesList.forEach((p) => {
-              const safePlate = window.PinThipSafe.safeText(p);
-              optionsHtml += `<option value="${safePlate}">${safePlate}</option>`;
-            });
-          }
-
-          const html = `
-        <div class="user-banner">${window.currentUser && window.currentUser.empName ? window.currentUser.empName : ''} (${window.currentUser && window.currentUser.empId ? window.currentUser.empId : ''})</div>
-        <div style="text-align:left; font-size:13px; color:#555; margin-bottom:5px;"><b>📌 ประเภทการเบิก:</b></div>
-        <select id="requestType" style="margin-bottom:8px;" onchange="toggleFuelAmountField()">
-          <option value="⛽ เบิกค่าน้ำมัน">⛽ เบิกค่าน้ำมันรถส่งของ</option>
-          <option value="🔧 เบิกค่าซ่อมรถ">🔧 เบิกค่าซ่อมรถ / ค่าอะไหล่</option>
-        </select>
-
-        <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>🚗 เลือกทะเบียนรถ:</b></div>
-        <select id="carPlateSelect" style="margin-bottom:8px;">
-          ${optionsHtml}
-        </select>
-
-        <div style="text-align:left; font-size:13px; color:#555; margin-bottom:3px;"><b>📍 รายละเอียด / เส้นทาง / รายการซ่อม:</b></div>
-        <textarea id="fuelRoute" rows="3" placeholder="เช่น ไปส่งหมูตลาดสุพรรณ หรือ เปลี่ยนยางนอกล้อหลัง"></textarea>
-
-        <div id="fuelAmountField" style="display:none; text-align:left; font-size:13px; color:#555; margin-bottom:3px;">
-          <b>💵 จำนวนเงินที่ต้องการเบิก (บาท):</b>
-          <input type="number" id="fuelAmountInput" placeholder="ระบุจำนวนเงินที่ต้องการเบิก" style="margin-bottom:8px;">
-        </div>
-        <div id="fuelDefaultHint" style="text-align:left; font-size:12px; color:#888; margin-bottom:8px;">💡 เบิกค่าน้ำมันเริ่มต้น 1,000 บาท (แอดมินสามารถปรับยอดได้)</div>
-        
-        <button class="btn-fuel" onclick="handleFuelSubmit()">💾 ส่งคำขอเบิกจ่าย</button>
-        <button class="btn-back" onclick="showDashboard()">${t.btnBack}</button>
-      `;
-          const mainContent = document.getElementById('mainContent');
-          if (mainContent) mainContent.innerHTML = html;
-        } catch (innerErr) {
-          console.error('[showFuelRequestForm] error inside car_plates callback:', innerErr);
-          const mainContent = document.getElementById('mainContent');
-          if (mainContent) mainContent.innerHTML = '<div style="color:#dc3545;">⚠️ โหลดข้อมูลทะเบียนรถไม่สำเร็จ: ' + (innerErr && innerErr.message ? innerErr.message : '') + '</div><button class="btn-back" onclick="showDashboard()">⬅️ กลับ</button>';
-        }
-      }, (dbErr) => {
-        console.error('[showFuelRequestForm] car_plates read failed:', dbErr);
+      // Render a two-tab layout (ขอเบิก | ประวัติ). The actual form + history
+      // markup is produced by helpers in employee-ui.js so the same tab UI
+      // is shared by the leave page.
+      if (window.PinThipSafe && window.PinThipSafe.ui && window.PinThipSafe.ui.renderFuelTabs) {
+        window.PinThipSafe.ui.renderFuelTabs(t);
+      } else {
         const mainContent = document.getElementById('mainContent');
-        if (mainContent) mainContent.innerHTML = '<div style="color:#dc3545;">⚠️ อ่านข้อมูลทะเบียนรถไม่ได้: ' + (dbErr && dbErr.message ? dbErr.message : '') + '</div><button class="btn-back" onclick="showDashboard()">⬅️ กลับ</button>';
-      });
+        if (mainContent) mainContent.innerHTML = '<div style="color:#dc3545;">⚠️ Tab UI ยังไม่พร้อม</div>';
+      }
     } catch (outerErr) {
       console.error('[showFuelRequestForm] outer error:', outerErr);
       window.alert('เปิดฟอร์มเบิกไม่ได้: ' + (outerErr && outerErr.message ? outerErr.message : outerErr));

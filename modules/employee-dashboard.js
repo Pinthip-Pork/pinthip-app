@@ -33,7 +33,6 @@
       ${driverExtras}
       <button class="btn-leave" onclick="showLeaveForm()">${escape(t.btnLeaveMenu)}</button>
       <button class="btn-history" onclick="showMyAttendance()">${escape(t.btnMyAttendance)}</button>
-      <button class="btn-purple" onclick="showHistory()">${escape(t.btnHistoryMenu)}</button>
       <button class="btn-logout" onclick="handleLogout()">${escape(t.btnLogout)}</button>
     `;
   }

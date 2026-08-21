@@ -318,6 +318,41 @@ button:disabled {
   margin-top: 2px;
 }
 
+/* ---- Tabs ---- */
+.tab-container {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #dfe7f5;
+}
+.tab-btn {
+  flex: 1;
+  padding: 12px 8px;
+  background: #f0f2f7;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  color: #555;
+  transition: background 0.2s, color 0.2s;
+}
+.tab-btn:hover {
+  background: #e2e7f5;
+}
+.tab-btn.active {
+  background: #0d6efd;
+  color: #fff;
+  border-bottom: 3px solid #0b5ed7;
+  margin-bottom: -2px;
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
+
 /* ---- Dashboard Grid ---- */
 .dashboard-grid {
   display: grid;

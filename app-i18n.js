@@ -39,7 +39,13 @@
       emptyInputErr: '⚠️ กรุณากรอกรหัสและ PIN',
       successTitle: '🎉 สำเร็จ!',
       errTitle: '🚫 แจ้งเตือน',
-      btnOk: 'ตกลง'
+      btnOk: 'ตกลง',
+      tabRequest: '📝 ขอเบิก',
+      tabLeaveForm: '🌴 ขอลา',
+      tabHistory: '📜 ประวัติ',
+      leaveHistoryEmpty: 'ยังไม่มีประวัติการลา',
+      fuelHistoryEmpty: 'ยังไม่มีประวัติการเบิก',
+      historyLoadErr: 'ไม่สามารถโหลดประวัติได้'
     },
     MM: {
       companyTitle: 'ပင်းသစ် ကုမ္ပဏီ လီမိတက်',
@@ -80,7 +86,13 @@
       emptyInputErr: '⚠️ ID နှင့် PIN ဖြည့်စွက်ပါ',
       successTitle: '🎉 အောင်မြင်ပါသည်!',
       errTitle: '🚫 သတိပေးချက်',
-      btnOk: 'ကောင်းပြီ'
+      btnOk: 'ကောင်းပြီ',
+      tabRequest: '📝 တောင်းခံ',
+      tabLeaveForm: '🌴 ခွင့်တောင်း',
+      tabHistory: '📜 မှတ်တမ်း',
+      leaveHistoryEmpty: 'ခွင့်မှတ်တမ်း မရှိသေးပါ',
+      fuelHistoryEmpty: 'ငွေတောင်းမှတ်တမ်း မရှိသေးပါ',
+      historyLoadErr: 'မှတ်တမ်းကို ရယူ၍မရပါ'
     }
   };
 

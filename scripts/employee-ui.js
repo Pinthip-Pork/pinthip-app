@@ -167,25 +167,17 @@ function executeClockIn(lateReason) {
   });
 }
 
-// ===== Leave Form =====
+// ===== Leave + History Tabs =====
 function showLeaveForm() {
   var t = i18n[currentLang];
   document.getElementById('pageTitle').innerText = t.pageTitleLeave;
   document.getElementById('listBox').style.display = "none";
-  var today = getLocalDateTimeString();
-
-      var html = '\u003Cdiv class=\"user-banner\"\u003E' + safeText(currentUser.empName) + ' (' + safeText(currentUser.empId) + ')\u003C/div\u003E' +
-        '\u003Cselect id=\"leaveType\"\u003E' +
-    '\u003Coption value=\"\u0E25\u0E32\u0E1B\u0E48\u0E27\u0E22\"\u003E' + t.optSick + '\u003C/option\u003E' +
-    '\u003Coption value=\"\u0E25\u0E32\u0E01\u0E34\u0E08\"\u003E' + t.optPersonal + '\u003C/option\u003E' +
-    '\u003Coption value=\"\u0E25\u0E32\u0E1E\u0E31\u0E01\u0E23\u0E49\u0E2D\u0E19\"\u003E' + t.optVacation + '\u003C/option\u003E' +
-    '\u003C/select\u003E' +
-    '\u003Cinput type=\"date\" id=\"startDate\" value=\"' + today + '\"\u003E' +
-    '\u003Cinput type=\"date\" id=\"endDate\" value=\"' + today + '\"\u003E' +
-    '\u003Ctextarea id=\"leaveReason\" rows=\"2\" placeholder=\"' + t.phReason + '\"\u003E\u003C/textarea\u003E' +
-    '\u003Cbutton onclick=\"handleLeaveSubmit()\"\u003E' + t.btnSubmitLeave + '\u003C/button\u003E' +
-    '\u003Cbutton class=\"btn-back\" onclick=\"showDashboard()\"\u003E' + t.btnBack + '\u003C/button\u003E';
-  document.getElementById('mainContent').innerHTML = html;
+  document.getElementById('status').innerHTML = "";
+  if (window.PinThipSafe && window.PinThipSafe.ui && window.PinThipSafe.ui.renderLeaveTabs) {
+    window.PinThipSafe.ui.renderLeaveTabs(t);
+  } else {
+    document.getElementById('mainContent').innerHTML = '<div style="color:#dc3545;">\u26A0 Tab UI \u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E1E\u0E23\u0E49\u0E2D\u0E21</div>';
+  }
 }
 
 function handleLeaveSubmit() {
@@ -207,128 +199,49 @@ function handleLeaveSubmit() {
     applyDate: new Date().toLocaleDateString()
   }, function(err) {
     if (!err) {
-      showModal("\uD83C\uDF89 \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", "\u0E22\u0E37\u0E48\u0E19\u0E43\u0E1A\u0E25\u0E32\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal(); showDashboard();\"\u003E\u0E15\u0E01\u0E25\u0E07\u003C/button\u003E');
+      showModal("\uD83C\uDF89 \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08", "\u0E22\u0E37\u0E48\u0E19\u0E43\u0E1A\u0E25\u0E32\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22", '\u003Cbutton class=\"btn-ok\" onclick=\"closeModal(); showLeaveForm();\"\u003E\u0E15\u0E01\u0E25\u0E07\u003C/button\u003E');
     }
   });
 }
-
-// ===== My Attendance History =====
-function showMyAttendance() {
+// ===== Leave + Fuel History (used by tab content) =====
+function loadLeaveHistoryInto(containerId) {
   var t = i18n[currentLang];
-  document.getElementById('pageTitle').innerText = t.pageTitleHistory;
-  document.getElementById('listBox').style.display = "none";
-  document.getElementById('status').innerHTML = i18n[currentLang].checking;
-
-  Promise.all([
-    db.ref('settings/globalLateTime').once('value'),
-    PinThipSafe.logsRepo.fetchAllLogs(db),
-    db.ref('leaves').once('value')
-  ]).then(function(results) {
-    var settingsSnap = results[0];
-    var logsObj = results[1];
-    var leaveSnap = results[2];
-    var globalLateTime = settingsSnap.val() || "08:00";
-    var leavesObj = leaveSnap.val() || {};
-
-    var presentDays = 0;
-    var lateRecords = [];
-
-    Object.values(logsObj).forEach(function(item) {
-      if (String(item.empId) === String(currentUser.empId) && item.type === "\u0E40\u0E02\u0E49\u0E32\u0E07\u0E32\u0E19") {
-        presentDays++;
-        if (item.time > globalLateTime) {
-          lateRecords.push(item);
-        }
-      }
-    });
-
-    var leaveCount = 0;
-    var leaveRecords = [];
-    Object.values(leavesObj).forEach(function(item) {
-      var statusStr = String(item.status || '');
-      if (String(item.empId) === String(currentUser.empId) && statusStr.indexOf('\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34') !== -1) {
-        leaveCount++;
-        leaveRecords.push(item);
-      }
-    });
-
-    document.getElementById('status').innerHTML = "";
-
-    var html = '\u003Cdiv class=\"user-banner\"\u003E\uD83D\uDC64 ' + safeText(currentUser.empName) + ' (' + safeText(currentUser.empId) + ')\u003C/div\u003E' +
-      '\u003Cdiv style=\"display: flex; gap: 8px; margin-bottom: 15px;\"\u003E' +
-      '\u003Cdiv class=\"stat-box\" style=\"background:#e8f5e9; color:#2e7d32; padding: 12px; border-radius: 10px; flex:1;\"\u003E\u0E21\u0E32\u0E17\u0E33\u0E07\u0E32\u0E19\u0E23\u0E27\u0E21\u003Cbr\u003E\u003Cb style=\"font-size:20px;\"\u003E' + presentDays + '\u003C/b\u003E \u0E27\u0E31\u0E19\u003C/div\u003E' +
-      '\u003Cdiv class=\"stat-box\" style=\"background:#fff3cd; color:#856404; padding: 12px; border-radius: 10px; flex:1;\"\u003E\u0E21\u0E32\u0E2A\u0E32\u0E22\u003Cbr\u003E\u003Cb style=\"font-size:20px;\"\u003E' + lateRecords.length + '\u003C/b\u003E \u0E04\u0E23\u0E31\u0E49\u0E07\u003C/div\u003E' +
-      '\u003Cdiv class=\"stat-box\" style=\"background:#e2e3e5; color:#383d41; padding: 12px; border-radius: 10px; flex:1;\"\u003E\u0E25\u0E32\u0E07\u0E32\u0E19\u003Cbr\u003E\u003Cb style=\"font-size:20px;\"\u003E' + leaveCount + '\u003C/b\u003E \u0E27\u0E31\u0E19\u003C/div\u003E' +
-      '\u003C/div\u003E';
-
-    if (lateRecords.length > 0 || leaveRecords.length > 0) {
-      html += '\u003Cdiv style=\"text-align:left; font-weight:bold; margin: 15px 0 5px 0; color:#495057;\"\u003E\uD83D\uDCCC \u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E27\u0E31\u0E19\u0E21\u0E32\u0E2A\u0E32\u0E22 \u0E2B\u0E23\u0E37\u0E2D \u0E27\u0E31\u0E19\u0E25\u0E32:\u003C/div\u003E';
-
-      lateRecords.slice().reverse().forEach(function(item) {
-        html += '\u003Cdiv class=\"history-item\" style=\"background: #fff3cd; border-left: 4px solid #ffc107;\"\u003E' +
-          '\u23F0 \u003Cb\u003E\u0E21\u0E32\u0E2A\u0E32\u0E22\u003C/b\u003E \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + item.date + ' (\u0E40\u0E27\u0E25\u0E32\u0E2A\u0E41\u0E01\u0E19: \u003Cb style=\"color:#d9534f;\"\u003E' + item.time + ' \u0E19.\u003C/b\u003E)\u003Cbr\u003E' +
-          '\u003Cspan style=\"font-size:12px; color:#555;\"\u003E\u0E40\u0E01\u0E13\u0E11\u0E4C\u0E40\u0E27\u0E25\u0E32\u0E40\u0E02\u0E49\u0E32\u0E07\u0E32\u0E19: ' + globalLateTime + ' \u0E19.\u003C/span\u003E\u003C/div\u003E';
-      });
-
-      leaveRecords.slice().reverse().forEach(function(item) {
-        html += '\u003Cdiv class=\"history-item\" style=\"background: #e2e3e5; border-left: 4px solid #6c757d;\"\u003E' +
-          '\uD83C\uDF34 \u003Cb\u003E' + safeText(item.leaveType) + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E' +
-          '\uD83D\uDCC5 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + safeText(item.startDate) + ' \u0E16\u0E36\u0E07 ' + safeText(item.endDate) + '\u003Cbr\u003E' +
-          '\uD83D\uDCAC \u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25: ' + safeText(item.reason) + '\u003C/div\u003E';
-      });
-    } else {
-      html += '\u003Cdiv style=\"color: #28a745; background: #e8f5e9; padding: 15px; border-radius: 10px; margin-top: 15px; font-weight: bold;\"\u003E\uD83C\uDF89 \u0E22\u0E2D\u0E14\u0E40\u0E22\u0E35\u0E48\u0E22\u0E21! \u0E04\u0E38\u0E13\u0E44\u0E21\u0E48\u0E40\u0E04\u0E22\u0E21\u0E32\u0E2A\u0E32\u0E22\u0E41\u0E25\u0E30\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E25\u0E32\u0E40\u0E25\u0E22\u003C/div\u003E';
-    }
-
-    html += '\u003Cbutton class=\"btn-back\" onclick=\"showDashboard()\" style=\"margin-top:15px;\"\u003E' + t.btnBack + '\u003C/button\u003E';
-    document.getElementById('mainContent').innerHTML = html;
-  }).catch(function(err) {
-    document.getElementById('status').innerHTML = "";
-    if (window.PinThipSafe && window.PinThipSafe.ui && window.PinThipSafe.ui.showAsyncError) {
-      window.PinThipSafe.ui.showAsyncError('mainContent', {
-        message: "\u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E42\u0E2B\u0E25\u0E14\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49",
-        detail: "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E2D\u0E34\u0E19\u0E40\u0E17\u0E2D\u0E23\u0E4C\u0E40\u0E19\u0E47\u0E15 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48",
-        retryFn: showMyAttendance
-      });
-    }
-    console.error('My attendance load failed:', err);
-  });
-}
-
-function showHistory() {
-  var t = i18n[currentLang];
-  document.getElementById('pageTitle').innerText = "\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E25\u0E32 & \u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22";
-  document.getElementById('listBox').style.display = "none";
-  document.getElementById('status').innerHTML = i18n[currentLang].checking;
-
-  Promise.all([
-    db.ref('leaves').once('value'),
-    db.ref('fuel_requests').once('value')
-  ]).then(function(results) {
-    document.getElementById('status').innerHTML = "";
-    var leaveSnap = results[0];
-    var fuelSnap = results[1];
-    var leavesObj = leaveSnap.val() || {};
-    var fuelObj = fuelSnap.val() || {};
-
+  db.ref('leaves').once('value').then(function(snap) {
+    var leavesObj = snap.val() || {};
     var myLeaves = Object.values(leavesObj).filter(function(item) {
       return String(item.empId) === String(currentUser.empId);
     });
+    var html = '';
+    if (myLeaves.length === 0) {
+      html = '\u003Cdiv style=\"color:#888; font-size:13px;\"\u003E' + (t.leaveHistoryEmpty || '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E25\u0E32') + '\u003C/div\u003E';
+    } else {
+      myLeaves.slice().reverse().forEach(function(item) {
+        html += '\u003Cdiv class=\"history-item\"\u003E\u003Cb\u003E' + safeText(item.leaveType) + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E\uD83D\uDCC5 ' + safeText(item.startDate) + ' \u0E16\u0E36\u0E07 ' + safeText(item.endDate);
+        if (item.reason) html += '\u003Cbr\u003E\uD83D\uDCAC ' + safeText(item.reason);
+        html += '\u003C/div\u003E';
+      });
+    }
+    var el = document.getElementById(containerId);
+    if (el) el.innerHTML = html;
+  }).catch(function(err) {
+    var el = document.getElementById(containerId);
+    if (el) el.innerHTML = '\u003Cdiv style=\"color:#dc3545; font-size:13px;\"\u003E' + (t.historyLoadErr || '\u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E42\u0E2B\u0E25\u0E14\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49') + '\u003C/div\u003E';
+    console.error('Leave history load failed:', err);
+  });
+}
+
+function loadFuelHistoryInto(containerId) {
+  var t = i18n[currentLang];
+  db.ref('fuel_requests').once('value').then(function(snap) {
+    var fuelObj = snap.val() || {};
     var myFuels = Object.values(fuelObj).filter(function(item) {
       return String(item.empId) === String(currentUser.empId);
     });
-
-    var html = '\u003Cdiv class=\"user-banner\"\u003E' + safeText(currentUser.empName) + '\u003C/div\u003E';
-    html += '\u003Cb\u003E\uD83C\uDF34 \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E25\u0E32:\u003C/b\u003E';
-    if (myLeaves.length === 0) html += '\u003Cdiv style=\"color:#888; font-size:12px;\"\u003E\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E01\u0E32\u0E23\u0E25\u0E32\u003C/div\u003E';
-    myLeaves.forEach(function(item) {
-      html += '\u003Cdiv class=\"history-item\"\u003E\u003Cb\u003E' + safeText(item.leaveType) + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E\uD83D\uDCC5 ' + safeText(item.startDate) + ' \u0E16\u0E36\u0E07 ' + safeText(item.endDate) + '\u003C/div\u003E';
-    });
-
-    if (currentUser.isDriver) {
-      html += '\u003Cbr\u003E\u003Cb\u003E\u26FD/\uD83D\uDD27 \u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E40\u0E1A\u0E34\u0E01\u0E04\u0E48\u0E32\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19 / \u0E04\u0E48\u0E32\u0E0B\u0E48\u0E2D\u0E21:\u003C/b\u003E';
-      if (myFuels.length === 0) html += '\u003Cdiv style=\"color:#888; font-size:12px;\"\u003E\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22\u003C/div\u003E';
-      myFuels.forEach(function(item) {
+    var html = '';
+    if (myFuels.length === 0) {
+      html = '\u003Cdiv style=\"color:#888; font-size:13px;\"\u003E' + (t.fuelHistoryEmpty || '\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E40\u0E1A\u0E34\u0E01\u0E08\u0E48\u0E32\u0E22') + '\u003C/div\u003E';
+    } else {
+      myFuels.slice().reverse().forEach(function(item) {
         var typeLabel = safeText(item.requestType || '\u0E40\u0E1A\u0E34\u0E01\u0E04\u0E48\u0E32\u0E19\u0E49\u0E33\u0E21\u0E31\u0E19');
         var plateInfo = item.carPlate ? ' (\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19: ' + safeText(item.carPlate) + ')' : '';
         var amtDisplay = item.amount > 0 ? item.amount + ' \u0E1A\u0E32\u0E17' : '\u0E23\u0E2D\u0E41\u0E2D\u0E14\u0E21\u0E34\u0E19\u0E01\u0E33\u0E2B\u0E19\u0E14';
@@ -336,20 +249,34 @@ function showHistory() {
         html += '\u003Cdiv class=\"history-item\"\u003E[' + typeLabel + ']' + plateInfo + routeInfo + ' | \u003Cb\u003E\u0E22\u0E2D\u0E14: ' + amtDisplay + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E\uD83D\uDCC5 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + safeText(item.date) + '\u003C/div\u003E';
       });
     }
-
-    html += '\u003Cbutton class=\"btn-back\" onclick=\"showDashboard()\"\u003E' + t.btnBack + '\u003C/button\u003E';
-    document.getElementById('mainContent').innerHTML = html;
+    var el = document.getElementById(containerId);
+    if (el) el.innerHTML = html;
   }).catch(function(err) {
-    document.getElementById('status').innerHTML = "";
-    if (window.PinThipSafe && window.PinThipSafe.ui && window.PinThipSafe.ui.showAsyncError) {
-      window.PinThipSafe.ui.showAsyncError('mainContent', {
-        message: "\u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E42\u0E2B\u0E25\u0E14\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49",
-        detail: "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E15\u0E23\u0E27\u0E08\u0E2A\u0E2D\u0E1A\u0E2D\u0E34\u0E19\u0E40\u0E17\u0E2D\u0E23\u0E4C\u0E40\u0E19\u0E47\u0E15 \u0E41\u0E25\u0E49\u0E27\u0E01\u0E14\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48",
-        retryFn: showHistory
-      });
-    }
-    console.error('History load failed:', err);
+    var el = document.getElementById(containerId);
+    if (el) el.innerHTML = '\u003Cdiv style=\"color:#dc3545; font-size:13px;\"\u003E' + (t.historyLoadErr || '\u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E42\u0E2B\u0E25\u0E14\u0E1B\u0E23\u0E30\u0E27\u0E31\u0E15\u0E34\u0E44\u0E14\u0E49') + '\u003C/div\u003E';
+    console.error('Fuel history load failed:', err);
   });
+}
+
+// ===== Tab Switching =====
+function switchTab(btn) {
+  var container = btn.parentNode;
+  var btns = container.querySelectorAll('.tab-btn');
+  btns.forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  var target = btn.getAttribute('data-target');
+  var panels = container.parentNode.querySelectorAll('.tab-content');
+  panels.forEach(function(p) { p.classList.remove('active'); });
+  var targetEl = document.getElementById(target);
+  if (targetEl) targetEl.classList.add('active');
+  // Lazy-load history content when the history tab is shown for the first time.
+  if (target && target.indexOf('History') !== -1) {
+    if (targetEl && targetEl.getAttribute('data-loaded') !== '1') {
+      targetEl.setAttribute('data-loaded', '1');
+      if (target === 'leaveHistoryTab') loadLeaveHistoryInto(target);
+      if (target === 'fuelHistoryTab') loadFuelHistoryInto(target);
+    }
+  }
 }
 
 // ===== Today List (Quick Stats) =====
