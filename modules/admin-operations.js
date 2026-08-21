@@ -685,6 +685,11 @@
         } else {
           currentFuelFilteredList.slice().reverse().forEach((item) => {
             const statusBadge = String(item.status || '').includes('อนุมัติแล้ว') ? '🟢 อนุมัติแล้ว' : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รออนุมัติ');
+            const isApproved = String(item.status || '').includes('อนุมัติแล้ว');
+            const isPaid = item.paid === true;
+            const paidBadge = isApproved
+              ? (isPaid ? '<span style=\"color:#2e7d32; font-weight:bold;\">💰 ได้รับเงินแล้ว</span>' + (item.paidDate ? ' (' + window.PinThipSafe.safeText(item.paidDate) + ')' : '') : '<span style=\"color:#e67e22; font-weight:bold;\">❓ ยังไม่ได้รับเงิน</span>')
+              : '';
             const badgeType = window.PinThipSafe.safeText(item.requestType || '⛽ เบิกค่าน้ำมัน');
             const safeEmpName = window.PinThipSafe.safeText(item.empName);
             const safeEmpId = window.PinThipSafe.safeText(item.empId);
@@ -695,12 +700,15 @@
 
             html += `
               <div class="history-item">
-                <b>👤 ${safeEmpName} (${safeEmpId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b><br>
+                <b>👤 ${safeEmpName} (${safeEmpId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b>${isApproved ? ' | ' + paidBadge : ''}<br>
                 ${plateText}📍 รายละเอียด: ${safeRoute} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
                 📅 วันที่: ${window.PinThipSafe.safeText(item.date)}<br>
-                <div style="margin-top:8px; display:flex; gap:6px;">
+                <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
                   <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${window.PinThipSafe.safeText(item.key)}', '${safeCarPlate}', '${safeRoute}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
                   <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${window.PinThipSafe.safeText(item.key)}', '${safeEmpName}')">🗑️ ลบ</button>
+                  ${isApproved ? (isPaid
+                    ? `<button class="btn-back" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="toggleFuelPaid('${window.PinThipSafe.safeText(item.key)}', false)">↩️ ยกเลิกได้รับเงิน</button>`
+                    : `<button style="width:auto; margin:0; padding:6px 12px; font-size:12px; background:#28a745; color:#fff; border:none; border-radius:6px;" onclick="toggleFuelPaid('${window.PinThipSafe.safeText(item.key)}', true)">💰 ทำเครื่องหมายได้รับเงินแล้ว</button>`) : ''}
                 </div>
               </div>
             `;
@@ -893,6 +901,31 @@
     window.db.ref('fuel_requests/' + key).remove((_err) => {
       window.closeModal();
       window.showAdminFuelHistory();
+    });
+  }
+
+  // ===== Fuel Payment Status (paid / not paid) =====
+  // Admin marks a fuel/repair request as "ได้รับเงินแล้ว" (paid: true) so the
+  // employee is informed the money has been handed over. When toggled back to
+  // false the paidDate is cleared. Only applies to already-approved requests.
+  function toggleFuelPaid(key, paid) {
+    if (!key) return;
+    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString
+      ? window.PinThipSafe.utils.getLocalDateTimeString()
+      : new Date().toISOString().slice(0, 10);
+
+    const update = paid
+      ? { paid: true, paidDate: todayStr }
+      : { paid: false, paidDate: null };
+
+    window.db.ref('fuel_requests/' + key).update(update, (err) => {
+      if (err) {
+        console.error('Update paid status failed:', err);
+        window.alert('บันทึกสถานะการรับเงินไม่สำเร็จ กรุณาลองอีกครั้ง');
+        return;
+      }
+      // Refresh the history list so the badge + button reflect the new state.
+      window.renderFuelHistoryList();
     });
   }
 
@@ -1927,6 +1960,7 @@
   window.submitEditFuel = submitEditFuel;
   window.confirmDeleteFuel = confirmDeleteFuel;
   window.executeDeleteFuel = executeDeleteFuel;
+  window.toggleFuelPaid = toggleFuelPaid;
 
   window.showAdminLeaves = showAdminLeaves;
   window.updateLeaveStatusAndHide = updateLeaveStatusAndHide;

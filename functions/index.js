@@ -852,6 +852,26 @@ exports.onFuelStatusChanged = onValueWritten({ ref: '/fuel_requests/{key}', regi
   const beforeStatus = String(before?.status || '');
   const afterStatus = String(after.status || '');
 
+  // ===== Payment-status notification =====
+  // Fires when the admin marks an approved request as "ได้รับเงินแล้ว"
+  // (paid transitions from false/undefined -> true). This is a separate signal
+  // from the approval/rejection notification below so the employee knows the
+  // money has actually been handed over.
+  const beforePaid = before && before.paid === true;
+  const afterPaid = after.paid === true;
+  if (!beforePaid && afterPaid) {
+    const empId = String(after.empId || '');
+    const empName = String(after.empName || empId || 'พนักงาน');
+    const requestType = String(after.requestType || 'เบิกจ่าย');
+    const amount = after.amount ? ` ${Number(after.amount).toLocaleString()} บาท` : '';
+    await notifyEmployeeDevice(
+      empId,
+      '💰 ได้รับเงินค่าเบิกจ่ายแล้ว',
+      `${empName} — ${requestType}${amount} — รับเงินแล้ว`,
+      `fuel-paid-${event.params.key}`
+    );
+  }
+
   if (!isPendingStatus(beforeStatus)) return;
   if (!isApprovedStatus(afterStatus) && !isRejectedStatus(afterStatus)) return;
 

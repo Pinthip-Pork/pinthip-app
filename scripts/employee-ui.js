@@ -246,7 +246,9 @@ function loadFuelHistoryInto(containerId) {
         var plateInfo = item.carPlate ? ' (\u0E17\u0E30\u0E40\u0E1A\u0E35\u0E22\u0E19: ' + safeText(item.carPlate) + ')' : '';
         var amtDisplay = item.amount > 0 ? item.amount + ' \u0E1A\u0E32\u0E17' : '\u0E23\u0E2D\u0E41\u0E2D\u0E14\u0E21\u0E34\u0E19\u0E01\u0E33\u0E2B\u0E19\u0E14';
         var routeInfo = item.route && item.route !== '-' ? '\u003Cbr\u003E\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14: ' + safeText(item.route) : '';
-        html += '\u003Cdiv class=\"history-item\"\u003E[' + typeLabel + ']' + plateInfo + routeInfo + ' | \u003Cb\u003E\u0E22\u0E2D\u0E14: ' + amtDisplay + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E\uD83D\uDCC5 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + safeText(item.date) + '\u003C/div\u003E';
+        var isApprovedFuel = String(item.status || '').indexOf('\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27') !== -1;
+        var paidBadge = (isApprovedFuel && item.paid === true) ? '\u003Cbr\u003E\uD83D\u0DCB \u003Cspan style=\"color:#2e7d32; font-weight:bold;\"\u003E\u0E44\u0E14\u0E49\u0E23\u0E31\u0E1A\u0E40\u0E07\u0E34\u0E19\u0E41\u0E25\u0E49\u0E27\u003C/span\u003E' + (item.paidDate ? ' (' + safeText(item.paidDate) + ')' : '') : (isApprovedFuel ? '\u003Cbr\u003E\u003Cspan style=\"color:#e67e22; font-weight:bold;\"\u003E\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E23\u0E31\u0E1A\u0E40\u0E07\u0E34\u0E19\u003C/span\u003E' : '');
+        html += '\u003Cdiv class=\"history-item\"\u003E[' + typeLabel + ']' + plateInfo + routeInfo + ' | \u003Cb\u003E\u0E22\u0E2D\u0E14: ' + amtDisplay + '\u003C/b\u003E (' + safeText(item.status) + ')\u003Cbr\u003E\uD83D\uDCC5 \u0E27\u0E31\u0E19\u0E17\u0E35\u0E48: ' + safeText(item.date) + paidBadge + '\u003C/div\u003E';
       });
     }
     var el = document.getElementById(containerId);
