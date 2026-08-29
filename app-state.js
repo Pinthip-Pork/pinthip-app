@@ -158,6 +158,39 @@
     return { isAdmin: false, currentUser: user, credentials: sanitizeCredentials(credentials) || null };
   }
 
+  // Refresh session expiry (sliding window) - extends TTL when user is still active
+  function refreshSessionExpiry() {
+    const stored = getStoredSession();
+    if (!stored) return false;
+
+    const ttlMs = getSessionTtlMs();
+    const newExpiresAt = Date.now() + ttlMs;
+
+    if (stored.isAdmin) {
+      // Refresh admin session
+      const rawAdminFlag = read(SESSION_KEYS.admin, false);
+      if (rawAdminFlag && typeof rawAdminFlag === 'object' && rawAdminFlag.value) {
+        write(SESSION_KEYS.admin, {
+          ...rawAdminFlag,
+          expiresAt: newExpiresAt
+        });
+        return true;
+      }
+    } else if (stored.currentUser) {
+      // Refresh user session
+      const rawUser = read(SESSION_KEYS.user, null);
+      if (rawUser && typeof rawUser === 'object' && rawUser.value) {
+        write(SESSION_KEYS.user, {
+          ...rawUser,
+          expiresAt: newExpiresAt
+        });
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   window.PinThipSafe = window.PinThipSafe || {};
   window.PinThipSafe.session = {
     read,
@@ -168,6 +201,7 @@
     getStoredSession,
     hasStoredSession,
     setAdminSession,
-    setUserSession
+    setUserSession,
+    refreshSessionExpiry
   };
 })();

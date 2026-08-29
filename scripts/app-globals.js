@@ -366,7 +366,13 @@ function initApp() {
   window._tokenRefreshInterval = setInterval(function() {
     var cu = firebase.auth().currentUser;
     if (cu) {
-      cu.getIdToken(true).catch(function(e) {
+      cu.getIdToken(true).then(function() {
+        // Also refresh the session storage expiry to extend the sliding window
+        if (window.PinThipSafe && window.PinThipSafe.session && window.PinThipSafe.session.refreshSessionExpiry) {
+          window.PinThipSafe.session.refreshSessionExpiry();
+          console.log('Session expiry refreshed (sliding window extended)');
+        }
+      }).catch(function(e) {
         console.warn('Proactive token refresh failed:', e);
       });
     }
@@ -478,5 +484,27 @@ function initApp() {
       resetExpiredAuthSession();
       if (typeof showLoginForm === 'function') showLoginForm();
     }
+  });
+
+  // User activity listener to refresh session expiry (sliding window)
+  // Throttled to avoid excessive localStorage writes
+  var lastActivityRefresh = 0;
+  var ACTIVITY_REFRESH_THROTTLE_MS = 5 * 60 * 1000; // Refresh at most every 5 minutes
+
+  function onUserActivity() {
+    var now = Date.now();
+    if (now - lastActivityRefresh > ACTIVITY_REFRESH_THROTTLE_MS) {
+      if (window.PinThipSafe && window.PinThipSafe.session && window.PinThipSafe.session.refreshSessionExpiry) {
+        if (window.PinThipSafe.session.refreshSessionExpiry()) {
+          lastActivityRefresh = now;
+          console.log('Session expiry refreshed due to user activity');
+        }
+      }
+    }
+  }
+
+  // Listen for user activity events
+  ['click', 'keydown', 'scroll', 'touchstart'].forEach(function(eventType) {
+    document.addEventListener(eventType, onUserActivity, { passive: true, capture: true });
   });
 }
