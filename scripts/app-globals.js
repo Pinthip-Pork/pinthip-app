@@ -457,6 +457,74 @@ function initApp() {
           isAdmin = false;
           window.isAdmin = false;
           if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
+
+
+// ===== UI/UX Helper Functions =====
+/**
+ * Set button loading state
+ * @param {HTMLElement} buttonElement - The button element
+ * @param {boolean} isLoading - True to show loading, false to hide
+ */
+function setButtonLoading(buttonElement, isLoading) {
+  if (!buttonElement) return;
+  
+  if (isLoading) {
+    buttonElement.classList.add('loading');
+    buttonElement.setAttribute('disabled', 'disabled');
+    buttonElement._originalText = buttonElement.innerHTML;
+  } else {
+    buttonElement.classList.remove('loading');
+    buttonElement.removeAttribute('disabled');
+    if (buttonElement._originalText) {
+      buttonElement.innerHTML = buttonElement._originalText;
+    }
+  }
+}
+
+/**
+ * Show success feedback on button
+ * @param {HTMLElement} buttonElement - The button element
+ */
+function setButtonSuccess(buttonElement) {
+  if (!buttonElement) return;
+  
+  buttonElement.classList.add('success');
+  setTimeout(function() {
+    buttonElement.classList.remove('success');
+  }, 600);
+}
+
+/**
+ * Create loading container HTML
+ * @param {string} text - Loading text to display
+ * @returns {string} HTML string
+ */
+function createLoadingHTML(text) {
+  text = text || 'กำลังโหลดข้อมูล...';
+  return '\n    <div class="loading-container">\n      <div class="loading-spinner"></div>\n      <div class="loading-text">' + (window.PinThipSafe?.escapeHtml ? window.PinThipSafe.escapeHtml(text) : text) + '</div>\n    </div>\n  ';
+}
+
+/**
+ * Create skeleton loading HTML
+ * @param {number} lines - Number of skeleton lines
+ * @returns {string} HTML string
+ */
+function createSkeletonHTML(lines) {
+  lines = lines || 3;
+  var html = '<div class="skeleton-box">';
+  for (var i = 0; i < lines; i++) {
+    html += '<div class="skeleton skeleton-line"></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// Make functions globally accessible
+window.setButtonLoading = setButtonLoading;
+window.setButtonSuccess = setButtonSuccess;
+window.createLoadingHTML = createLoadingHTML;
+window.createSkeletonHTML = createSkeletonHTML;
+
           if (typeof startDevicePresence === 'function') {
             startDevicePresence(window.PinThipSafe.utils.getDeviceId(), currentUser.empName, 'employee');
           }

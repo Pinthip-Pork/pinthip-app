@@ -306,7 +306,7 @@
         '</div>' +
       '</div>' +
       '<div id="foamCustomerManagerList" style="max-height:420px; overflow-y:auto; border:1px solid #e9ecef; border-radius:12px; padding:8px; background:#fff; margin-bottom:12px;">' +
-        '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>' +
+        createLoadingHTML('กำลังโหลดรายชื่อลูกค้า...') +
       '</div>' +
       '<div style="background:#f8f9fa; border:1px solid #e9ecef; border-radius:12px; padding:12px; margin-bottom:12px; text-align:left;">' +
         '<div style="font-weight:bold; margin-bottom:10px;">➕ เพิ่มลูกค้าใหม่</div>' +
@@ -390,7 +390,7 @@
         return;
       }
 
-      list.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>';
+      list.innerHTML = createLoadingHTML('กำลังโหลดรายชื่อลูกค้า...');
       repo.fetchAllCustomers().then(function (customers) {
         window.PinThipSafe.foamCustomerRepo.__cachedList = customers;
         var filtered = q

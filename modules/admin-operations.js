@@ -60,7 +60,7 @@
     const container = document.getElementById('attendanceSummaryResultContainer');
     if (!container || !startDate || !endDate) return;
 
-    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+    container.innerHTML = createLoadingHTML();
 
     Promise.all([
       window.db.ref('settings/globalLateTime').once('value'),
@@ -202,7 +202,7 @@
     if (bellBtn) bellBtn.style.display = 'block';
     if (pageTitle) pageTitle.innerText = '📍 จัดการพิกัด GPS และรัศมีเช็กอิน';
     if (listBox) listBox.style.display = 'none';
-    if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+    if (status) status.innerHTML = createLoadingHTML();
 
     window.db.ref('locations').once('value', (snapshot) => {
       if (status) status.innerHTML = '';
@@ -433,7 +433,7 @@
     if (bellBtn) bellBtn.style.display = 'block';
     if (pageTitle) pageTitle.innerText = '⛽/🔧 อนุมัติเบิกค่าน้ำมัน / ค่าซ่อมรถ';
     if (listBox) listBox.style.display = 'none';
-    if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+    if (status) status.innerHTML = createLoadingHTML();
 
     window.db.ref('fuel_requests').once('value', (snapshot) => {
       if (status) status.innerHTML = '';
@@ -644,7 +644,7 @@
     const container = document.getElementById('fuelHistoryContainer');
     if (!container || !startDate || !endDate) return;
 
-    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+    container.innerHTML = createLoadingHTML();
 
     window.db.ref('fuel_requests').once('value', (snapshot) => {
       try {
@@ -1061,7 +1061,7 @@
     const container = document.getElementById('leaveHistoryContainer');
     if (!container || !startDate || !endDate) return;
 
-    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+    container.innerHTML = createLoadingHTML();
 
     window.db.ref('leaves').once('value', (snapshot) => {
       const leavesObj = snapshot.val() || {};
@@ -1228,7 +1228,7 @@
     const container = document.getElementById('logHistoryContainer');
     if (!container || !startDate || !endDate) return;
 
-    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+    container.innerHTML = createLoadingHTML();
 
     window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, startDate, endDate).then((logsObj) => {
       const list = Object.keys(logsObj).map((k) => logsObj[k]);
@@ -1356,7 +1356,7 @@
     const container = document.getElementById('dailyPayrollResultContainer');
     if (!container || !startDate || !endDate) return;
 
-    container.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+    container.innerHTML = createLoadingHTML();
 
     window.db.ref('employees').once('value', (empSnap) => {
       const employeesObj = empSnap.val() || {};
@@ -1660,7 +1660,7 @@
     if (hamburgerBtn) hamburgerBtn.style.display = 'block';
     if (bellBtn) bellBtn.style.display = 'block';
     if (listBox) listBox.style.display = 'none';
-    if (status) status.innerHTML = (window.i18n && window.i18n[window.currentLang]) ? window.i18n[window.currentLang].checking : 'กำลังโหลด...';
+    if (status) status.innerHTML = createLoadingHTML();
 
     window.db.ref('settings/globalLateTime').once('value', (settingsSnap) => {
       const globalLateTime = settingsSnap.val() || '08:00';

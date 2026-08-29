@@ -29,7 +29,7 @@
 
     const mainContent = document.getElementById('mainContent');
     if (mainContent) {
-      mainContent.innerHTML = '<div class="admin-content" style="text-align:center; padding:40px 16px; color:#64748b;">⏳ กำลังโหลดข้อมูลแดชบอร์ด...</div>';
+      mainContent.innerHTML = createLoadingHTML('กำลังโหลดข้อมูลแดชบอร์ด...');
     }
 
     Promise.all([
