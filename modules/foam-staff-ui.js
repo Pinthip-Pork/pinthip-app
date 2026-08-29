@@ -19,6 +19,40 @@
     return window.PinThipSafe.foamDeliveryRepo;
   }
 
+  // ===== Cache Management =====
+  var customerCache = null;
+  var cacheTimestamp = 0;
+  var CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  var searchTimeout = null;
+  var recentCustomers = []; // Store recent customer IDs
+
+  function clearCustomerCache() {
+    customerCache = null;
+    cacheTimestamp = 0;
+  }
+
+  function addToRecentCustomers(customerId) {
+    // Add to beginning, remove duplicates, keep only 5
+    recentCustomers = [customerId, ...recentCustomers.filter(function(id) { return id !== customerId; })].slice(0, 5);
+    // Save to localStorage
+    try {
+      localStorage.setItem('foamRecentCustomers', JSON.stringify(recentCustomers));
+    } catch (e) {
+      console.warn('Failed to save recent customers:', e);
+    }
+  }
+
+  function loadRecentCustomers() {
+    try {
+      var stored = localStorage.getItem('foamRecentCustomers');
+      if (stored) {
+        recentCustomers = JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Failed to load recent customers:', e);
+    }
+  }
+
   // ===== Main Staff View =====
   function showFoamStaffView() {
     if (!window.PinThipSafe || !window.PinThipSafe.requireFirebaseAuth || !window.PinThipSafe.requireFirebaseAuth()) {
@@ -51,37 +85,87 @@
     foamLoadCustomerList('');
   }
 
-  // ===== Load Customer List =====
+  // ===== Search Customers (with debounce) =====
+  function foamSearchCustomers() {
+    // #1: Debounce - รอ 300ms หลังจาก user หยุดพิมพ์
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(function() {
+      var input = document.getElementById('foamSearchInput');
+      if (!input) return;
+      var query = input.value.trim().toLowerCase();
+      foamLoadCustomerList(query);
+    }, 300);
+  }
+
+  // ===== Load Customer List (with cache) =====
   function foamLoadCustomerList(query) {
     var container = document.getElementById('foamCustomerList');
     if (!container) return;
 
-    getRepo().searchCustomers(query).then(function (customers) {
-      if (customers.length === 0) {
-        container.innerHTML = '<div style="color:#888; text-align:center; padding:20px;">ไม่พบลูกค้า</div>';
-        return;
-      }
+    // #8: Check cache first
+    var now = Date.now();
+    if (customerCache && (now - cacheTimestamp) < CACHE_TTL) {
+      filterAndDisplayCustomers(customerCache, query, container);
+      return;
+    }
 
-      customers.sort(function (a, b) {
-        return String(a.name || '').localeCompare(String(b.name || ''), 'th');
-      });
+    // No cache or expired - load from server
+    container.innerHTML = (typeof createLoadingHTML === 'function') 
+      ? createLoadingHTML('กำลังโหลดรายชื่อลูกค้า...') 
+      : '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>';
 
-      var html = '';
-      customers.forEach(function (c) {
-        var addr = [c.address, c.subdistrict, c.district, c.province, c.postalCode]
-          .filter(Boolean).join(' ');
-        html += '<div class="history-item" style="cursor:pointer; border-left:4px solid #0d6efd;" onclick="foamSelectCustomer(\'' + escape(c.key) + '\')">';
-        html += '<b>🏬 ' + escape(c.name) + '</b>';
-        if (c.phone) html += ' | 📞 ' + escape(c.phone);
-        if (addr) html += '<br><span style="font-size:12px; color:#555;">📍 ' + escape(addr) + '</span>';
-        if (c.shipping) html += ' | 🚚 ' + escape(c.shipping);
-        html += '</div>';
-      });
-      container.innerHTML = html;
+    getRepo().searchCustomers('').then(function (allCustomers) {
+      // Update cache
+      customerCache = allCustomers;
+      cacheTimestamp = now;
+      filterAndDisplayCustomers(allCustomers, query, container);
     }).catch(function (err) {
       console.warn('Load customers failed:', err);
       container.innerHTML = '<div style="color:#d9534f; text-align:center; padding:20px;">โหลดข้อมูลไม่สำเร็จ</div>';
     });
+  }
+
+  function filterAndDisplayCustomers(allCustomers, query, container) {
+    // Filter by query
+    var customers = query 
+      ? allCustomers.filter(function(c) {
+          var searchText = (c.name + ' ' + (c.phone || '') + ' ' + (c.address || '')).toLowerCase();
+          return searchText.indexOf(query) !== -1;
+        })
+      : allCustomers;
+
+    // #2: แสดง "ไม่พบลูกค้า" พร้อมปุ่มเพิ่มใหม่
+    if (customers.length === 0) {
+      container.innerHTML = '<div style="text-align:center; padding:30px 20px;">' +
+        '<div style="font-size:48px; margin-bottom:12px;">🔍</div>' +
+        '<div style="color:#6b7280; margin-bottom:8px; font-size:15px;">ไม่พบลูกค้า' + 
+        (query ? ' "' + escape(query) + '"' : '') + '</div>' +
+        '<div style="color:#9ca3af; font-size:13px; margin-bottom:16px;">ลองค้นหาด้วยชื่อ เบอร์โทร หรือที่อยู่</div>' +
+        '<button class="btn-blue" onclick="showFoamNewCustomerForm(\'' + escape(query) + '\')" style="max-width:200px; margin:0 auto;">' +
+        '➕ เพิ่มลูกค้าใหม่</button></div>';
+      return;
+    }
+
+    customers.sort(function (a, b) {
+      return String(a.name || '').localeCompare(String(b.name || ''), 'th');
+    });
+
+    // #2: แสดงจำนวนผลลัพธ์
+    var html = '<div style="color:#6b7280; padding:8px 12px; font-size:13px; background:#f8f9fa; border-radius:8px; margin-bottom:8px;">' +
+      '🔍 พบ <b>' + customers.length + '</b> รายการ' + 
+      (query ? ' จากการค้นหา "' + escape(query) + '"' : '') + '</div>';
+
+    customers.forEach(function (c) {
+      var addr = [c.address, c.subdistrict, c.district, c.province, c.postalCode]
+        .filter(Boolean).join(' ');
+      html += '<div class="history-item" style="cursor:pointer; border-left:4px solid #0d6efd;" onclick="foamSelectCustomer(\'' + escape(c.key) + '\')">';
+      html += '<b>🏬 ' + escape(c.name) + '</b>';
+      if (c.phone) html += ' | 📞 ' + escape(c.phone);
+      if (addr) html += '<br><span style="font-size:12px; color:#555;">📍 ' + escape(addr) + '</span>';
+      if (c.shipping) html += ' | 🚚 ' + escape(c.shipping);
+      html += '</div>';
+    });
+    container.innerHTML = html;
   }
 
   function foamSearchCustomers() {
@@ -97,6 +181,8 @@
         window.alert('ไม่พบข้อมูลลูกค้า');
         return;
       }
+      // #6: Add to recent customers
+      addToRecentCustomers(customerKey);
       foamShowConfirmForm(customer);
     });
   }
@@ -114,12 +200,15 @@
     if (customer.shipping) html += '🚚 ขนส่ง: ' + escape(customer.shipping) + '<br>';
     html += '</div>';
 
-    html += '<label style="display:block; text-align:left; font-weight:bold; margin-bottom:4px;">จำนวนลัง:</label>';
-    html += '<select id="foamBoxCount" style="font-weight:bold;">';
-    html += '<option value="1">1 ลัง</option>';
-    html += '<option value="2">2 ลัง</option>';
-    html += '<option value="3">3 ลัง</option>';
-    html += '</select>';
+    // #3: จำนวนลังที่ใหญ่ขึ้น พร้อม +/- buttons
+    html += '<div style="margin-bottom:12px;">';
+    html += '<label style="display:block; font-weight:bold; margin-bottom:6px;">จำนวนลัง</label>';
+    html += '<div style="display:flex; align-items:center; gap:8px; justify-content:center;">';
+    html += '<button type="button" onclick="var inp=document.getElementById(\'foamBoxCount\'); inp.value=Math.max(1, parseInt(inp.value||1)-1);" style="width:48px; height:48px; font-size:24px; padding:0;">−</button>';
+    html += '<input type="number" id="foamBoxCount" value="1" min="1" max="999" style="width:100px; text-align:center; font-size:24px; font-weight:bold; height:48px; border:2px solid #3b82f6; border-radius:8px;">';
+    html += '<button type="button" onclick="var inp=document.getElementById(\'foamBoxCount\'); inp.value=Math.min(999, parseInt(inp.value||1)+1);" style="width:48px; height:48px; font-size:24px; padding:0;">+</button>';
+    html += '</div>';
+    html += '</div>';
 
     html += '<label style="display:block; text-align:left; font-weight:bold; margin-top:10px; margin-bottom:4px;">🚚 ขนส่ง:</label>';
     html += '<input type="text" id="foamShipping" value="' + escape(customer.shipping || '') + '" placeholder="ระบุขนส่ง (เช่น Kerry, Flash)">';
@@ -131,6 +220,15 @@
     html += '<button class="btn-back" onclick="showFoamStaffView()">⬅️ กลับ</button>';
 
     document.getElementById('mainContent').innerHTML = html;
+    
+    // #3: Auto-focus on box count input
+    setTimeout(function() {
+      var boxInput = document.getElementById('foamBoxCount');
+      if (boxInput) {
+        boxInput.focus();
+        boxInput.select();
+      }
+    }, 100);
   }
 
   // ===== Submit Delivery =====
@@ -178,20 +276,36 @@
   }
 
   // ===== New Customer Form =====
-  function showFoamNewCustomerForm() {
+  function showFoamNewCustomerForm(prefillName) {
     var html = '<div class="user-banner">➕ ลูกค้าใหม่</div>';
 
-    html += '<input type="text" id="foamNewName" placeholder="ชื่อลูกค้า *" style="font-weight:bold;">';
-    html += '<input type="text" id="foamNewPhone" placeholder="เบอร์โทรศัพท์">';
-    html += '<textarea id="foamNewAddress" rows="2" placeholder="ที่อยู่ (เท่าที่ทราบ)"></textarea>';
+    // #5: คำแนะนำลดฟิลด์บังคับ
+    html += '<div style="background:#fef3c7; border:1px solid #fbbf24; border-radius:8px; padding:12px; margin-bottom:12px; text-align:left;">';
+    html += '💡 <b>เคล็ดลับ:</b> กรอกแค่ชื่อกับเบอร์โทรก็ส่งได้แล้ว<br>';
+    html += '<span style="font-size:13px; color:#92400e;">แอดมินจะเติมที่อยู่ให้ครบถ้วนภายหลัง</span>';
+    html += '</div>';
+
+    html += '<input type="text" id="foamNewName" placeholder="ชื่อลูกค้า *" value="' + escape(prefillName || '') + '" style="font-weight:bold; border:2px solid #3b82f6;">';
+    html += '<input type="tel" id="foamNewPhone" placeholder="เบอร์โทรศัพท์ *" style="border:2px solid #3b82f6;">';
+    
+    html += '<details style="margin:12px 0; border:1px solid #e5e7eb; border-radius:8px; padding:8px;">';
+    html += '<summary style="cursor:pointer; color:#3b82f6; font-weight:bold; padding:4px;">➕ เพิ่มรายละเอียด (ถ้ารู้)</summary>';
+    html += '<div style="margin-top:8px;">';
+    html += '<textarea id="foamNewAddress" rows="2" placeholder="ที่อยู่ (เท่าที่ทราบ)" style="margin-top:8px;"></textarea>';
     html += '<input type="text" id="foamNewShipping" placeholder="🚚 ขนส่ง (ถ้าทราบ)">';
-    html += '<label style="display:block; text-align:left; font-weight:bold; margin-top:8px;">จำนวนลัง:</label>';
-    html += '<select id="foamNewBoxCount" style="font-weight:bold;">';
-    html += '<option value="1">1 ลัง</option>';
-    html += '<option value="2">2 ลัง</option>';
-    html += '<option value="3">3 ลัง</option>';
-    html += '</select>';
     html += '<textarea id="foamNewNote" rows="2" placeholder="หมายเหตุ (ถ้ามี)"></textarea>';
+    html += '</div>';
+    html += '</details>';
+
+    // จำนวนลังแบบใหม่
+    html += '<div style="margin:12px 0;">';
+    html += '<label style="display:block; font-weight:bold; margin-bottom:6px;">จำนวนลัง</label>';
+    html += '<div style="display:flex; align-items:center; gap:8px; justify-content:center;">';
+    html += '<button type="button" onclick="var inp=document.getElementById(\'foamNewBoxCount\'); inp.value=Math.max(1, parseInt(inp.value||1)-1);" style="width:48px; height:48px; font-size:24px; padding:0;">−</button>';
+    html += '<input type="number" id="foamNewBoxCount" value="1" min="1" max="999" style="width:100px; text-align:center; font-size:24px; font-weight:bold; height:48px; border:2px solid #3b82f6; border-radius:8px;">';
+    html += '<button type="button" onclick="var inp=document.getElementById(\'foamNewBoxCount\'); inp.value=Math.min(999, parseInt(inp.value||1)+1);" style="width:48px; height:48px; font-size:24px; padding:0;">+</button>';
+    html += '</div>';
+    html += '</div>';
 
     html += '<button class="btn-fuel" onclick="foamSubmitNewCustomer()" style="margin-top:12px; font-size:16px; padding:14px;">📤 ส่งให้แอดมินตรวจสอบ</button>';
     html += '<button class="btn-back" onclick="showFoamStaffView()">⬅️ กลับ</button>';
@@ -211,8 +325,14 @@
     console.log('[foam-staff-ui] Form data:', { name, phone, address, shipping, boxCount, note });
     console.log('[foam-staff-ui] Current user:', window.currentUser);
 
+    // #5: Validation - บังคับเฉพาะชื่อ + เบอร์โทร
     if (!name) {
-      window.alert('กรุณากรอกชื่อลูกค้า');
+      window.alert('⚠️ กรุณากรอกชื่อลูกค้า');
+      return;
+    }
+
+    if (!phone) {
+      window.alert('⚠️ กรุณากรอกเบอร์โทรศัพท์\n\nเบอร์โทรจำเป็นสำหรับการติดต่อลูกค้า');
       return;
     }
 
@@ -296,28 +416,59 @@
 
       myList.sort(function (a, b) { return String(b.createdAt || '').localeCompare(String(a.createdAt || '')); });
 
-      var listHtml = '';
+      // #4: แสดงจำนวนรายการ
+      var listHtml = '<div style="color:#6b7280; padding:8px 12px; font-size:13px; background:#f8f9fa; border-radius:8px; margin-bottom:12px;">';
+      listHtml += '📋 ส่งไปแล้ว <b>' + myList.length + '</b> รายการวันนี้';
+      listHtml += '</div>';
+
       myList.forEach(function (r) {
         var cs = r.customerSnapshot || {};
         var statusText = getDeliveryRepo().statusLabel(r.status);
-        var statusColor = r.status === 'approved' || r.status === 'printed' || r.status === 'completed' ? '#28a745' :
-                          r.status === 'cancelled' ? '#dc3545' : '#e67e22';
+        var statusColor = r.status === 'approved' || r.status === 'printed' || r.status === 'completed' ? '#10b981' :
+                          r.status === 'cancelled' ? '#dc3545' : '#f59e0b';
         var canEdit = r.status === 'pending_review' || r.status === 'pending_duplicate_approval';
 
+        // #4: Format timestamp
+        var timeStr = '';
+        if (r.createdAt || r.timestamp) {
+          try {
+            var date = new Date(r.createdAt || r.timestamp);
+            timeStr = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+          } catch (e) {
+            timeStr = '';
+          }
+        }
+
         listHtml += '<div class="history-item" style="border-left:4px solid ' + statusColor + ';">';
-        listHtml += '<div style="display:flex; justify-content:space-between; align-items:center;">';
+        listHtml += '<div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">';
         listHtml += '<div style="flex:1;">';
         listHtml += '<b>🏬 ' + escape(cs.name || 'ไม่ระบุชื่อ') + '</b>';
-        listHtml += ' | 📦 ' + r.boxCount + ' ลัง';
-        listHtml += '<br>สถานะ: <span style="color:' + statusColor + '; font-weight:bold;">' + statusText + '</span>';
+        listHtml += '</div>';
+        
+        // #4: Status badge
+        listHtml += '<span style="background:' + statusColor + '; color:white; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold; white-space:nowrap;">';
+        listHtml += statusText;
+        listHtml += '</span>';
+        listHtml += '</div>';
+
+        listHtml += '<div style="font-size:14px; color:#374151; margin-bottom:6px;">';
+        listHtml += '📦 ' + r.boxCount + ' ลัง';
         if (cs.shipping) listHtml += ' | 🚚 ' + escape(cs.shipping);
-        if (r.isDuplicate) listHtml += '<br><span style="color:#e67e22; font-size:12px;">⚠️ รายการซ้ำ</span>';
-        if (r.note) listHtml += '<br><span style="font-size:12px; color:#888;">📝 ' + escape(r.note) + '</span>';
+        // #4: Show time
+        if (timeStr) listHtml += ' | 🕐 ' + timeStr;
         listHtml += '</div>';
+
+        if (r.isDuplicate) listHtml += '<div style="color:#f59e0b; font-size:12px; margin-bottom:4px;">⚠️ รายการซ้ำ</div>';
+        if (r.note) listHtml += '<div style="font-size:12px; color:#6b7280; margin-bottom:8px;">📝 ' + escape(r.note) + '</div>';
+
+        // #7: Action buttons (แก้ไข + ลบ)
         if (canEdit) {
-          listHtml += '<button class="btn-fuel" onclick="foamEditMyRequest(\'' + escape(r.key) + '\')" style="width:auto; margin:0; padding:6px 12px; font-size:12px; white-space:nowrap;">✏️ แก้ไข</button>';
+          listHtml += '<div style="display:flex; gap:8px; margin-top:8px;">';
+          listHtml += '<button class="btn-blue" onclick="foamEditMyRequest(\'' + escape(r.key) + '\')" style="flex:1; margin:0; padding:8px 12px; font-size:13px;">✏️ แก้ไข</button>';
+          listHtml += '<button class="btn-danger" onclick="foamDeleteMyRequest(\'' + escape(r.key) + '\')" style="flex:1; margin:0; padding:8px 12px; font-size:13px;">🗑️ ลบ</button>';
+          listHtml += '</div>';
         }
-        listHtml += '</div>';
+        
         listHtml += '</div>';
       });
       container.innerHTML = listHtml;
@@ -480,6 +631,28 @@
     });
   }
 
+  // #7: Delete Request Function
+  function foamDeleteMyRequest(requestKey) {
+    if (!window.confirm('⚠️ ต้องการลบรายการนี้ใช่หรือไม่?\n\nการลบไม่สามารถย้อนกลับได้')) {
+      return;
+    }
+
+    var dateStr = (window.PinThipSafe && window.PinThipSafe.utils && window.PinThipSafe.utils.getLocalDateTimeString)
+      ? window.PinThipSafe.utils.getLocalDateTimeString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+
+    getDeliveryRepo().deleteRequest(dateStr, requestKey).then(function() {
+      window.showModal('✅ สำเร็จ', 'ลบรายการเรียบร้อย',
+        '<button class="btn-ok" onclick="closeModal(); showFoamMyTodayRequests();">ตกลง</button>');
+    }).catch(function(err) {
+      console.warn('Delete request failed:', err);
+      window.alert('ลบไม่สำเร็จ กรุณาลองใหม่');
+    });
+  }
+
+  // Initialize recent customers on module load
+  loadRecentCustomers();
+
   window.PinThipSafe = window.PinThipSafe || {};
   window.PinThipSafe.foamStaffUI = {
     showFoamStaffView: showFoamStaffView,
@@ -493,7 +666,8 @@
     foamEditMyRequest: foamEditMyRequest,
     foamEditSearchCustomers: foamEditSearchCustomers,
     foamEditSelectCustomer: foamEditSelectCustomer,
-    foamSaveEditRequest: foamSaveEditRequest
+    foamSaveEditRequest: foamSaveEditRequest,
+    foamDeleteMyRequest: foamDeleteMyRequest
   };
 
   window.showFoamStaffView = showFoamStaffView;
@@ -507,4 +681,5 @@
   window.foamEditSearchCustomers = foamEditSearchCustomers;
   window.foamEditSelectCustomer = foamEditSelectCustomer;
   window.foamSaveEditRequest = foamSaveEditRequest;
+  window.foamDeleteMyRequest = foamDeleteMyRequest;
 })();
