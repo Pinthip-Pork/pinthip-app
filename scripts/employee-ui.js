@@ -361,7 +361,7 @@ function loadMyAttendance() {
     return;
   }
 
-  container.innerHTML = createLoadingHTML('กำลังโหลดประวัติ...');
+  container.innerHTML = (typeof createLoadingHTML === 'function') ? createLoadingHTML('กำลังโหลดประวัติ...') : '<div style="color:#888; padding:10px;">⏳ กำลังโหลดประวัติ...</div>';
 
   var user = window.currentUser || {};
   var myEmpId = String(user.empId || '');

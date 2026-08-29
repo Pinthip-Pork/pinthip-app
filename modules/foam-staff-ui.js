@@ -42,7 +42,7 @@
     html += '<button class="btn-history" onclick="showFoamMyTodayRequests()" style="width:100%; margin-bottom:12px; padding:10px;">📋 รายการส่งลังโฟมของฉันวันนี้</button>';
 
     html += '<div id="foamCustomerList" style="max-height:400px; overflow-y:auto; margin-bottom:12px;">';
-    html += createLoadingHTML('กำลังโหลดรายชื่อลูกค้า...');
+    html += (typeof createLoadingHTML === 'function') ? createLoadingHTML('กำลังโหลดรายชื่อลูกค้า...') : '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>';
     html += '</div>';
 
     html += '<button class="btn-back" onclick="showDashboard()">⬅️ กลับหน้าหลัก</button>';
@@ -276,7 +276,7 @@
     document.getElementById('listBox').style.display = 'none';
 
     var html = '<div class="user-banner">📋 รายการของฉันวันนี้</div>';
-    html += '<div id="foamMyTodayList">' + createLoadingHTML() + '</div>';
+    html += '<div id="foamMyTodayList">' + ((typeof createLoadingHTML === 'function') ? createLoadingHTML() : '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลด...</div>') + '</div>';
     html += '<button class="btn-back" onclick="showFoamStaffView()" style="margin-top:12px;">⬅️ กลับ</button>';
 
     document.getElementById('mainContent').innerHTML = html;
