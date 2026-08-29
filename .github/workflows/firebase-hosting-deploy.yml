@@ -32,4 +32,4 @@ jobs:
       - name: Deploy to Firebase Hosting
         run: firebase deploy --only hosting --project pinthip-checkin
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
