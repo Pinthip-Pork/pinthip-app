@@ -25,8 +25,8 @@
        to prevent the FCM SDK from auto-registering a service worker during login. -->
 
   <!-- Core modules (no dependency on scripts/) -->
-  <script defer src="./security-helpers-browser.js"></script>
-  <script defer src="./app-state.js"></script>
+  <script src="./security-helpers-browser.js"></script>
+  <script src="./app-state.js"></script>
   <script>
     // Dynamically load local-admin-config.js only when running locally.
     // On GitHub Pages this file is gitignored and would 404; silently skip.
@@ -40,15 +40,15 @@
       document.head.appendChild(s);
     })();
   </script>
-  <script defer src="./app-config.js"></script>
-  <script defer src="./auth.js"></script>
-  <script defer src="./app-utils.js"></script>
-  <script defer src="./app-i18n.js"></script>
+  <script src="./app-config.js"></script>
+  <script src="./auth.js"></script>
+  <script src="./app-utils.js"></script>
+  <script src="./app-i18n.js"></script>
 
   <!-- Feature modules (may reference window.PinThipSafe.*) -->
-  <script defer src="./modules/logs-repository.js"></script>
-  <script defer src="./modules/ui-helpers.js"></script>
-  <script defer src="./modules/employee-dashboard.js?v=foam-list-20260817"></script>
+  <script src="./modules/logs-repository.js"></script>
+  <script src="./modules/ui-helpers.js"></script>
+  <script src="./modules/employee-dashboard.js?v=foam-list-20260817"></script>
   <!-- Admin modules: lazy loaded after admin login -->
   <!-- <script defer src="./modules/admin-dashboard.js?v=opt-realtime-20260819"></script> -->
   <!-- <script defer src="./modules/admin-holiday-calendar.js?v=holiday-cal-20260818"></script> -->
@@ -150,13 +150,13 @@
   </div>
 
   <!-- Extracted Scripts (loaded in dependency order) -->
-  <script defer src="./scripts/app-globals.js?v=push-restore-20260819"></script>
-  <script defer src="./scripts/notification.js"></script>
-  <script defer src="./scripts/device-access.js?v=direct-db-admin-20260819e"></script>
-  <script defer src="./scripts/fcm.js?v=clean-fcm-20260819h"></script>
-  <script defer src="./scripts/auth-ui.js?v=push-emp-20260819"></script>
-  <script defer src="./scripts/employee-ui.js?v=fuel-fix-20260819"></script>
-  <script defer src="./scripts/admin-quick-modal.js"></script>
+  <script src="./scripts/app-globals.js?v=push-restore-20260819"></script>
+  <script src="./scripts/notification.js"></script>
+  <script src="./scripts/device-access.js?v=direct-db-admin-20260819e"></script>
+  <script src="./scripts/fcm.js?v=clean-fcm-20260819h"></script>
+  <script src="./scripts/auth-ui.js?v=push-emp-20260819"></script>
+  <script src="./scripts/employee-ui.js?v=fuel-fix-20260819"></script>
+  <script src="./scripts/admin-quick-modal.js"></script>
 
   <!-- Bootstrap: start the app -->
   <script>
