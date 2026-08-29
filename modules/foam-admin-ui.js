@@ -417,7 +417,6 @@
   var foamCustomerSearchTimer = null;
 
   function foamSubmitManualCustomer() {
-    console.log('[foam-admin] foamSubmitManualCustomer called');
     var repo = getCustomerRepo();
     if (!repo) {
       window.alert('ระบบฐานข้อมูลลูกค้าไม่พร้อมใช้งาน');
@@ -437,18 +436,13 @@
       note: document.getElementById('foamManualNote') ? document.getElementById('foamManualNote').value.trim() : ''
     };
 
-    console.log('[foam-admin] Payload:', payload);
-    console.log('[foam-admin] Current user:', window.currentUser);
-
     if (!payload.name) {
       window.alert('กรุณากรอกชื่อลูกค้า');
       return;
     }
 
-    console.log('[foam-admin] Adding customer with createdBy: admin');
     repo.addCustomer(payload, 'admin').then(function () {
       bustFoamCustomerCache();
-      console.log('[foam-admin] Customer added successfully');
       window.showModal('✅ สำเร็จ', 'เพิ่มลูกค้าลังโฟมเรียบร้อยแล้ว', '<button class="btn-ok" onclick="closeModal(); showFoamCustomerManager();">ตกลง</button>');
     }).catch(function (err) {
       console.error('[foam-admin] Add foam customer failed:', err);

@@ -337,7 +337,6 @@
   }
 
   function showFuelRequestForm() {
-    console.log('[showFuelRequestForm] clicked');
     try {
       const t = (window.i18n && window.i18n[window.currentLang]) || { pageTitleFuel: 'Fuel', btnBack: 'Back' };
       const pageTitle = document.getElementById('pageTitle');

@@ -83,7 +83,7 @@ function playNotificationSound() {
     osc2.start(now + 0.15);
     osc2.stop(now + 0.4);
   } catch (e) {
-    console.log("AudioContext blocked or not supported", e);
+    // AudioContext not supported
   }
 }
 

@@ -324,16 +324,12 @@
   }
 
   function foamSubmitNewCustomer() {
-    console.log('[foam-staff-ui] foamSubmitNewCustomer called');
     var name = document.getElementById('foamNewName')?.value.trim();
     var phone = document.getElementById('foamNewPhone')?.value.trim();
     var address = document.getElementById('foamNewAddress')?.value.trim();
     var shipping = document.getElementById('foamNewShipping')?.value.trim();
     var boxCount = Number(document.getElementById('foamNewBoxCount')?.value) || 1;
     var note = document.getElementById('foamNewNote')?.value.trim();
-
-    console.log('[foam-staff-ui] Form data:', { name, phone, address, shipping, boxCount, note });
-    console.log('[foam-staff-ui] Current user:', window.currentUser);
 
     // #5: Validation - บังคับเฉพาะชื่อ + เบอร์โทร
     if (!name) {
@@ -359,7 +355,6 @@
       return;
     }
 
-    console.log('[foam-staff-ui] Adding customer...');
     repo.addCustomer({
       name: name,
       phone: phone,
@@ -367,8 +362,6 @@
       shipping: shipping,
       note: 'ลูกค้าใหม่ - รอแอดมินตรวจสอบที่อยู่'
     }, window.currentUser.empId).then(function (result) {
-      console.log('[foam-staff-ui] Customer added, key:', result.key);
-      console.log('[foam-staff-ui] Submitting delivery request...');
       return deliveryRepo.submitRequest({
         customerId: result.key,
         customerSnapshot: {
@@ -386,7 +379,7 @@
         note: 'ลูกค้าใหม่ - ' + (note || '')
       });
     }).then(function () {
-      console.log('[foam-staff-ui] Delivery request submitted successfully');
+      
       window.showModal('🎉 สำเร็จ', 'ส่งข้อมูลลูกค้าใหม่เรียบร้อย\nแอดมินจะตรวจสอบและเติมที่อยู่ให้ครบถ้วน',
         '<button class="btn-ok" onclick="closeModal(); showFoamStaffView();">ตกลง</button>');
     }).catch(function (err) {

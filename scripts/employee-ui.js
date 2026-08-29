@@ -616,7 +616,7 @@ function handleLogout() {
     if (token && window.firebase && window.firebase.functions) {
       var logoutCallable = window.firebase.functions().httpsCallable('logout');
       logoutCallable({ sessionToken: token }).then(function() {
-        console.log('Session token revoked on server');
+        // Session revoked
       }).catch(function(err) {
         console.warn('Server revoke failed (will still clear local):', err);
       });
@@ -627,7 +627,7 @@ function handleLogout() {
 
   if (window.firebase?.auth) {
     firebase.auth().signOut().then(function() {
-      console.log('Firebase Auth sign-out successful');
+      // Sign-out successful
     }).catch(function(err) {
       console.warn('Firebase Auth sign-out error:', err);
     });

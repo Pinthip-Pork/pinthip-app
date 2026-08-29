@@ -149,7 +149,6 @@ document.addEventListener("visibilitychange", function() {
     if (typeof checkCurrentDeviceAccess === 'function') {
       checkCurrentDeviceAccess();
     }
-    console.log("App resumed, keeping current state.");
   }
 });
 
@@ -255,7 +254,6 @@ function requireFirebaseAuth() {
   if (stored) {
     recoverFirebaseSession().then(function(recovered) {
       if (recovered) {
-        console.log('Session recovered in requireFirebaseAuth.');
         // recoverFirebaseSession() already re-renders the appropriate dashboard
       } else {
         console.warn('Firebase Auth session is required before accessing protected data.');
@@ -320,7 +318,6 @@ async function recoverFirebaseSession() {
         }, 1000);
       }
 
-      console.log('Admin session recovered successfully.');
       return true;
     }
 
@@ -344,7 +341,6 @@ async function recoverFirebaseSession() {
         }, 1000);
       }
 
-      console.log('Employee session recovered successfully.');
       return true;
     }
   } catch (e) {
@@ -373,7 +369,6 @@ function initApp() {
         // Also refresh the session storage expiry to extend the sliding window
         if (window.PinThipSafe && window.PinThipSafe.session && window.PinThipSafe.session.refreshSessionExpiry) {
           window.PinThipSafe.session.refreshSessionExpiry();
-          console.log('Session expiry refreshed (sliding window extended)');
         }
       }).catch(function(e) {
         console.warn('Proactive token refresh failed:', e);
@@ -392,7 +387,7 @@ function initApp() {
         var curUser = firebase.auth().currentUser;
         if (curUser) {
           curUser.getIdToken(true).then(function() {
-            console.log('Session recovered after token refresh.');
+            // Token refresh successful
           }).catch(function(err) {
             console.warn('Token refresh recovery failed:', err);
             // Try to re-authenticate using stored credentials
@@ -568,7 +563,6 @@ window.createSkeletonHTML = createSkeletonHTML;
       if (window.PinThipSafe && window.PinThipSafe.session && window.PinThipSafe.session.refreshSessionExpiry) {
         if (window.PinThipSafe.session.refreshSessionExpiry()) {
           lastActivityRefresh = now;
-          console.log('Session expiry refreshed due to user activity');
         }
       }
     }

@@ -17,7 +17,7 @@
         return;
       }
       var script = document.createElement('script');
-      script.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js';
+      script.src = 'https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js';
       script.onload = function () { resolve(); };
       script.onerror = function () { reject(new Error('Failed to load firebase-messaging-compat.js')); };
       document.head.appendChild(script);
