@@ -230,6 +230,9 @@ function showLoginForm() {
 }
 
 function resetExpiredAuthSession() {
+  // Clean up all active Firebase listeners to prevent memory leaks
+  if (typeof stopTodayListRealtime === 'function') stopTodayListRealtime();
+  if (typeof stopAdminNotificationListener === 'function') stopAdminNotificationListener();
   if (typeof stopDeviceAccessGuard === 'function') stopDeviceAccessGuard();
   if (typeof stopDevicePresence === 'function') stopDevicePresence();
   if (window._tokenRefreshInterval) {

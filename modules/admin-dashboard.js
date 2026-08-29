@@ -1,5 +1,8 @@
 (function () {
   function showAdminDashboard() {
+    // Clean up employee listeners when switching to admin mode
+    if (typeof stopTodayListRealtime === 'function') stopTodayListRealtime();
+    
     window.isAdmin = true;
     const mainCard = document.getElementById('mainCard');
     const hamburgerBtn = document.getElementById('hamburgerBtn');
@@ -16,6 +19,9 @@
     if (pageTitle) pageTitle.innerText = '';
     if (status) status.innerText = '';
     if (listBox) listBox.style.display = 'none';
+    
+    // Start admin notification listeners
+    if (typeof startAdminNotificationListener === 'function') startAdminNotificationListener();
 
     const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString
       ? window.PinThipSafe.utils.getLocalDateTimeString()

@@ -7,6 +7,9 @@
 
 // ===== Employee Dashboard =====
 function showDashboard() {
+  // Clean up admin listeners when switching to employee mode
+  if (typeof stopAdminNotificationListener === 'function') stopAdminNotificationListener();
+  
   isAdmin = false;
   window.isAdmin = false;
   document.getElementById('mainCard').classList.remove('admin-wide');
