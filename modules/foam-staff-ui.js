@@ -68,8 +68,8 @@
 
     var html = '<div class="user-banner">📦 ระบบส่งลังโฟม - ' + escape(window.currentUser && window.currentUser.empName || '') + '</div>';
 
-    // 1. กล่องรายชื่อลูกค้า (บนสุด) - Compact
-    html += '<div id="foamCustomerList" style="border:2px solid #e5e7eb; border-radius:12px; max-height:280px; overflow-y:auto; margin-bottom:10px; background:#f9fafb;">';
+    // 1. กล่องรายชื่อลูกค้า (แสดง ~3 คน)
+    html += '<div id="foamCustomerList" style="border:2px solid #e5e7eb; border-radius:12px; max-height:220px; overflow-y:auto; margin-bottom:10px; background:#f9fafb;">';
     html += (typeof createLoadingHTML === 'function') ? createLoadingHTML('กำลังโหลดรายชื่อลูกค้า...') : '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>';
     html += '</div>';
 
@@ -154,31 +154,23 @@
       return String(a.name || '').localeCompare(String(b.name || ''), 'th');
     });
 
-    // #2: แสดงจำนวนผลลัพธ์ - Compact
-    var html = '<div style="padding:8px 12px; border-bottom:2px solid #e5e7eb; background:white; border-radius:12px 12px 0 0;">' +
-      '<div style="color:#6b7280; font-size:12px; font-weight:600;">พบ <span style="color:#1f2937;">' + customers.length + '</span> คน' + 
+    // #2: แสดงจำนวนผลลัพธ์
+    var html = '<div style="padding:10px 12px; border-bottom:2px solid #e5e7eb; background:white; border-radius:12px 12px 0 0;">' +
+      '<div style="color:#6b7280; font-size:13px; font-weight:600;">🔍 พบ <span style="color:#1f2937;">' + customers.length + '</span> รายการ' + 
       (query ? ' · "' + escape(query) + '"' : '') + '</div></div>';
 
     customers.forEach(function (c) {
-      // สร้างข้อมูลบรรทัดเดียว: ชื่อ · เบอร์ · ที่อยู่
-      var parts = [];
-      parts.push('<b>' + escape(c.name) + '</b>');
-      if (c.phone) parts.push(escape(c.phone));
+      var addr = [c.address, c.subdistrict, c.district, c.province, c.postalCode]
+        .filter(Boolean).join(' ');
       
-      // แสดงแค่ อำเภอ/จังหวัด (ไม่ใช่ที่อยู่เต็ม)
-      var location = [];
-      if (c.district) location.push(c.district);
-      if (c.province) location.push(c.province);
-      if (location.length > 0) parts.push(escape(location.join(' ')));
-      
-      var displayText = parts.join(' · ');
-      
-      html += '<div style="padding:10px 12px; border-bottom:1px solid #e5e7eb; background:white; cursor:pointer; font-size:14px; color:#1f2937; transition:background 0.15s;" ' +
+      html += '<div style="padding:12px; border-bottom:1px solid #e5e7eb; background:white; cursor:pointer; transition:background 0.15s;" ' +
               'onclick="foamSelectCustomer(\'' + escape(c.key) + '\')" ' +
               'onmouseover="this.style.background=\'#eff6ff\'" ' +
-              'onmouseout="this.style.background=\'white\'">' +
-              displayText +
-              '</div>';
+              'onmouseout="this.style.background=\'white\'">';
+      html += '<div style="font-weight:700; font-size:15px; color:#1f2937; margin-bottom:4px;">🏬 ' + escape(c.name) + '</div>';
+      if (c.phone) html += '<div style="font-size:13px; color:#6b7280; margin-bottom:2px;">📞 ' + escape(c.phone) + '</div>';
+      if (addr) html += '<div style="font-size:12px; color:#9ca3af;">📍 ' + escape(addr) + '</div>';
+      html += '</div>';
     });
     container.innerHTML = html;
   }
