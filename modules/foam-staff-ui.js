@@ -53,7 +53,7 @@
     }
   }
 
-  // ===== Main Staff View =====
+  // ===== Main Staff View - Full Screen =====
   function showFoamStaffView() {
     if (!window.PinThipSafe || !window.PinThipSafe.requireFirebaseAuth || !window.PinThipSafe.requireFirebaseAuth()) {
       return;
@@ -62,28 +62,27 @@
     window.isAdmin = false;
     document.getElementById('mainCard').classList.remove('admin-wide');
     document.getElementById('hamburgerBtn').style.display = 'none';
-    document.getElementById('pageTitle').innerText = '📦 ส่งลังโฟม';
+    document.getElementById('pageTitle').innerText = '';
     document.getElementById('status').innerText = '';
     document.getElementById('listBox').style.display = 'none';
 
-    var html = '<div class="user-banner">📦 ระบบส่งลังโฟม - ' + escape(window.currentUser && window.currentUser.empName || '') + '</div>';
-
-    // 1. กล่องรายชื่อลูกค้า (แสดง ~3 คน)
-    html += '<div id="foamCustomerList" style="border:2px solid #e5e7eb; border-radius:12px; max-height:220px; overflow-y:auto; margin-bottom:10px; background:#f9fafb;">';
-    html += (typeof createLoadingHTML === 'function') ? createLoadingHTML('กำลังโหลดรายชื่อลูกค้า...') : '<div style="color:#888; text-align:center; padding:20px;">กำลังโหลดรายชื่อลูกค้า...</div>';
-    html += '</div>';
-
-    // 2. ค้นหา (70%) + ลูกค้าใหม่ (30%)
+    // Full Screen Layout - No Banner
+    var html = '';
+    
+    // Top Bar: Search + Actions (Sticky)
+    html += '<div style="position:sticky; top:0; z-index:100; background:white; padding:12px; border-bottom:2px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.05);">';
     html += '<div style="display:flex; gap:8px; margin-bottom:8px;">';
-    html += '<input type="text" id="foamSearchInput" placeholder="🔍 ค้นหาชื่อหรือเบอร์โทรลูกค้า..." style="flex:7; min-width:0; min-height:48px; padding:0 16px; font-size:16px; border:2px solid #3b82f6; border-radius:10px;" oninput="foamSearchCustomers()">';
-    html += '<button class="btn-green" onclick="showFoamNewCustomerForm()" style="flex:3; min-width:0; margin:0; padding:10px 8px; white-space:nowrap; min-height:48px; font-size:15px;">➕ ใหม่</button>';
+    html += '<input type="text" id="foamSearchInput" placeholder="🔍 ค้นหาชื่อ หรือ เบอร์โทรลูกค้า..." style="flex:1; min-width:0; height:52px; padding:0 16px; font-size:16px; border:2px solid #3b82f6; border-radius:10px;" oninput="foamSearchCustomers()">';
+    html += '<button class="btn-green" onclick="showFoamNewCustomerForm()" style="width:52px; height:52px; margin:0; padding:0; font-size:24px; border-radius:10px;">➕</button>';
+    html += '<button class="btn-history" onclick="showFoamMyTodayRequests()" style="width:52px; height:52px; margin:0; padding:0; font-size:24px; border-radius:10px;">📋</button>';
+    html += '<button class="btn-back" onclick="showDashboard()" style="width:52px; height:52px; margin:0; padding:0; font-size:24px; border-radius:10px;">⬅️</button>';
+    html += '</div>';
     html += '</div>';
 
-    // 3. รายการส่งลังโฟมวันนี้
-    html += '<button class="btn-history" onclick="showFoamMyTodayRequests()" style="width:100%; margin-bottom:8px; padding:12px; min-height:48px; font-size:15px;">📋 รายการส่งลังโฟมวันนี้</button>';
-
-    // 4. กลับหน้าหลัก
-    html += '<button class="btn-back" onclick="showDashboard()" style="min-height:48px; padding:12px;">⬅️ กลับหน้าหลัก</button>';
+    // Customer List Container (Scrollable)
+    html += '<div id="foamCustomerList" style="padding:0; min-height:calc(100vh - 200px); background:#f9fafb;">';
+    html += (typeof createLoadingHTML === 'function') ? createLoadingHTML('กำลังโหลดรายชื่อลูกค้า...') : '<div style="color:#888; text-align:center; padding:40px 20px;">กำลังโหลดรายชื่อลูกค้า...</div>';
+    html += '</div>';
 
     document.getElementById('mainContent').innerHTML = html;
     foamLoadCustomerList('');
@@ -138,14 +137,14 @@
         })
       : allCustomers;
 
-    // #2: แสดง "ไม่พบลูกค้า" พร้อมปุ่มเพิ่มใหม่ - Compact
+    // Empty state
     if (customers.length === 0) {
-      container.innerHTML = '<div style="background:white; border-radius:12px; text-align:center; padding:30px 20px;">' +
-        '<div style="font-size:48px; margin-bottom:12px; opacity:0.3;">🔍</div>' +
-        '<div style="color:#1f2937; font-weight:600; font-size:15px; margin-bottom:6px;">ไม่พบลูกค้า' + 
+      container.innerHTML = '<div style="padding:60px 20px; text-align:center;">' +
+        '<div style="font-size:64px; margin-bottom:20px; opacity:0.2;">🔍</div>' +
+        '<div style="color:#1f2937; font-weight:600; font-size:18px; margin-bottom:8px;">ไม่พบลูกค้า' + 
         (query ? ' "' + escape(query) + '"' : '') + '</div>' +
-        '<div style="color:#9ca3af; font-size:12px; margin-bottom:16px;">ลองค้นหาด้วยชื่อหรือเบอร์โทร</div>' +
-        '<button class="btn-green" onclick="showFoamNewCustomerForm(\'' + escape(query) + '\')" style="max-width:200px; margin:0 auto; min-height:44px; font-size:14px;">' +
+        '<div style="color:#9ca3af; font-size:14px; margin-bottom:24px;">ลองค้นหาด้วยชื่อหรือเบอร์โทร</div>' +
+        '<button class="btn-green" onclick="showFoamNewCustomerForm(\'' + escape(query) + '\')" style="max-width:200px; margin:0 auto; min-height:48px; font-size:15px;">' +
         '➕ เพิ่มลูกค้าใหม่</button></div>';
       return;
     }
@@ -154,24 +153,28 @@
       return String(a.name || '').localeCompare(String(b.name || ''), 'th');
     });
 
-    // #2: แสดงจำนวนผลลัพธ์
-    var html = '<div style="padding:10px 12px; border-bottom:2px solid #e5e7eb; background:white; border-radius:12px 12px 0 0;">' +
-      '<div style="color:#6b7280; font-size:13px; font-weight:600;">🔍 พบ <span style="color:#1f2937;">' + customers.length + '</span> รายการ' + 
-      (query ? ' · "' + escape(query) + '"' : '') + '</div></div>';
+    // Header: Count
+    var html = '<div style="padding:12px 16px; background:#f8f9fa; border-bottom:1px solid #e5e7eb; position:sticky; top:76px; z-index:99;">' +
+      '<span style="color:#6b7280; font-size:13px; font-weight:600;">พบ <span style="color:#1f2937; font-size:15px;">' + customers.length + '</span> รายการ' + 
+      (query ? ' · ค้นหา "' + escape(query) + '"' : '') + '</span></div>';
 
+    // Customer Cards
+    html += '<div style="padding:12px;">';
     customers.forEach(function (c) {
       var addr = [c.address, c.subdistrict, c.district, c.province, c.postalCode]
         .filter(Boolean).join(' ');
       
-      html += '<div style="padding:12px; border-bottom:1px solid #e5e7eb; background:white; cursor:pointer; transition:background 0.15s;" ' +
+      html += '<div style="background:white; border:2px solid #e5e7eb; border-radius:12px; padding:14px; margin-bottom:12px; cursor:pointer; transition:all 0.15s; box-shadow:0 1px 3px rgba(0,0,0,0.05);" ' +
               'onclick="foamSelectCustomer(\'' + escape(c.key) + '\')" ' +
-              'onmouseover="this.style.background=\'#eff6ff\'" ' +
-              'onmouseout="this.style.background=\'white\'">';
-      html += '<div style="font-weight:700; font-size:15px; color:#1f2937; margin-bottom:4px;">🏬 ' + escape(c.name) + '</div>';
-      if (c.phone) html += '<div style="font-size:13px; color:#6b7280; margin-bottom:2px;">📞 ' + escape(c.phone) + '</div>';
-      if (addr) html += '<div style="font-size:12px; color:#9ca3af;">📍 ' + escape(addr) + '</div>';
+              'onmouseover="this.style.borderColor=\'#3b82f6\'; this.style.boxShadow=\'0 4px 12px rgba(59,130,246,0.15)\'" ' +
+              'onmouseout="this.style.borderColor=\'#e5e7eb\'; this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.05)\'">';
+      html += '<div style="font-weight:700; font-size:16px; color:#1f2937; margin-bottom:6px;">🏬 ' + escape(c.name) + '</div>';
+      if (c.phone) html += '<div style="font-size:14px; color:#6b7280; margin-bottom:4px;">📞 ' + escape(c.phone) + '</div>';
+      if (addr) html += '<div style="font-size:13px; color:#9ca3af;">📍 ' + escape(addr) + '</div>';
       html += '</div>';
     });
+    html += '</div>';
+    
     container.innerHTML = html;
   }
 
