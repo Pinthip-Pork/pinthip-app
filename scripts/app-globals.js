@@ -37,6 +37,39 @@ var downloadCSV = window.PinThipSafe.utils.downloadCSV;
 window.getLocalDateTimeString = getLocalDateTimeString;
 window.downloadCSV = downloadCSV;
 
+// ===== Lazy Loading Helper =====
+function loadScript(src) {
+  return new Promise(function(resolve, reject) {
+    var script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+function loadAdminModules() {
+  return Promise.all([
+    loadScript('./modules/admin-operations.js?v=fuel-fix-20260819b'),
+    loadScript('./modules/admin-holiday-calendar.js?v=holiday-cal-20260818'),
+    loadScript('./modules/admin-dashboard.js?v=opt-realtime-20260819')
+  ]);
+}
+
+function loadFoamModules() {
+  return Promise.all([
+    loadScript('./modules/foam-customer-repo.js?v=foam-line-20260816-1'),
+    loadScript('./modules/foam-delivery-repo.js'),
+    loadScript('./modules/foam-print.js?v=foam-addr-shrink-20260817'),
+    loadScript('./modules/foam-print-editor.js?v=foam-print-editor-20260818'),
+    loadScript('./modules/foam-staff-ui.js?v=foam-edit-20260817'),
+    loadScript('./modules/foam-admin-ui.js?v=opt-realtime-20260819')
+  ]);
+}
+
+window.loadAdminModules = loadAdminModules;
+window.loadFoamModules = loadFoamModules;
+
 // ===== Pull-to-Refresh (touch events) =====
 function shouldIgnorePullRefreshTouch(target) {
   if (!target || typeof target.closest !== 'function') return false;

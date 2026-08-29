@@ -42,6 +42,14 @@ async function handleLogin() {
     });
     await firebase.auth().signInWithCustomToken(adminResult.data.token);
 
+    setStatusText('status', 'กำลังโหลดโมดูล Admin...');
+    // Load admin modules
+    try {
+      await window.loadAdminModules();
+    } catch (e) {
+      console.warn('Admin modules load error:', e);
+    }
+
     setStatusText('status', '');
     var sessionState = PinThipSafe.session.setAdminSession({
       username: inputId,
@@ -175,6 +183,14 @@ async function handleCustomAuthLogin(inputId, inputPin) {
       isAdmin = false;
       window.isAdmin = false;
       setStatusText('status', '');
+      
+      // Load foam modules if user has permission (non-blocking)
+      if (currentUser.canSendFoamLabels) {
+        window.loadFoamModules().catch(function(e) {
+          console.warn('Foam modules load error:', e);
+        });
+      }
+      
       if (typeof showNotificationSoundControl === 'function') showNotificationSoundControl(true);
       if (typeof enableNotificationSound === 'function') enableNotificationSound();
       if (typeof startDevicePresence === 'function') {
