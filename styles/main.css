@@ -1632,6 +1632,16 @@ button.success {
   overflow: hidden;
 }
 
+.modern-stat-card * {
+  box-sizing: border-box;
+}
+
+.modern-stat-card svg {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0;
+}
+
 .modern-stat-card::before {
   content: '';
   position: absolute;
@@ -1693,12 +1703,29 @@ button.success {
   justify-content: center;
   background: linear-gradient(135deg, var(--card-color-start), var(--card-color-end));
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-icon-wrapper svg {
+  width: 24px !important;
+  height: 24px !important;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .stat-icon {
-  width: 24px;
-  height: 24px;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px;
+  min-height: 24px;
+  max-width: 24px;
+  max-height: 24px;
   color: #ffffff;
+  display: block;
 }
 
 /* Stat Trend */
