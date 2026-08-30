@@ -138,13 +138,22 @@
       });
       container.innerHTML = html;
     }).catch((err) => {
-      if (container) container.innerHTML = '';
-      if (window.PinThipSafe?.ui?.showAsyncError) {
-        window.PinThipSafe.ui.showAsyncError('attendanceSummaryResultContainer', {
-          message: 'ไม่สามารถโหลดข้อมูลสถิติพนักงานได้', detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง', retryFn: renderAttendanceSummaryList
-        });
-      }
       console.error('Attendance summary load failed:', err);
+      if (container) container.innerHTML = '';
+      
+      // Check if it's a permission error
+      const errMsg = err?.message || String(err);
+      if (errMsg.includes('permission') || errMsg.includes('Permission')) {
+        PinThipSafe.modal.error('ไม่มีสิทธิ์เข้าถึงข้อมูล กรุณาตรวจสอบ Firebase Rules หรือ Login ใหม่');
+      } else {
+        if (window.PinThipSafe?.ui?.showAsyncError) {
+          window.PinThipSafe.ui.showAsyncError('attendanceSummaryResultContainer', {
+            message: 'ไม่สามารถโหลดข้อมูลสถิติพนักงานได้',
+            detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
+            retryFn: renderAttendanceSummaryList
+          });
+        }
+      }
     });
   }
 
