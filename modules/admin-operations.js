@@ -1147,7 +1147,7 @@
     if (mainCard) mainCard.classList.add('admin-wide');
     if (hamburgerBtn) hamburgerBtn.style.display = 'block';
     if (bellBtn) bellBtn.style.display = 'block';
-    if (pageTitle) pageTitle.innerText = '💵 สรุปค่าแรง & ค่าใช้จ่ายรายวัน (ช่วงเวลา)';
+    if (pageTitle) pageTitle.innerText = '💵 สรุปค่าแรง & ค่าใช้จ่ายรายบุคคล';
     if (listBox) listBox.style.display = 'none';
 
     const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
@@ -1188,7 +1188,7 @@
     window.renderDailyPayrollData();
   }
 
-  let currentPayrollDataCache = { salaryList: [], fuelList: [], repairList: [], salaryTotal: 0, fuelTotal: 0, repairTotal: 0 };
+  let currentPayrollDataCache = { salaryList: [], fuelList: [], repairList: [], salaryTotal: 0, fuelTotal: 0, repairTotal: 0, employeeData: {} };
 
   function renderDailyPayrollData() {
     const startDate = document.getElementById('payrollStartDate')?.value;
@@ -1236,54 +1236,130 @@
               const amt = Number(f.amount || 0);
               if (reqType.includes('ซ่อม')) {
                 repairOnlyTotal += amt;
-                repairList.push({ name: f.empName, type: reqType, date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
+                repairList.push({ name: f.empName, empId: f.empId, type: reqType, date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
               } else {
                 fuelOnlyTotal += amt;
-                fuelList.push({ name: f.empName, type: reqType, date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
+                fuelList.push({ name: f.empName, empId: f.empId, type: reqType, date: f.date, plate: f.carPlate || '-', route: f.route || '-', amount: amt });
               }
             }
           });
 
-          currentPayrollDataCache = { salaryList: presentList, fuelList, repairList, salaryTotal, fuelTotal: fuelOnlyTotal, repairTotal: repairOnlyTotal };
+          // จัดกลุ่มข้อมูลตามพนักงาน
+          const employeeData = {};
+          
+          // เพิ่มข้อมูลค่าแรง
+          presentList.forEach((item) => {
+            if (!employeeData[item.id]) {
+              employeeData[item.id] = {
+                empId: item.id,
+                empName: item.name,
+                salary: { total: 0, days: 0, list: [] },
+                fuel: { total: 0, count: 0, list: [] },
+                repair: { total: 0, count: 0, list: [] },
+                grandTotal: 0
+              };
+            }
+            employeeData[item.id].salary.total += item.rate;
+            employeeData[item.id].salary.days += 1;
+            employeeData[item.id].salary.list.push(item);
+          });
+
+          // เพิ่มข้อมูลค่าน้ำมัน
+          fuelList.forEach((item) => {
+            const empId = item.empId || 'unknown';
+            if (!employeeData[empId]) {
+              employeeData[empId] = {
+                empId: empId,
+                empName: item.name,
+                salary: { total: 0, days: 0, list: [] },
+                fuel: { total: 0, count: 0, list: [] },
+                repair: { total: 0, count: 0, list: [] },
+                grandTotal: 0
+              };
+            }
+            employeeData[empId].fuel.total += item.amount;
+            employeeData[empId].fuel.count += 1;
+            employeeData[empId].fuel.list.push(item);
+          });
+
+          // เพิ่มข้อมูลค่าซ่อม
+          repairList.forEach((item) => {
+            const empId = item.empId || 'unknown';
+            if (!employeeData[empId]) {
+              employeeData[empId] = {
+                empId: empId,
+                empName: item.name,
+                salary: { total: 0, days: 0, list: [] },
+                fuel: { total: 0, count: 0, list: [] },
+                repair: { total: 0, count: 0, list: [] },
+                grandTotal: 0
+              };
+            }
+            employeeData[empId].repair.total += item.amount;
+            employeeData[empId].repair.count += 1;
+            employeeData[empId].repair.list.push(item);
+          });
+
+          // คำนวณยอดรวมของแต่ละคน
+          Object.keys(employeeData).forEach((empId) => {
+            const emp = employeeData[empId];
+            emp.grandTotal = emp.salary.total + emp.fuel.total + emp.repair.total;
+          });
+
+          currentPayrollDataCache = { 
+            salaryList: presentList, 
+            fuelList, 
+            repairList, 
+            salaryTotal, 
+            fuelTotal: fuelOnlyTotal, 
+            repairTotal: repairOnlyTotal,
+            employeeData 
+          };
 
           const grandTotal = salaryTotal + fuelOnlyTotal + repairOnlyTotal;
-
+          
+          // สร้าง HTML แบบใหม่ (รายบุคคล)
           let html = `
-            <div style="background: linear-gradient(135deg, #2b5876, #4e4376); color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: left;">
-              <b>📊 สรุปยอดช่วงวันที่: ${startDate} ถึง ${endDate}</b><br><br>
-              • ค่าแรงพนักงานรวม: <b>${salaryTotal.toLocaleString()} บาท</b><br>
-              • ⛽ ค่าน้ำมันรถรวม (อนุมัติแล้ว): <b style="color:#f39c12;">${fuelOnlyTotal.toLocaleString()} บาท</b><br>
-              • 🔧 ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#e74c3c;">${repairOnlyTotal.toLocaleString()} บาท</b><br>
-              <hr style="border:0; border-top:1px solid rgba(255,255,255,0.4); margin:8px 0;">
-              <span style="font-size: 17px; font-weight: bold;">💰 รวมจ่ายออกทั้งหมด: ${grandTotal.toLocaleString()} บาท</span>
+            <!-- สรุปภาพรวม -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+              <div style="font-size: 15px; font-weight: bold; margin-bottom: 12px;">📊 สรุปภาพรวมช่วงวันที่: ${startDate} ถึง ${endDate}</div>
+              <div class="payroll-summary-cards">
+                <div class="payroll-summary-card" style="background: rgba(255,255,255,0.25);">
+                  <div class="card-icon" style="font-size: 24px;">👤</div>
+                  <div class="card-label">ค่าแรง</div>
+                  <div class="card-count">${presentList.length} วัน</div>
+                  <div class="card-amount">${salaryTotal.toLocaleString()} ฿</div>
+                </div>
+                <div class="payroll-summary-card" style="background: rgba(243,156,18,0.9);">
+                  <div class="card-icon" style="font-size: 24px;">⛽</div>
+                  <div class="card-label">ค่าน้ำมัน</div>
+                  <div class="card-count">${fuelList.length} รายการ</div>
+                  <div class="card-amount">${fuelOnlyTotal.toLocaleString()} ฿</div>
+                </div>
+                <div class="payroll-summary-card" style="background: rgba(231,76,60,0.9);">
+                  <div class="card-icon" style="font-size: 24px;">🔧</div>
+                  <div class="card-label">ค่าซ่อม</div>
+                  <div class="card-count">${repairList.length} รายการ</div>
+                  <div class="card-amount">${repairOnlyTotal.toLocaleString()} ฿</div>
+                </div>
+                <div class="payroll-summary-card" style="background: rgba(46,213,115,0.95);">
+                  <div class="card-icon" style="font-size: 24px;">💰</div>
+                  <div class="card-label">รวมทั้งหมด</div>
+                  <div class="card-count">&nbsp;</div>
+                  <div class="card-amount" style="font-size: 20px; font-weight: bold;">${grandTotal.toLocaleString()} ฿</div>
+                </div>
+              </div>
             </div>
-            <div style="text-align:left; font-weight:bold; margin-bottom:5px;">👤 รายชื่อพนักงานที่มาทำงาน (${presentList.length} รายการสแกน):</div>
           `;
 
-          if (presentList.length === 0) {
-            html += '<div style="color:#888; margin-bottom:15px;">ไม่มีพนักงานสแกนเข้างานในช่วงเวลานี้</div>';
+          // แสดงรายละเอียดรายบุคคล
+          const employeeList = Object.values(employeeData).sort((a, b) => b.grandTotal - a.grandTotal);
+          
+          if (employeeList.length === 0) {
+            html += '<div style="text-align:center; color:#888; padding: 40px 20px; background:#f8f9fa; border-radius:10px;">ไม่มีข้อมูลในช่วงเวลานี้</div>';
           } else {
-            presentList.slice().reverse().forEach((p) => {
-              html += `<div class="history-item">📅 ${window.PinThipSafe.safeText(p.date)} | <b>${window.PinThipSafe.safeText(p.name)} (${window.PinThipSafe.safeText(p.id)})</b> - เวลา ${window.PinThipSafe.safeText(p.time)} น. | ค่าแรง: <b style="color:#28a745;">${p.rate} บาท</b></div>`;
-            });
-          }
-
-          html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">⛽ รายการเบิกค่าน้ำมันที่อนุมัติแล้ว (${fuelList.length} รายการ):</div>`;
-          if (fuelList.length === 0) {
-            html += '<div style="color:#888; margin-bottom:10px;">ไม่มีการเบิกค่าน้ำมันในช่วงเวลานี้</div>';
-          } else {
-            fuelList.slice().reverse().forEach((f) => {
-              html += `<div class="history-item">📅 ${window.PinThipSafe.safeText(f.date)} | <b>${window.PinThipSafe.safeText(f.name)}</b> [${window.PinThipSafe.safeText(f.type)}] (ทะเบียน: ${window.PinThipSafe.safeText(f.plate)})<br>รายละเอียด: ${window.PinThipSafe.safeText(f.route)} | อนุมัติจ่าย: <b style="color:#e67e22;">${f.amount} บาท</b></div>`;
-            });
-          }
-
-          html += `<div style="text-align:left; font-weight:bold; margin-top:15px; margin-bottom:5px;">🔧 รายการเบิกค่าซ่อมรถที่อนุมัติแล้ว (${repairList.length} รายการ):</div>`;
-          if (repairList.length === 0) {
-            html += '<div style="color:#888;">ไม่มีการเบิกค่าซ่อมรถในช่วงเวลานี้</div>';
-          } else {
-            repairList.slice().reverse().forEach((r) => {
-              html += `<div class="history-item">📅 ${window.PinThipSafe.safeText(r.date)} | <b>${window.PinThipSafe.safeText(r.name)}</b> [${window.PinThipSafe.safeText(r.type)}] (ทะเบียน: ${window.PinThipSafe.safeText(r.plate)})<br>รายละเอียด: ${window.PinThipSafe.safeText(r.route)} | อนุมัติจ่าย: <b style="color:#d9534f;">${r.amount} บาท</b></div>`;
-            });
+            html += `<div style="font-weight:bold; margin-bottom:12px; font-size:14px;">👥 รายละเอียดรายบุคคล (${employeeList.length} คน)</div>`;
+            html += window.renderEmployeePayrollCards(employeeList);
           }
 
           container.innerHTML = html;
