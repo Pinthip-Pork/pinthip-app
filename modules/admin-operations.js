@@ -1318,7 +1318,10 @@
 
           const grandTotal = salaryTotal + fuelOnlyTotal + repairOnlyTotal;
           
-          // สร้าง HTML แบบ 4 กล่องเรียงแนวนอน (เหมือนรูป)
+          // เก็บข้อมูลพนักงานทั้งหมดไว้ใน window เพื่อใช้กับ filter
+          window.allEmployeeData = employeeData;
+          
+          // สร้าง HTML แบบ 4 กล่องเรียงแนวนอน (จะอัปเดตแบบ dynamic)
           let html = `
             <div style="text-align: center; margin-bottom: 20px;">
               <h2 style="margin: 0 0 5px 0; font-size: 16px; color: #2c3e50;">สรุปค่าแรง & ค่าใช้จ่ายรายบุคคล</h2>
@@ -1344,46 +1347,178 @@
               }
             </style>
             
-            <div class="payroll-summary-grid">
+            <div class="payroll-summary-grid" id="summary-cards">
               <!-- Card 1: พนักงานทั้งหมด -->
               <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
-                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">พนักงานทั้งหมด</div>
-                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${Object.keys(employeeData).length}</div>
+                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">พนักงานที่เลือก</div>
+                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;" id="selected-count">${Object.keys(employeeData).length}</div>
                 <div style="font-size: 13px; color: #7f8c8d;">คน</div>
               </div>
               
               <!-- Card 2: ค่าแรงรวม -->
               <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f39c12; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
                 <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">ค่าแรงรวม</div>
-                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${salaryTotal.toLocaleString()}</div>
+                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;" id="selected-salary">${salaryTotal.toLocaleString()}</div>
                 <div style="font-size: 13px; color: #7f8c8d;">บาท</div>
               </div>
               
               <!-- Card 3: ค่าน้ำมัน + ซ่อม -->
               <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #9b59b6; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
                 <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">ค่าน้ำมัน + ซ่อม</div>
-                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${(fuelOnlyTotal + repairOnlyTotal).toLocaleString()}</div>
+                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;" id="selected-other">${(fuelOnlyTotal + repairOnlyTotal).toLocaleString()}</div>
                 <div style="font-size: 13px; color: #7f8c8d;">บาท</div>
               </div>
               
               <!-- Card 4: รวมทั้งหมด -->
               <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
                 <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">รวมทั้งหมด</div>
-                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${grandTotal.toLocaleString()}</div>
+                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;" id="selected-total">${grandTotal.toLocaleString()}</div>
                 <div style="font-size: 13px; color: #7f8c8d;">เช็ครับ + ไม่ผ่า</div>
               </div>
             </div>
+            
+            <!-- ปุ่มควบคุม -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+              <button onclick="selectAllEmployees()" style="flex: 1; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">
+                ✓ เลือกทั้งหมด
+              </button>
+              <button onclick="unselectAllEmployees()" style="flex: 1; padding: 10px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">
+                ✗ ยกเลิกทั้งหมด
+              </button>
+            </div>
           `;
 
-          // แสดงรายละเอียดรายบุคคล
+          // แสดงรายละเอียดรายบุคคล (แบบ 3 คอลัมน์ คลิกที่ชื่อ)
           const employeeList = Object.values(employeeData).sort((a, b) => b.grandTotal - a.grandTotal);
           
           if (employeeList.length === 0) {
-            html += '<div style="text-align:center; color:#888; padding: 40px 20px; background:#f8f9fa; border-radius:10px;">ไม่มีข้อมูลในช่วงเวลานี้</div>';
+            html += '<div style="text-align:center; color:#888; padding: 40px 20px; background:#f8f9fa; border-radius:10px; margin-top: 20px;">ไม่มีข้อมูลในช่วงเวลานี้</div>';
           } else {
-            html += `<div style="font-weight:bold; margin-bottom:12px; font-size:14px;">👥 รายละเอียดรายบุคคล (${employeeList.length} คน)</div>`;
-            html += window.renderEmployeePayrollCards(employeeList);
+            html += `<div style="margin-top: 30px; margin-bottom: 15px;"><h3 style="margin: 0; font-size: 16px; color: #2c3e50; font-weight: bold;">👥 รายละเอียดรายบุคคล (${employeeList.length} คน)</h3></div>`;
+            
+            html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;" class="employee-grid-3col">';
+            
+            html += `<style>
+              .employee-grid-3col {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+              }
+              @media (max-width: 1024px) {
+                .employee-grid-3col {
+                  grid-template-columns: repeat(2, 1fr);
+                }
+              }
+              @media (max-width: 640px) {
+                .employee-grid-3col {
+                  grid-template-columns: repeat(1, 1fr);
+                }
+              }
+            </style>`;
+            
+            employeeList.forEach((emp) => {
+              if (emp.grandTotal <= 0) return;
+              html += `
+                <div id="emp-card-${emp.empId}" 
+                     onclick="toggleEmployeeSelection('${emp.empId}')" 
+                     style="background: #27ae60; padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <div style="color: white; font-size: 15px; font-weight: bold; margin-bottom: 6px; text-align: center;">
+                    👤 ${window.PinThipSafe.safeText(emp.empName)}
+                  </div>
+                  <div style="color: white; font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 6px;">
+                    ${emp.grandTotal.toLocaleString()} ฿
+                  </div>
+                  <div style="display: flex; justify-content: center; gap: 12px; font-size: 12px; color: rgba(255,255,255,0.95);">
+                    <span>📅 ${emp.salary.days}</span>
+                    <span>⛽ ${emp.fuel.count}</span>
+                    <span>🔧 ${emp.repair.count}</span>
+                  </div>
+                  <input type="checkbox" id="emp-checkbox-${emp.empId}" checked style="display: none;">
+                </div>
+              `;
+            });
+            
+            html += '</div>';
           }
+          
+          // ฟังก์ชัน toggle selection
+          window.toggleEmployeeSelection = function(empId) {
+            const card = document.getElementById('emp-card-' + empId);
+            const checkbox = document.getElementById('emp-checkbox-' + empId);
+            
+            if (checkbox && card) {
+              checkbox.checked = !checkbox.checked;
+              
+              if (checkbox.checked) {
+                // เลือก = สีเขียว
+                card.style.background = '#27ae60';
+                card.style.opacity = '1';
+              } else {
+                // ไม่เลือก = สีเทา
+                card.style.background = '#95a5a6';
+                card.style.opacity = '0.6';
+              }
+              
+              window.updatePayrollSummary();
+            }
+          };
+          
+          // ฟังก์ชันอัปเดตสรุป
+          window.updatePayrollSummary = function() {
+            const allData = window.allEmployeeData;
+            let selectedCount = 0;
+            let selectedSalary = 0;
+            let selectedFuel = 0;
+            let selectedRepair = 0;
+            
+            Object.values(allData).forEach(emp => {
+              const checkbox = document.getElementById('emp-checkbox-' + emp.empId);
+              if (checkbox && checkbox.checked) {
+                selectedCount++;
+                selectedSalary += emp.salary.total;
+                selectedFuel += emp.fuel.total;
+                selectedRepair += emp.repair.total;
+              }
+            });
+            
+            const selectedOther = selectedFuel + selectedRepair;
+            const selectedTotal = selectedSalary + selectedOther;
+            
+            document.getElementById('selected-count').textContent = selectedCount;
+            document.getElementById('selected-salary').textContent = selectedSalary.toLocaleString();
+            document.getElementById('selected-other').textContent = selectedOther.toLocaleString();
+            document.getElementById('selected-total').textContent = selectedTotal.toLocaleString();
+          };
+          
+          // ฟังก์ชันเลือกทั้งหมด
+          window.selectAllEmployees = function() {
+            const allData = window.allEmployeeData;
+            Object.values(allData).forEach(emp => {
+              const checkbox = document.getElementById('emp-checkbox-' + emp.empId);
+              const card = document.getElementById('emp-card-' + emp.empId);
+              if (checkbox && card) {
+                checkbox.checked = true;
+                card.style.background = '#27ae60';
+                card.style.opacity = '1';
+              }
+            });
+            window.updatePayrollSummary();
+          };
+          
+          // ฟังก์ชันยกเลิกทั้งหมด
+          window.unselectAllEmployees = function() {
+            const allData = window.allEmployeeData;
+            Object.values(allData).forEach(emp => {
+              const checkbox = document.getElementById('emp-checkbox-' + emp.empId);
+              const card = document.getElementById('emp-card-' + emp.empId);
+              if (checkbox && card) {
+                checkbox.checked = false;
+                card.style.background = '#95a5a6';
+                card.style.opacity = '0.6';
+              }
+            });
+            window.updatePayrollSummary();
+          };
 
           container.innerHTML = html;
         }, (fuelErr) => {
