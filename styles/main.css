@@ -1636,12 +1636,6 @@ button.success {
   box-sizing: border-box;
 }
 
-.modern-stat-card svg {
-  width: 24px !important;
-  height: 24px !important;
-  flex-shrink: 0;
-}
-
 .modern-stat-card::before {
   content: '';
   position: absolute;
@@ -1712,32 +1706,19 @@ button.success {
   position: relative;
 }
 
+/* Icon Text (Emoji/Unicode) */
+.stat-icon-text {
+  font-size: 24px;
+  line-height: 1;
+  display: block;
+}
+
+/* ลบ CSS สำหรับ SVG ที่ไม่ใช้แล้ว */
 .stat-icon-wrapper svg,
 .stat-icon-wrapper .stat-icon,
 .modern-stat-card .stat-icon-wrapper svg,
 .modern-stats-grid svg {
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
-  max-width: 24px !important;
-  min-height: 24px !important;
-  max-height: 24px !important;
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  flex-shrink: 0 !important;
-}
-
-.stat-icon {
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px;
-  min-height: 24px;
-  max-width: 24px;
-  max-height: 24px;
-  color: #ffffff;
-  display: block;
+  display: none;
 }
 
 /* Stat Trend */
@@ -1753,17 +1734,6 @@ button.success {
   color: #6b7280;
 }
 
-.stat-trend svg,
-.stat-trend .trend-icon {
-  width: 14px !important;
-  height: 14px !important;
-  min-width: 14px !important;
-  max-width: 14px !important;
-  min-height: 14px !important;
-  max-height: 14px !important;
-  flex-shrink: 0 !important;
-}
-
 .stat-trend-up {
   background: #d1fae5;
   color: #065f46;
@@ -1777,11 +1747,6 @@ button.success {
 .stat-trend-neutral {
   background: #f3f4f6;
   color: #4b5563;
-}
-
-.trend-icon {
-  width: 14px !important;
-  height: 14px !important;
 }
 
 .trend-value {

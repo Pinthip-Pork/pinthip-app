@@ -1318,7 +1318,7 @@
 
           const grandTotal = salaryTotal + fuelOnlyTotal + repairOnlyTotal;
           
-          // สร้าง HTML แบบใหม่ (Modern Dashboard Style)
+          // สร้าง HTML แบบใหม่ (Modern Dashboard Style - ใช้ Unicode Icons)
           let html = `
             <!-- Modern Page Header -->
             <div class="modern-payroll-header">
@@ -1334,10 +1334,7 @@
               <div class="modern-stat-card card-salary">
                 <div class="stat-card-header">
                   <div class="stat-icon-wrapper stat-icon-salary">
-                    <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
+                    <span class="stat-icon-text">👥</span>
                   </div>
                   <div class="stat-trend stat-trend-neutral">
                     <span class="trend-value">${presentList.length} วัน</span>
@@ -1354,12 +1351,7 @@
               <div class="modern-stat-card card-fuel">
                 <div class="stat-card-header">
                   <div class="stat-icon-wrapper stat-icon-fuel">
-                    <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M3 22h12"></path>
-                      <path d="M4 9h10"></path>
-                      <path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"></path>
-                      <path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"></path>
-                    </svg>
+                    <span class="stat-icon-text">⛽</span>
                   </div>
                   <div class="stat-trend stat-trend-neutral">
                     <span class="trend-value">${fuelList.length} รายการ</span>
@@ -1376,9 +1368,7 @@
               <div class="modern-stat-card card-repair">
                 <div class="stat-card-header">
                   <div class="stat-icon-wrapper stat-icon-repair">
-                    <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-                    </svg>
+                    <span class="stat-icon-text">🔧</span>
                   </div>
                   <div class="stat-trend stat-trend-neutral">
                     <span class="trend-value">${repairList.length} รายการ</span>
@@ -1395,16 +1385,9 @@
               <div class="modern-stat-card card-total">
                 <div class="stat-card-header">
                   <div class="stat-icon-wrapper stat-icon-total">
-                    <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="1" x2="12" y2="23"></line>
-                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                    </svg>
+                    <span class="stat-icon-text">💰</span>
                   </div>
                   <div class="stat-trend stat-trend-up">
-                    <svg class="trend-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                      <polyline points="17 6 23 6 23 12"></polyline>
-                    </svg>
                     <span class="trend-value">100%</span>
                   </div>
                 </div>
