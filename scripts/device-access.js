@@ -358,7 +358,7 @@ function setDeviceAutoApprove(enabled) {
   if (!window.confirm(message)) return;
   db.ref('settings/deviceAccessAutoApprove').set(Boolean(enabled)).then(function() {
     logDeviceAccessEvent(enabled ? 'auto_approve_enabled' : 'auto_approve_disabled', 'settings', 'admin', 'Admin');
-    showDeviceAccessManagement();
+    
   });
 }
 
@@ -389,10 +389,9 @@ function approveAdminDevice(deviceId, deviceInfo) {
   approveUpdates['settings/admin/pendingDevices/' + deviceId] = null;
   db.ref().update(approveUpdates).then(function() {
     logDeviceAccessEvent('admin_device_approved', deviceId, 'admin', 'Admin');
-    window.alert('\u2705 \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E2D\u0E38\u0E1B\u0E01\u0E03\u0E13\u0E4C\u0E40\u0E1B\u0E47\u0E19 Admin \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08!');
-    showDeviceAccessManagement();
+    PinThipSafe.modal.success('อนุมัติอุปกรณ์เป็น Admin สำเร็จ!', showDeviceAccessManagement);
   }).catch(function(err) {
-    window.alert('\u274C \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E44\u0E21\u0E08\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ' + (err.message || err));
+    PinThipSafe.modal.error('อนุมัติไม่สำเร็จ: ' + (err.message || err));
   });
 }
 
@@ -400,8 +399,7 @@ function removePendingAdminDevice(deviceId) {
   if (!isAdmin) return;
   if (!window.confirm('\u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E48\u0E2B\u0E23\u0E37\u0E2D\u0E44\u0E21\u0E48? (' + deviceId + ')')) return;
   db.ref('settings/admin/pendingDevices/' + deviceId).remove().then(function() {
-    window.alert('\u274C \u0E1B\u0E0F\u0E34\u0E40\u0E2A\u0E18\u0E04\u0E33\u0E02\u0E2D\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27');
-    showDeviceAccessManagement();
+    PinThipSafe.modal.success('ปฏิเสธคำขอเรียบร้อยแล้ว', showDeviceAccessManagement);
   });
 }
 
@@ -414,10 +412,9 @@ function revokeAdminDevice(deviceId) {
   revokeUpdates['device_access/' + deviceId + '/blockedAt'] = Date.now();
   db.ref().update(revokeUpdates).then(function() {
     logDeviceAccessEvent('admin_device_revoked', deviceId, 'admin', 'Admin');
-    window.alert('\uD83D\uDEAB \u0E40\u0E1E\u0E34\u0E01\u0E16\u0E2D\u0E19\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C Admin \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08');
-    showDeviceAccessManagement();
+    PinThipSafe.modal.success('เพิกถอนสิทธิ์ Admin สำเร็จ', showDeviceAccessManagement);
   }).catch(function(err) {
-    window.alert('\u274C \u0E40\u0E1E\u0E34\u0E01\u0E16\u0E2D\u0E19\u0E44\u0E21\u0E08\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ' + (err.message || err));
+    PinThipSafe.modal.error('เพิกถอนไม่สำเร็จ: ' + (err.message || err));
   });
 }
 
@@ -464,8 +461,14 @@ function addDeviceManually() {
   var deviceId = String(document.getElementById('addDeviceId').value).trim();
   var deviceInfo = String(document.getElementById('addDeviceInfo').value).trim();
 
-  if (!empId) { window.alert('\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19'); return; }
-  if (!deviceId) { window.alert('\u0E01\u0E23\u0E38\u0E13\u0E32\u0E23\u0E30\u0E1A\u0E38 Device ID'); return; }
+  if (!empId) { 
+    PinThipSafe.modal.warning('กรุณาเลือกพนักงาน');
+    return; 
+  }
+  if (!deviceId) { 
+    PinThipSafe.modal.warning('กรุณาระบุ Device ID');
+    return; 
+  }
 
   // Look up employee name
   db.ref('employees').once('value').then(function(snapshot) {
@@ -488,10 +491,10 @@ function addDeviceManually() {
       role: 'employee'
     }).then(function() {
       logDeviceAccessEvent('manual_add', deviceId, empId, empName);
-      window.alert('\u2705 \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08! \u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19 ' + empId + ' \u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19\u0E44\u0E14\u0E49\u0E17\u0E31\u0E19\u0E17\u0E35');
-      showDeviceAccessManagement();
+      PinThipSafe.modal.success('เพิ่มอุปกรณ์สำเร็จ! พนักงาน ' + empId + ' สามารถใช้งานได้ทันที', showDeviceAccessManagement);
     }).catch(function(err) {
-      window.alert('\u274C \u0E40\u0E1E\u0E34\u0E48\u0E21\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08: ' + err.message);
+      PinThipSafe.modal.error('เพิ่มอุปกรณ์ไม่สำเร็จ: ' + err.message);
     });
   });
 }
+

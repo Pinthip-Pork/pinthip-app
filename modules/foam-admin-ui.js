@@ -230,7 +230,7 @@
 
     var repo = getCustomerRepo();
     if (!repo) {
-      window.alert('ระบบฐานข้อมูลลูกค้าไม่พร้อมใช้งาน');
+      PinThipSafe.modal.error('ระบบฐานข้อมูลลูกค้าไม่พร้อมใช้งาน');
       return;
     }
 
@@ -240,7 +240,7 @@
     function finishRows(rows) {
       var records = Array.isArray(rows) ? rows : [];
       if (!records.length) {
-        window.alert('ไม่พบข้อมูลลูกค้าในไฟล์ที่เลือก');
+        PinThipSafe.modal.warning('ไม่พบข้อมูลลูกค้าในไฟล์ที่เลือก');
         return;
       }
 
@@ -259,7 +259,7 @@
         window.showModal('📥 สำเร็จ', 'นำเข้าสู่ฐานข้อมูลลูกค้าแล้ว ' + created + ' รายการ', '<button class="btn-ok" onclick="closeModal(); showFoamCustomerManager();">ตกลง</button>');
       }).catch(function (err) {
         console.warn('Import foam customers failed:', err);
-        window.alert('นำเข้าข้อมูลไม่สำเร็จ กรุณาตรวจสอบรูปแบบไฟล์');
+        PinThipSafe.modal.error('นำเข้าข้อมูลไม่สำเร็จ กรุณาตรวจสอบรูปแบบไฟล์');
       });
     }
 
@@ -268,7 +268,7 @@
         finishRows(parseFoamCsvText(text));
       }).catch(function (err) {
         console.warn('Read CSV failed:', err);
-        window.alert('อ่านไฟล์ไม่สำเร็จ');
+        PinThipSafe.modal.error('อ่านไฟล์ไม่สำเร็จ');
       });
       return;
     }
@@ -283,14 +283,14 @@
           finishRows(jsonRows.map(function (row) { return normalizeFoamCustomerRecord(row); }).filter(function (row) { return String(row.name || '').trim(); }));
         } catch (err) {
           console.warn('Excel parse failed:', err);
-          window.alert('ไม่สามารถอ่านไฟล์ Excel ได้ กรุณาใช้ไฟล์ CSV หรือไฟล์ Excel ที่มีข้อมูลแบบตาราง');
+          PinThipSafe.modal.error('ไม่สามารถอ่านไฟล์ Excel ได้ กรุณาใช้ไฟล์ CSV หรือไฟล์ Excel ที่มีข้อมูลแบบตาราง');
         }
       };
       reader.readAsArrayBuffer(file);
       return;
     }
 
-    window.alert('โปรดอัปโหลดไฟล์ CSV หรือใช้ Excel ที่เปิดโดยมี XLSX.js ในหน้าเว็บ');
+    PinThipSafe.modal.warning('โปรดอัปโหลดไฟล์ CSV หรือใช้ Excel ที่เปิดโดยมี XLSX.js ในหน้าเว็บ');
   }
 
   function showFoamCustomerManager() {
@@ -419,7 +419,7 @@
   function foamSubmitManualCustomer() {
     var repo = getCustomerRepo();
     if (!repo) {
-      window.alert('ระบบฐานข้อมูลลูกค้าไม่พร้อมใช้งาน');
+      PinThipSafe.modal.error('ระบบฐานข้อมูลลูกค้าไม่พร้อมใช้งาน');
       return;
     }
 
@@ -437,7 +437,7 @@
     };
 
     if (!payload.name) {
-      window.alert('กรุณากรอกชื่อลูกค้า');
+      PinThipSafe.modal.warning('กรุณากรอกชื่อลูกค้า');
       return;
     }
 
@@ -447,7 +447,7 @@
     }).catch(function (err) {
       console.error('[foam-admin] Add foam customer failed:', err);
       var errMsg = (err && err.message) ? err.message : 'เพิ่มลูกค้าไม่สำเร็จ';
-      window.alert(errMsg + '\n\nตรวจสอบคอนโซล (F12) สำหรับรายละเอียด');
+      PinThipSafe.modal.error(errMsg + '\n\nตรวจสอบคอนโซล (F12) สำหรับรายละเอียด');
     });
   }
 
@@ -461,7 +461,7 @@
       foamCustomerManagerSearch();
     }).catch(function (err) {
       console.warn('Delete foam customer failed:', err);
-      window.alert('ลบลูกค้าไม่สำเร็จ');
+      PinThipSafe.modal.error('ลบลูกค้าไม่สำเร็จ');
     });
   }
 
@@ -471,7 +471,7 @@
 
     repo.getCustomer(customerKey).then(function (customer) {
       if (!customer) {
-        window.alert('ไม่พบข้อมูลลูกค้า');
+        PinThipSafe.modal.warning('ไม่พบข้อมูลลูกค้า');
         return;
       }
 
@@ -498,7 +498,7 @@
         '<button class="btn-ok" onclick="foamSaveEditedCustomer(' + escape(JSON.stringify(customerKey)) + ')">💾 บันทึก</button>');
     }).catch(function (err) {
       console.warn('Load foam customer for edit failed:', err);
-      window.alert('โหลดข้อมูลลูกค้าไม่สำเร็จ');
+      PinThipSafe.modal.error('โหลดข้อมูลลูกค้าไม่สำเร็จ');
     });
   }
 
@@ -519,7 +519,7 @@
       note: document.getElementById('foamEditCustomerNote')?.value.trim() || ''
     };
     if (!data.name) {
-      window.alert('กรุณากรอกชื่อลูกค้า');
+      PinThipSafe.modal.warning('กรุณากรอกชื่อลูกค้า');
       return;
     }
 
@@ -530,7 +530,7 @@
       window.showModal('✅ สำเร็จ', 'บันทึกข้อมูลลูกค้าเรียบร้อยแล้ว', '', '<button class="btn-ok" onclick="closeModal()">ตกลง</button>');
     }).catch(function (err) {
       console.warn('Update foam customer failed:', err);
-      window.alert('บันทึกข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่');
+      PinThipSafe.modal.error('บันทึกข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่');
     });
   }
 
@@ -540,13 +540,13 @@
 
     repo.getCustomer(customerKey).then(function (customer) {
       if (!customer) {
-        window.alert('ไม่พบข้อมูลลูกค้า');
+        PinThipSafe.modal.warning('ไม่พบข้อมูลลูกค้า');
         return;
       }
 
       var printApi = getPrintApi();
       if (!printApi) {
-        window.alert('ระบบพิมพ์ป้ายยังไม่พร้อมใช้งาน');
+        PinThipSafe.modal.warning('ระบบพิมพ์ป้ายยังไม่พร้อมใช้งาน');
         return;
       }
 
@@ -636,7 +636,7 @@
     db.ref('foam_delivery_requests/' + dateStr + '/' + requestKey).once('value').then(function (snapshot) {
       var request = snapshot.val();
       if (!request) {
-        window.alert('ไม่พบรายการที่ต้องการแก้ไข');
+        PinThipSafe.modal.warning('ไม่พบรายการที่ต้องการแก้ไข');
         return;
       }
 
@@ -668,7 +668,7 @@
         '<button class="btn-ok" onclick="foamAdminSaveEdited(' + escape(JSON.stringify(requestKey)) + ', ' + escape(JSON.stringify(dateStr)) + ')">💾 บันทึก</button>');
     }).catch(function (err) {
       console.warn('foamAdminEditSelected failed:', err);
-      window.alert('โหลดข้อมูลไม่สำเร็จ');
+      PinThipSafe.modal.error('โหลดข้อมูลไม่สำเร็จ');
     });
   }
 
@@ -696,7 +696,7 @@
       };
 
       if (!data.name) {
-        window.alert('กรุณากรอกชื่อลูกค้า');
+        PinThipSafe.modal.warning('กรุณากรอกชื่อลูกค้า');
         return;
       }
 
@@ -737,7 +737,7 @@
       loadFoamAdminQueue();
     }).catch(function (err) {
       console.warn('Save edited foam request failed:', err);
-      window.alert('บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่');
+      PinThipSafe.modal.error('บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่');
     });
   }
 
@@ -751,7 +751,7 @@
       loadFoamAdminQueue();
     }).catch(function (err) {
       console.warn('Reject foam request failed:', err);
-      window.alert('ยกเลิกรายการไม่สำเร็จ');
+      PinThipSafe.modal.error('ยกเลิกรายการไม่สำเร็จ');
     });
   }
 
@@ -768,7 +768,7 @@
       loadFoamAdminQueue();
     }).catch(function (err) {
       console.warn('Delete foam request failed:', err);
-      window.alert('ลบรายการไม่สำเร็จ กรุณาลองใหม่');
+      PinThipSafe.modal.error('ลบรายการไม่สำเร็จ กรุณาลองใหม่');
     });
   }
 
@@ -779,14 +779,14 @@
     db.ref('foam_delivery_requests/' + dateStr + '/' + requestKey).once('value').then(function (snapshot) {
       var request = snapshot.val();
       if (!request) {
-        window.alert('ไม่พบรายการที่ต้องการพิมพ์');
+        PinThipSafe.modal.warning('ไม่พบรายการที่ต้องการพิมพ์');
         return;
       }
 
       var data = request.customerSnapshot || {};
       var printApi = getPrintApi();
       if (!printApi) {
-        window.alert('ระบบพิมพ์ป้ายยังไม่พร้อมใช้งาน');
+        PinThipSafe.modal.warning('ระบบพิมพ์ป้ายยังไม่พร้อมใช้งาน');
         return;
       }
 

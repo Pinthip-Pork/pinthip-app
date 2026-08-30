@@ -456,7 +456,7 @@
       };
       window.PinThipSafe.foamPrint.printSingleLabel(sampleData);
     } else {
-      window.alert('ไม่พบฟังก์ชันพิมพ์');
+      PinThipSafe.modal.warning('ไม่พบฟังก์ชันพิมพ์');
     }
   }
 

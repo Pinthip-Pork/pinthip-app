@@ -123,7 +123,7 @@
    */
   function printLabels(labels) {
     if (!labels || labels.length === 0) {
-      window.alert('ไม่มีข้อมูลสำหรับพิมพ์');
+      PinThipSafe.modal.warning('ไม่มีข้อมูลสำหรับพิมพ์');
       return;
     }
 
@@ -207,7 +207,7 @@
 
     var printWindow = window.open('', '_blank', 'width=1200,height=800');
     if (!printWindow) {
-      window.alert('กรุณาอนุญาต Pop-up เพื่อเปิดหน้าต่างพิมพ์');
+      PinThipSafe.modal.warning('กรุณาอนุญาต Pop-up เพื่อเปิดหน้าต่างพิมพ์');
       return;
     }
     printWindow.document.write(fullHtml);

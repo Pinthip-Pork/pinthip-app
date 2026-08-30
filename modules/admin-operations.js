@@ -1,191 +1,32 @@
 (function () {
+  // ===== Lazy-loaded Attendance Module =====
   function showAdminAttendanceSummaryReport() {
-    window.isAdmin = true;
-    const mainCard = document.getElementById('mainCard');
-    const hamburgerBtn = document.getElementById('hamburgerBtn');
-    const bellBtn = document.getElementById('bellBtn');
-    const pageTitle = document.getElementById('pageTitle');
-    const listBox = document.getElementById('listBox');
+    PinThipSafe.lazyLoad.loadModule('admin-attendance').then(() => {
+      window.AdminAttendance.show();
+    }).catch(err => {
+      PinThipSafe.modal.error('ไม่สามารถโหลดโมดูลสถิติการทำงานได้');
+      console.error('Failed to load admin-attendance:', err);
+    });
+  }
 
-    if (mainCard) mainCard.classList.add('admin-wide');
-    if (hamburgerBtn) hamburgerBtn.style.display = 'block';
-    if (bellBtn) bellBtn.style.display = 'block';
-    if (pageTitle) pageTitle.innerText = '👥 สรุปสถิติ ขาด ลา มาสาย (รายบุคคล)';
-    if (listBox) listBox.style.display = 'none';
-
-    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
-
-    const html = `
-      <h2>👥 สรุปสถิติ ขาด ลา มาสาย (แยกตามรายบุคคล)</h2>
-      <div style="background:#eef2f5; padding:12px; border-radius:10px; margin-bottom:15px; text-align:left;">
-        <b>📅 เลือกช่วงเวลาตรวจสอบสถิติ:</b>
-        <div style="display:flex; gap:10px; margin-top:5px;">
-          <div style="flex:1;">
-            <span style="font-size:12px; color:#555;">จากวันที่:</span>
-            <input type="date" id="attStartDate" value="${todayStr}" onchange="renderAttendanceSummaryList()" style="font-weight:bold; margin:2px 0 0 0;">
-          </div>
-          <div style="flex:1;">
-            <span style="font-size:12px; color:#555;">ถึงวันที่:</span>
-            <input type="date" id="attEndDate" value="${todayStr}" onchange="renderAttendanceSummaryList()" style="font-weight:bold; margin:2px 0 0 0;">
-          </div>
-        </div>
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          <button class="btn-blue" onclick="setAttendanceDateToday()" style="margin:0; padding:8px; font-size:13px; flex:1;">📌 ดูเฉพาะวันนี้</button>
-          <button class="btn-excel" onclick="exportAttendanceSummaryExcel()" style="margin:0; padding:8px; font-size:13px; flex:1;">📥 ส่งออกข้อมูลเป็น Excel</button>
-        </div>
-      </div>
-      <div id="attendanceSummaryResultContainer"></div>
-      <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดสบอร์ด</button>
-    `;
-
-    const mainContent = document.getElementById('mainContent');
-    if (mainContent) mainContent.innerHTML = html;
-    window.renderAttendanceSummaryList();
+  function renderAttendanceSummaryList() {
+    if (window.AdminAttendance) {
+      window.AdminAttendance.render();
+    } else {
+      showAdminAttendanceSummaryReport();
+    }
   }
 
   function setAttendanceDateToday() {
-    const todayStr = window.PinThipSafe?.utils?.getLocalDateTimeString ? window.PinThipSafe.utils.getLocalDateTimeString() : new Date().toISOString().slice(0, 10);
-    const startDate = document.getElementById('attStartDate');
-    const endDate = document.getElementById('attEndDate');
-    if (startDate) startDate.value = todayStr;
-    if (endDate) endDate.value = todayStr;
-    window.renderAttendanceSummaryList();
-  }
-
-  let currentAttendanceSummaryCache = [];
-
-  function renderAttendanceSummaryList() {
-    const startDate = document.getElementById('attStartDate')?.value;
-    const endDate = document.getElementById('attEndDate')?.value;
-    const container = document.getElementById('attendanceSummaryResultContainer');
-    if (!container || !startDate || !endDate) return;
-
-    container.innerHTML = (typeof createLoadingHTML === 'function') ? createLoadingHTML() : 'กำลังโหลด...';
-
-    Promise.all([
-      window.db.ref('settings/globalLateTime').once('value'),
-      window.db.ref('employees').once('value'),
-      window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, startDate, endDate),
-      window.db.ref('leaves').once('value')
-    ]).then(([settingsSnap, empSnap, logs, leaveSnap]) => {
-      const globalLateTime = settingsSnap.val() || '08:00';
-      const employees = empSnap.val() || {};
-      const leaves = leaveSnap.val() || {};
-
-      const summaryList = [];
-      const empKeys = Object.keys(employees);
-
-      if (empKeys.length === 0) {
-        container.innerHTML = '<div style="color:#888; margin:20px 0;">ไม่มีข้อมูลพนักงานในระบบ</div>';
-        return;
-      }
-
-      // OPTIMIZATION: pre-index logs and leaves by empId once (O(n+m)) instead of
-      // nested loops (O(employees × logs) + O(employees × leaves)).
-      const logsByEmpId = new Map();
-      Object.keys(logs).forEach((lk) => {
-        const log = logs[lk];
-        if (!log || log.type !== 'เข้างาน') return;
-        if (!log.date || log.date < startDate || log.date > endDate) return;
-        const empId = String(log.empId);
-        if (!logsByEmpId.has(empId)) logsByEmpId.set(empId, []);
-        logsByEmpId.get(empId).push(log);
-      });
-
-      const leavesByEmpId = new Map();
-      Object.keys(leaves).forEach((fk) => {
-        const leave = leaves[fk];
-        const statusStr = String(leave.status || '');
-        if (!statusStr.includes('อนุมัติแล้ว')) return;
-        if (!leave.startDate || !leave.endDate || leave.startDate > endDate || leave.endDate < startDate) return;
-        const empId = String(leave.empId);
-        if (!leavesByEmpId.has(empId)) leavesByEmpId.set(empId, 0);
-        leavesByEmpId.set(empId, leavesByEmpId.get(empId) + 1);
-      });
-
-      empKeys.forEach((ek) => {
-        const emp = employees[ek];
-        const empId = String(emp.empId);
-        const empLogs = logsByEmpId.get(empId) || [];
-        let presentCount = 0;
-        let lateCount = 0;
-        empLogs.forEach((log) => {
-          presentCount++;
-          if (log.time > globalLateTime) lateCount++;
-        });
-        const leaveCount = leavesByEmpId.get(empId) || 0;
-
-        summaryList.push({
-          empId: emp.empId,
-          empName: emp.empName,
-          presentCount,
-          lateCount,
-          leaveCount
-        });
-      });
-
-      currentAttendanceSummaryCache = summaryList;
-
-      let html = `
-        <div style="background: linear-gradient(135deg, #0dcaf0, #0d6efd); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
-          <b>📊 สรุปสถิติพนักงานช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-          👥 จำนวนพนักงานทั้งหมด: <b>${summaryList.length} คน</b> (เกณฑ์มาสาย: หลัง ${globalLateTime} น.)
-        </div>
-      `;
-
-      summaryList.forEach((item) => {
-        html += `
-          <div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <b>👤 ${item.empName}</b> (${item.empId})<br>
-              <span style="color: #6c757d; font-size: 12px;">มาทำงาน: <b style="color: #28a745;">${item.presentCount}</b> วัน</span>
-            </div>
-            <div style="display: flex; gap: 8px; text-align: right;">
-              <span style="background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 6px; font-size: 13px;">⏰ มาสาย: <b>${item.lateCount}</b> ครั้ง</span>
-              <span style="background: #e2e3e5; color: #383d41; padding: 4px 10px; border-radius: 6px; font-size: 13px;">🌴 ลา: <b>${item.leaveCount}</b> วัน</span>
-            </div>
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
-    }).catch((err) => {
-      if (container) container.innerHTML = '';
-      if (window.PinThipSafe?.ui?.showAsyncError) {
-        window.PinThipSafe.ui.showAsyncError('attendanceSummaryResultContainer', {
-          message: 'ไม่สามารถโหลดข้อมูลสถิติพนักงานได้',
-          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง',
-          retryFn: renderAttendanceSummaryList
-        });
-      }
-      console.error('Attendance summary load failed:', err);
-    });
+    if (window.AdminAttendance) {
+      window.AdminAttendance.setToday();
+    }
   }
 
   function exportAttendanceSummaryExcel() {
-    if (!currentAttendanceSummaryCache || currentAttendanceSummaryCache.length === 0) {
-      window.alert('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
-      return;
+    if (window.AdminAttendance) {
+      window.AdminAttendance.exportExcel();
     }
-
-    const startDate = document.getElementById('attStartDate')?.value;
-    const endDate = document.getElementById('attEndDate')?.value;
-
-    const rows = [
-      ['รหัสพนักงาน', 'ชื่อพนักงาน', 'มาทำงาน (วัน)', 'มาสาย (ครั้ง)', 'ลา (วัน)', 'ช่วงวันที่ตรวจสอบ', `${startDate} ถึง ${endDate}`]
-    ];
-
-    currentAttendanceSummaryCache.forEach((item) => {
-      rows.push([
-        item.empId,
-        item.empName,
-        item.presentCount,
-        item.lateCount,
-        item.leaveCount
-      ]);
-    });
-
-    window.downloadCSV(`Attendance_Summary_${startDate}_to_${endDate}.csv`, rows);
   }
 
   function showLocationManagement() {
@@ -264,7 +105,7 @@
     const radius = document.getElementById('locRadius')?.value.trim();
 
     if (!name || !lat || !lng || !radius) {
-      window.alert('กรุณากรอกข้อมูลสถานที่ให้ครบถ้วน');
+      PinThipSafe.modal.warning('กรุณากรอกข้อมูลสถานที่ให้ครบถ้วน');
       return;
     }
 
@@ -307,7 +148,7 @@
     const radius = document.getElementById('editLocRadius')?.value.trim();
 
     if (!key || !name || !lat || !lng || !radius) {
-      window.alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      PinThipSafe.modal.warning('กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
 
@@ -358,7 +199,7 @@
       }
     } catch (outerErr) {
       console.error('[showFuelRequestForm] outer error:', outerErr);
-      window.alert('เปิดฟอร์มเบิกไม่ได้: ' + (outerErr && outerErr.message ? outerErr.message : outerErr));
+      PinThipSafe.modal.error('เปิดฟอร์มเบิกไม่ได้: ' + (outerErr && outerErr.message ? outerErr.message : outerErr));
     }
   }
 
@@ -384,7 +225,7 @@
     const amountInput = document.getElementById('fuelAmountInput')?.value.trim();
 
     if (!carPlate) {
-      window.alert('กรุณาเลือกทะเบียนรถ');
+      PinThipSafe.modal.warning('กรุณาเลือกทะเบียนรถ');
       return;
     }
 
@@ -394,7 +235,7 @@
       defaultAmount = 1000;
     } else if (reqType && reqType.includes('ซ่อม')) {
       if (!amountInput || Number(amountInput) <= 0) {
-        window.alert('กรุณากรอกจำนวนเงินที่ต้องการเบิกค่าซ่อม');
+        PinThipSafe.modal.warning('กรุณากรอกจำนวนเงินที่ต้องการเบิกค่าซ่อม');
         return;
       }
       defaultAmount = Number(amountInput);
@@ -492,7 +333,7 @@
     const amountVal = document.getElementById(`fuelAmount_${key}`)?.value.trim();
 
     if (newStatus && newStatus.includes('อนุมัติแล้ว') && (!amountVal || Number(amountVal) <= 0)) {
-      window.alert('กรุณากรอกจำนวนเงินอนุมัติให้ถูกต้อง');
+      PinThipSafe.modal.warning('กรุณากรอกจำนวนเงินอนุมัติให้ถูกต้อง');
       return;
     }
 
@@ -605,7 +446,7 @@
   function addCarPlate() {
     const val = document.getElementById('newCarPlateInput')?.value.trim();
     if (!val) {
-      window.alert('กรุณากรอกเลขทะเบียนรถ');
+      PinThipSafe.modal.warning('กรุณากรอกเลขทะเบียนรถ');
       return;
     }
 
@@ -797,7 +638,7 @@
 
   function exportFuelHistoryExcel() {
     if (!currentFuelFilteredList || currentFuelFilteredList.length === 0) {
-      window.alert('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
+      PinThipSafe.modal.warning('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
       return;
     }
     const startDate = document.getElementById('fuelStartDate')?.value;
@@ -861,7 +702,7 @@
       if (mainContent) mainContent.innerHTML = html;
     }, (err) => {
       console.error('Edit fuel modal plates load failed:', err);
-      window.alert('โหลดรายการทะเบียนรถไม่สำเร็จ กรุณาลองอีกครั้ง');
+      PinThipSafe.modal.error('โหลดรายการทะเบียนรถไม่สำเร็จ กรุณาลองอีกครั้ง');
       window.showAdminFuelHistory();
     });
   }
@@ -874,7 +715,7 @@
     const amount = document.getElementById('editFuelAmount')?.value.trim();
 
     if (!carPlate || !amount) {
-      window.alert('กรุณาเลือกทะเบียนรถและกรอกจำนวนเงินให้ครบถ้วน');
+      PinThipSafe.modal.warning('กรุณาเลือกทะเบียนรถและกรอกจำนวนเงินให้ครบถ้วน');
       return;
     }
 
@@ -920,7 +761,7 @@
     window.db.ref('fuel_requests/' + key).update(update, (err) => {
       if (err) {
         console.error('Update paid status failed:', err);
-        window.alert('บันทึกสถานะการรับเงินไม่สำเร็จ กรุณาลองอีกครั้ง');
+        PinThipSafe.modal.error('บันทึกสถานะการรับเงินไม่สำเร็จ กรุณาลองอีกครั้ง');
         return;
       }
       // Refresh the history list so the badge + button reflect the new state.
@@ -1118,7 +959,7 @@
 
   function exportLeaveHistoryExcel() {
     if (!currentLeaveFilteredList || currentLeaveFilteredList.length === 0) {
-      window.alert('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
+      PinThipSafe.modal.warning('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
       return;
     }
     const startDate = document.getElementById('leaveStartDate')?.value;
@@ -1270,7 +1111,7 @@
 
   function exportLogHistoryExcel() {
     if (!currentLogFilteredList || currentLogFilteredList.length === 0) {
-      window.alert('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
+      PinThipSafe.modal.warning('ไม่มีข้อมูลสำหรับส่งออกเป็น Excel');
       return;
     }
     const startDate = document.getElementById('logStartDate')?.value;
@@ -1735,7 +1576,7 @@
   function saveGlobalLateTime() {
     const val = document.getElementById('globalLateInput')?.value.trim();
     if (!val) {
-      window.alert('กรุณาระบุเวลาให้ถูกต้อง');
+      PinThipSafe.modal.warning('กรุณาระบุเวลาให้ถูกต้อง');
       return;
     }
 
@@ -1775,7 +1616,7 @@
     const canSendFoamLabels = document.getElementById('newEmpFoamLabels')?.checked;
 
     if (!id || !name || !pin || !rate) {
-      window.alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+      PinThipSafe.modal.warning('กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
 
@@ -1806,7 +1647,7 @@
       });
     }, (empErr) => {
       console.error('Add employee duplicate-check failed:', empErr);
-      window.alert('ตรวจสอบรหัสพนักงานซ้ำไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง');
+      PinThipSafe.modal.error('ตรวจสอบรหัสพนักงานซ้ำไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง');
     });
   }
 

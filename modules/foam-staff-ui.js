@@ -188,7 +188,7 @@
   function foamSelectCustomer(customerKey) {
     getRepo().getCustomer(customerKey).then(function (customer) {
       if (!customer) {
-        window.alert('ไม่พบข้อมูลลูกค้า');
+        PinThipSafe.modal.warning('ไม่พบข้อมูลลูกค้า');
         return;
       }
       // #6: Add to recent customers
@@ -249,7 +249,7 @@
 
     getRepo().getCustomer(customerKey).then(function (customer) {
       if (!customer) {
-        window.alert('ไม่พบข้อมูลลูกค้า');
+        PinThipSafe.modal.warning('ไม่พบข้อมูลลูกค้า');
         return;
       }
 
@@ -280,7 +280,7 @@
           '<button class="btn-ok" onclick="closeModal(); showFoamStaffView();">ตกลง</button>');
       }).catch(function (err) {
         console.warn('Submit foam delivery failed:', err);
-        window.alert('ส่งรายการไม่สำเร็จ กรุณาลองใหม่');
+        PinThipSafe.modal.error('ส่งรายการไม่สำเร็จ กรุณาลองใหม่');
       });
     });
   }
@@ -333,17 +333,17 @@
 
     // #5: Validation - บังคับเฉพาะชื่อ + เบอร์โทร
     if (!name) {
-      window.alert('⚠️ กรุณากรอกชื่อลูกค้า');
+      PinThipSafe.modal.warning('⚠️ กรุณากรอกชื่อลูกค้า');
       return;
     }
 
     if (!phone) {
-      window.alert('⚠️ กรุณากรอกเบอร์โทรศัพท์\n\nเบอร์โทรจำเป็นสำหรับการติดต่อลูกค้า');
+      PinThipSafe.modal.warning('⚠️ กรุณากรอกเบอร์โทรศัพท์\n\nเบอร์โทรจำเป็นสำหรับการติดต่อลูกค้า');
       return;
     }
 
     if (!window.currentUser || !window.currentUser.empId) {
-      window.alert('ข้อผิดพลาด: ไม่พบข้อมูลพนักงาน กรุณาเข้าสู่ระบบใหม่');
+      PinThipSafe.modal.error('ข้อผิดพลาด: ไม่พบข้อมูลพนักงาน กรุณาเข้าสู่ระบบใหม่');
       return;
     }
 
@@ -351,7 +351,7 @@
     var deliveryRepo = getDeliveryRepo();
     
     if (!repo || !deliveryRepo) {
-      window.alert('ระบบยังไม่พร้อมใช้งาน กรุณารีเฟรชหน้า');
+      PinThipSafe.modal.error('ระบบยังไม่พร้อมใช้งาน กรุณารีเฟรชหน้า');
       return;
     }
 
@@ -385,7 +385,7 @@
     }).catch(function (err) {
       console.error('[foam-staff-ui] Operation failed:', err);
       var errMsg = (err && err.message) ? err.message : 'ส่งข้อมูลไม่สำเร็จ';
-      window.alert(errMsg + '\n\nตรวจสอบคอนโซล (F12) สำหรับรายละเอียด');
+      PinThipSafe.modal.error(errMsg + '\n\nตรวจสอบคอนโซล (F12) สำหรับรายละเอียด');
     });
   }
 
@@ -483,7 +483,7 @@
     getDeliveryRepo().fetchRequestsByDate().then(function (list) {
       var req = list.find(function (r) { return r.key === requestKey; });
       if (!req) {
-        window.alert('ไม่พบรายการนี้');
+        PinThipSafe.modal.warning('ไม่พบรายการนี้');
         return;
       }
 
@@ -578,7 +578,7 @@
     var note = document.getElementById('foamEditNote')?.value.trim() || '';
 
     if (!requestKey) {
-      window.alert('ไม่พบรหัสรายการ');
+      PinThipSafe.modal.warning('ไม่พบรหัสรายการ');
       return;
     }
 
@@ -630,7 +630,7 @@
         '<button class="btn-ok" onclick="closeModal(); showFoamMyTodayRequests();">ตกลง</button>');
     }).catch(function (err) {
       console.warn('Edit request failed:', err);
-      window.alert('แก้ไขไม่สำเร็จ กรุณาลองใหม่');
+      PinThipSafe.modal.error('แก้ไขไม่สำเร็จ กรุณาลองใหม่');
     });
   }
 
@@ -649,7 +649,7 @@
         '<button class="btn-ok" onclick="closeModal(); showFoamMyTodayRequests();">ตกลง</button>');
     }).catch(function(err) {
       console.warn('Delete request failed:', err);
-      window.alert('ลบไม่สำเร็จ กรุณาลองใหม่');
+      PinThipSafe.modal.error('ลบไม่สำเร็จ กรุณาลองใหม่');
     });
   }
 

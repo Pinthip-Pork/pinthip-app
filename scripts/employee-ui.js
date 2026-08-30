@@ -66,7 +66,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 function executeClockIn(lateReason) {
   if (!navigator.geolocation) {
-    alert("\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E44\u0E21\u0E48\u0E23\u0E2D\u0E07\u0E23\u0E31\u0E1A GPS");
+    PinThipSafe.modal.error('อุปกรณ์ไม่รองรับ GPS');
     return;
   }
 
@@ -165,7 +165,7 @@ function executeClockIn(lateReason) {
         });
       });
     }, function(err) {
-      alert("\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E1B\u0E34\u0E14\u0E41\u0E25\u0E30\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15\u0E2A\u0E34\u0E17\u0E18\u0E34\u0E4C GPS \u0E1A\u0E19\u0E21\u0E37\u0E2D\u0E16\u0E37\u0E2D\u0E02\u0E2D\u0E07\u0E04\u0E38\u0E13");
+      PinThipSafe.modal.error('กรุณาเปิดและอนุญาตสิทธิ์ GPS บนมือถือของคุณ');
     }, { enableHighAccuracy: true, timeout: 8000 });
   });
 }
@@ -189,7 +189,10 @@ function handleLeaveSubmit() {
   var endDate = document.getElementById('endDate').value;
   var reason = document.getElementById('leaveReason').value.trim();
 
-  if (!reason) { alert("\u0E01\u0E23\u0E38\u0E13\u0E32\u0E23\u0E30\u0E1A\u0E38\u0E40\u0E2B\u0E15\u0E38\u0E1C\u0E25"); return; }
+  if (!reason) { 
+    PinThipSafe.modal.warning('กรุณาระบุเหตุผล');
+    return; 
+  }
 
   db.ref('leaves').push().set({
     empId: currentUser.empId,

@@ -259,7 +259,7 @@ function requireFirebaseAuth() {
         console.warn('Firebase Auth session is required before accessing protected data.');
         resetExpiredAuthSession();
         if (typeof showLoginForm === 'function') showLoginForm();
-        window.alert('เซสชันเข้าสู่ระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+        PinThipSafe.modal.warning('เซสชันเข้าสู่ระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่');
       }
     });
     return false;
@@ -268,7 +268,7 @@ function requireFirebaseAuth() {
   console.warn('Firebase Auth session is required before accessing protected data.');
   resetExpiredAuthSession();
   if (typeof showLoginForm === 'function') showLoginForm();
-  window.alert('เซสชันเข้าสู่ระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+  PinThipSafe.modal.warning('เซสชันเข้าสู่ระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่');
   return false;
 }
 
