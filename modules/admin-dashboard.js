@@ -34,14 +34,22 @@
         : '<div class="admin-content" style="text-align:center; padding:40px 16px; color:#64748b;">⏳ กำลังโหลดข้อมูลแดชบอร์ด...</div>';
     }
 
-    Promise.all([
+    // Create timeout wrapper for Promise (10 seconds)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('TIMEOUT')), 10000);
+    });
+
+    const dataPromise = Promise.all([
       window.db.ref('employees').once('value'),
       window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, todayStr, todayStr),
       window.db.ref('leaves').once('value'),
       window.db.ref('fuel_requests').once('value'),
       window.db.ref('settings/globalLateTime').once('value'),
       window.db.ref('foam_delivery_requests/' + todayStr).once('value')
-    ]).then(([empSnap, logsObj, leaveSnap, fuelSnap, settingsSnap, foamSnap]) => {
+    ]);
+
+    // Race between data loading and timeout
+    Promise.race([dataPromise, timeoutPromise]).then(([empSnap, logsObj, leaveSnap, fuelSnap, settingsSnap, foamSnap]) => {
       const employeesObj = empSnap.val() || {};
       const leavesObj = leaveSnap.val() || {};
       const fuelObj = fuelSnap.val() || {};
@@ -320,14 +328,25 @@
       if (contentEl) {
         contentEl.innerHTML = '';
       }
+      
+      // Check if it's a timeout error
+      const isTimeout = err.message === 'TIMEOUT';
+      const errorMessage = isTimeout 
+        ? 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ (หมดเวลา)'
+        : 'ไม่สามารถโหลดข้อมูลแดชบอร์ดได้';
+      
+      const errorDetail = isTimeout
+        ? 'การเชื่อมต่อช้าเกินไป กรุณาตรวจสอบอินเทอร์เน็ตหรือลองใหม่อีกครั้ง'
+        : 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วกดลองใหม่';
+      
       if (window.PinThipSafe?.ui?.showAsyncError) {
         window.PinThipSafe.ui.showAsyncError('mainContent', {
-          message: 'ไม่สามารถโหลดข้อมูลแดชบอร์ดได้',
-          detail: 'กรุณาตรวจสอบอินเทอร์เน็ต แล้วกดลองใหม่',
+          message: errorMessage,
+          detail: errorDetail + '\n\n💡 หรือดึงหน้าจอลงเพื่อรีเฟรชข้อมูล',
           retryFn: showAdminDashboard
         });
       }
-      console.error('Admin dashboard load failed:', err);
+      console.error('Admin dashboard load failed:', err, isTimeout ? '(TIMEOUT)' : '');
     });
   }
 
