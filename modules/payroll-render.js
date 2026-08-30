@@ -5,22 +5,25 @@
   function renderEmployeeCard(emp) {
     let html = '<div class="employee-payroll-card">';
     html += '<div class="employee-header" onclick="toggleEmployeeDetail(\'emp-' + emp.empId + '\')">';
-    html += '<div style="flex:1;">';
-    html += '<div style="font-size:15px; font-weight:bold; color:#2c3e50;">';
-    html += '👤 ' + window.PinThipSafe.safeText(emp.empName) + ' ';
-    html += '<span style="font-size:13px; color:#7f8c8d;">(' + window.PinThipSafe.safeText(emp.empId) + ')</span>';
+    html += '<div class="emp-header-left">';
+    html += '<div class="emp-name-row">';
+    html += '<span class="emp-avatar">👨‍💼</span>';
+    html += '<span class="emp-name">' + window.PinThipSafe.safeText(emp.empName) + '</span>';
+    html += '<span class="emp-id">ID: ' + window.PinThipSafe.safeText(emp.empId) + '</span>';
     html += '</div>';
-    html += '<div style="font-size:12px; color:#95a5a6; margin-top:2px;">';
-    html += 'ค่าแรง ' + emp.salary.days + ' วัน • น้ำมัน ' + emp.fuel.count + ' รายการ • ซ่อม ' + emp.repair.count + ' รายการ';
+    html += '<div class="emp-stats-row">';
+    html += '<span class="emp-stat"><span class="stat-icon">📅</span> ' + emp.salary.days + ' วัน</span>';
+    html += '<span class="emp-stat"><span class="stat-icon">⛽</span> ' + emp.fuel.count + '</span>';
+    html += '<span class="emp-stat"><span class="stat-icon">🔧</span> ' + emp.repair.count + '</span>';
     html += '</div></div>';
-    html += '<div style="text-align:right;">';
-    html += '<div style="font-size:18px; font-weight:bold; color:#27ae60;">' + emp.grandTotal.toLocaleString() + ' ฿</div>';
-    html += '<div style="font-size:12px; color:#7f8c8d; margin-top:2px;">';
-    html += '<span id="emp-' + emp.empId + '-toggle">▼</span> ดูรายละเอียด';
-    html += '</div></div></div>';
+    html += '<div class="emp-header-right">';
+    html += '<div class="emp-total-amount">' + emp.grandTotal.toLocaleString() + ' ฿</div>';
+    html += '<button class="emp-toggle-btn" id="emp-' + emp.empId + '-toggle">▼ แสดงรายละเอียด</button>';
+    html += '</div></div>';
     html += '<div id="emp-' + emp.empId + '" class="employee-detail" style="display:none;">';
     html += renderSummaryCards(emp);
-    html += '<div style="margin-top:12px;"><div style="font-weight:bold; font-size:13px; color:#2c3e50; margin-bottom:8px;">📋 รายละเอียดทั้งหมด:</div>';
+    html += '<div class="detail-section">';
+    html += '<h3 class="detail-title">รายการทั้งหมด</h3>';
     html += renderDetails(emp);
     html += '</div></div></div>';
     return html;
@@ -29,50 +32,84 @@
   // Private helper function: Render summary cards (salary, fuel, repair)
   function renderSummaryCards(emp) {
     let html = '<div class="employee-summary-cards">';
-    html += '<div class="mini-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white;">';
-    html += '<div style="font-size:20px; margin-bottom:4px;">💼</div>';
-    html += '<div style="font-size:11px; opacity:0.9;">ค่าแรง</div>';
-    html += '<div style="font-size:18px; font-weight:bold; margin-top:4px;">' + emp.salary.total.toLocaleString() + ' ฿</div>';
-    html += '<div style="font-size:11px; opacity:0.8; margin-top:2px;">' + emp.salary.days + ' วัน</div>';
+    
+    // Salary Card
+    html += '<div class="stat-card stat-card-salary">';
+    html += '<div class="stat-card-header">';
+    html += '<span class="stat-card-icon">💼</span>';
+    html += '<span class="stat-card-label">ค่าแรง</span>';
     html += '</div>';
-    html += '<div class="mini-card" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color:white;">';
-    html += '<div style="font-size:20px; margin-bottom:4px;">⛽</div>';
-    html += '<div style="font-size:11px; opacity:0.9;">ค่าน้ำมัน</div>';
-    html += '<div style="font-size:18px; font-weight:bold; margin-top:4px;">' + emp.fuel.total.toLocaleString() + ' ฿</div>';
-    html += '<div style="font-size:11px; opacity:0.8; margin-top:2px;">' + emp.fuel.count + ' รายการ</div>';
+    html += '<div class="stat-card-value">' + emp.salary.total.toLocaleString() + ' ฿</div>';
+    html += '<div class="stat-card-meta">' + emp.salary.days + ' วันทำงาน</div>';
     html += '</div>';
-    html += '<div class="mini-card" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color:white;">';
-    html += '<div style="font-size:20px; margin-bottom:4px;">🔧</div>';
-    html += '<div style="font-size:11px; opacity:0.9;">ค่าซ่อม</div>';
-    html += '<div style="font-size:18px; font-weight:bold; margin-top:4px;">' + emp.repair.total.toLocaleString() + ' ฿</div>';
-    html += '<div style="font-size:11px; opacity:0.8; margin-top:2px;">' + emp.repair.count + ' รายการ</div>';
-    html += '</div></div>';
+    
+    // Fuel Card
+    html += '<div class="stat-card stat-card-fuel">';
+    html += '<div class="stat-card-header">';
+    html += '<span class="stat-card-icon">⛽</span>';
+    html += '<span class="stat-card-label">ค่าน้ำมัน</span>';
+    html += '</div>';
+    html += '<div class="stat-card-value">' + emp.fuel.total.toLocaleString() + ' ฿</div>';
+    html += '<div class="stat-card-meta">' + emp.fuel.count + ' รายการ</div>';
+    html += '</div>';
+    
+    // Repair Card
+    html += '<div class="stat-card stat-card-repair">';
+    html += '<div class="stat-card-header">';
+    html += '<span class="stat-card-icon">🔧</span>';
+    html += '<span class="stat-card-label">ค่าซ่อม</span>';
+    html += '</div>';
+    html += '<div class="stat-card-value">' + emp.repair.total.toLocaleString() + ' ฿</div>';
+    html += '<div class="stat-card-meta">' + emp.repair.count + ' รายการ</div>';
+    html += '</div>';
+    
+    html += '</div>';
     return html;
   }
 
   // Private helper function: Render all detail items
   function renderDetails(emp) {
-    let html = '';
+    let html = '<div class="detail-table">';
+    
+    // Salary items
     emp.salary.list.forEach((item) => {
-      html += '<div class="detail-item"><div class="detail-icon" style="background:#667eea;">💼</div>';
-      html += '<div style="flex:1;"><div style="font-size:13px; color:#2c3e50;">เข้างาน - เวลา ' + window.PinThipSafe.safeText(item.time) + ' น.</div>';
-      html += '<div style="font-size:11px; color:#7f8c8d; margin-top:2px;">📅 ' + window.PinThipSafe.safeText(item.date) + '</div></div>';
-      html += '<div style="font-size:14px; font-weight:bold; color:#27ae60;">' + item.rate.toLocaleString() + ' ฿</div></div>';
+      html += '<div class="detail-row detail-row-salary">';
+      html += '<div class="detail-icon-col"><span class="detail-type-badge badge-salary">💼 ค่าแรง</span></div>';
+      html += '<div class="detail-info-col">';
+      html += '<div class="detail-primary">เข้างาน เวลา ' + window.PinThipSafe.safeText(item.time) + ' น.</div>';
+      html += '<div class="detail-secondary">' + window.PinThipSafe.safeText(item.date) + '</div>';
+      html += '</div>';
+      html += '<div class="detail-amount-col">' + item.rate.toLocaleString() + ' ฿</div>';
+      html += '</div>';
     });
+    
+    // Fuel items
     emp.fuel.list.forEach((item) => {
-      html += '<div class="detail-item"><div class="detail-icon" style="background:#f39c12;">⛽</div>';
-      html += '<div style="flex:1;"><div style="font-size:13px; color:#2c3e50;">' + window.PinThipSafe.safeText(item.type) + '</div>';
-      html += '<div style="font-size:11px; color:#7f8c8d; margin-top:2px;">📅 ' + window.PinThipSafe.safeText(item.date) + ' • 🚗 ' + window.PinThipSafe.safeText(item.plate) + '</div>';
-      html += '<div style="font-size:11px; color:#95a5a6; margin-top:2px;">' + window.PinThipSafe.safeText(item.route) + '</div></div>';
-      html += '<div style="font-size:14px; font-weight:bold; color:#f39c12;">' + item.amount.toLocaleString() + ' ฿</div></div>';
+      html += '<div class="detail-row detail-row-fuel">';
+      html += '<div class="detail-icon-col"><span class="detail-type-badge badge-fuel">⛽ น้ำมัน</span></div>';
+      html += '<div class="detail-info-col">';
+      html += '<div class="detail-primary">' + window.PinThipSafe.safeText(item.type) + '</div>';
+      html += '<div class="detail-secondary">' + window.PinThipSafe.safeText(item.date) + ' • 🚗 ' + window.PinThipSafe.safeText(item.plate) + '</div>';
+      html += '<div class="detail-tertiary">' + window.PinThipSafe.safeText(item.route) + '</div>';
+      html += '</div>';
+      html += '<div class="detail-amount-col">' + item.amount.toLocaleString() + ' ฿</div>';
+      html += '</div>';
     });
+    
+    // Repair items
     emp.repair.list.forEach((item) => {
-      html += '<div class="detail-item"><div class="detail-icon" style="background:#e74c3c;">🔧</div>';
-      html += '<div style="flex:1;"><div style="font-size:13px; color:#2c3e50;">' + window.PinThipSafe.safeText(item.type) + '</div>';
-      html += '<div style="font-size:11px; color:#7f8c8d; margin-top:2px;">📅 ' + window.PinThipSafe.safeText(item.date) + ' • 🚗 ' + window.PinThipSafe.safeText(item.plate) + '</div>';
-      html += '<div style="font-size:11px; color:#95a5a6; margin-top:2px;">' + window.PinThipSafe.safeText(item.route) + '</div></div>';
-      html += '<div style="font-size:14px; font-weight:bold; color:#e74c3c;">' + item.amount.toLocaleString() + ' ฿</div></div>';
+      html += '<div class="detail-row detail-row-repair">';
+      html += '<div class="detail-icon-col"><span class="detail-type-badge badge-repair">🔧 ซ่อม</span></div>';
+      html += '<div class="detail-info-col">';
+      html += '<div class="detail-primary">' + window.PinThipSafe.safeText(item.type) + '</div>';
+      html += '<div class="detail-secondary">' + window.PinThipSafe.safeText(item.date) + ' • 🚗 ' + window.PinThipSafe.safeText(item.plate) + '</div>';
+      html += '<div class="detail-tertiary">' + window.PinThipSafe.safeText(item.route) + '</div>';
+      html += '</div>';
+      html += '<div class="detail-amount-col">' + item.amount.toLocaleString() + ' ฿</div>';
+      html += '</div>';
     });
+    
+    html += '</div>';
     return html;
   }
 
@@ -93,10 +130,10 @@
     if (detail && toggle) {
       if (detail.style.display === 'none') {
         detail.style.display = 'block';
-        toggle.textContent = '▲';
+        toggle.textContent = '▲ ซ่อนรายละเอียด';
       } else {
         detail.style.display = 'none';
-        toggle.textContent = '▼';
+        toggle.textContent = '▼ แสดงรายละเอียด';
       }
     }
   };
