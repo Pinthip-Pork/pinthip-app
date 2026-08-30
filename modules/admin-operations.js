@@ -1318,45 +1318,59 @@
 
           const grandTotal = salaryTotal + fuelOnlyTotal + repairOnlyTotal;
           
-          // สร้าง HTML แบบเหมือนหน้า Dashboard
+          // สร้าง HTML แบบ 4 กล่องเรียงแนวนอน (เหมือนรูป)
           let html = `
-            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <h2 style="margin: 0 0 10px 0; font-size: 18px; color: #2c3e50;">📊 สรุปภาพรวมค่าใช้จ่าย</h2>
-              <p style="margin: 0 0 20px 0; font-size: 14px; color: #7f8c8d;">${startDate} ถึง ${endDate}</p>
-              
-              <div style="border-bottom: 2px solid #e9ecef; margin-bottom: 15px;"></div>
-              
-              <!-- ค่าแรง -->
-              <div style="margin-bottom: 20px;">
-                <div style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">👥 ค่าแรงรวม</div>
-                <div style="font-size: 24px; font-weight: bold; color: #3498db; margin-bottom: 5px;">${salaryTotal.toLocaleString()} ฿</div>
-                <div style="font-size: 14px; color: #7f8c8d;">${presentList.length} วัน</div>
-                <div style="font-size: 14px; color: #7f8c8d;">${Object.values(employeeData).filter(e => e.salary.days > 0).length} พนักงาน</div>
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h2 style="margin: 0 0 5px 0; font-size: 16px; color: #2c3e50;">สรุปค่าแรง & ค่าใช้จ่ายรายบุคคล</h2>
+              <p style="margin: 0; font-size: 13px; color: #7f8c8d;">${startDate} ถึง ${endDate}</p>
+            </div>
+            
+            <style>
+              .payroll-summary-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px;
+                margin-bottom: 25px;
+              }
+              @media (max-width: 768px) {
+                .payroll-summary-grid {
+                  grid-template-columns: repeat(2, 1fr);
+                }
+              }
+              @media (max-width: 480px) {
+                .payroll-summary-grid {
+                  grid-template-columns: repeat(1, 1fr);
+                }
+              }
+            </style>
+            
+            <div class="payroll-summary-grid">
+              <!-- Card 1: พนักงานทั้งหมด -->
+              <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
+                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">พนักงานทั้งหมด</div>
+                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${Object.keys(employeeData).length}</div>
+                <div style="font-size: 13px; color: #7f8c8d;">คน</div>
               </div>
               
-              <!-- ค่าน้ำมัน -->
-              <div style="margin-bottom: 20px;">
-                <div style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">⛽ ค่าน้ำมัน</div>
-                <div style="font-size: 24px; font-weight: bold; color: #f39c12; margin-bottom: 5px;">${fuelOnlyTotal.toLocaleString()} ฿</div>
-                <div style="font-size: 14px; color: #7f8c8d;">${fuelList.length} รายการ</div>
-                <div style="font-size: 14px; color: #7f8c8d;">${Object.values(employeeData).filter(e => e.fuel.count > 0).length} พนักงาน</div>
+              <!-- Card 2: ค่าแรงรวม -->
+              <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f39c12; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
+                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">ค่าแรงรวม</div>
+                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${salaryTotal.toLocaleString()}</div>
+                <div style="font-size: 13px; color: #7f8c8d;">บาท</div>
               </div>
               
-              <!-- ค่าซ่อม -->
-              <div style="margin-bottom: 20px;">
-                <div style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">🔧 ค่าซ่อม</div>
-                <div style="font-size: 24px; font-weight: bold; color: #e74c3c; margin-bottom: 5px;">${repairOnlyTotal.toLocaleString()} ฿</div>
-                <div style="font-size: 14px; color: #7f8c8d;">${repairList.length} รายการ</div>
-                <div style="font-size: 14px; color: #7f8c8d;">${Object.values(employeeData).filter(e => e.repair.count > 0).length} พนักงาน</div>
+              <!-- Card 3: ค่าน้ำมัน + ซ่อม -->
+              <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #9b59b6; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
+                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">ค่าน้ำมัน + ซ่อม</div>
+                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${(fuelOnlyTotal + repairOnlyTotal).toLocaleString()}</div>
+                <div style="font-size: 13px; color: #7f8c8d;">บาท</div>
               </div>
               
-              <div style="border-bottom: 2px solid #e9ecef; margin-bottom: 15px;"></div>
-              
-              <!-- ยอดรวมทั้งหมด -->
-              <div style="margin-bottom: 20px;">
-                <div style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">💰 ยอดรวมทั้งหมด</div>
-                <div style="font-size: 28px; font-weight: bold; color: #27ae60; margin-bottom: 5px;">${grandTotal.toLocaleString()} ฿</div>
-                <div style="font-size: 14px; color: #7f8c8d;">${Object.keys(employeeData).length} พนักงานทั้งหมด</div>
+              <!-- Card 4: รวมทั้งหมด -->
+              <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
+                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">รวมทั้งหมด</div>
+                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${grandTotal.toLocaleString()}</div>
+                <div style="font-size: 13px; color: #7f8c8d;">เช็ครับ + ไม่ผ่า</div>
               </div>
             </div>
           `;
