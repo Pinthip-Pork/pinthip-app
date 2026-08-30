@@ -1318,84 +1318,45 @@
 
           const grandTotal = salaryTotal + fuelOnlyTotal + repairOnlyTotal;
           
-          // สร้าง HTML แบบใหม่ (Modern Dashboard Style - ใช้ Unicode Icons)
+          // สร้าง HTML แบบเหมือนหน้า Dashboard
           let html = `
-            <!-- Modern Page Header -->
-            <div class="modern-payroll-header">
-              <div class="payroll-header-left">
-                <h2 class="payroll-page-title">📊 สรุปภาพรวมค่าใช้จ่าย</h2>
-                <p class="payroll-date-range">${startDate} ถึง ${endDate}</p>
+            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <h2 style="margin: 0 0 10px 0; font-size: 18px; color: #2c3e50;">📊 สรุปภาพรวมค่าใช้จ่าย</h2>
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #7f8c8d;">${startDate} ถึง ${endDate}</p>
+              
+              <div style="border-bottom: 2px solid #e9ecef; margin-bottom: 15px;"></div>
+              
+              <!-- ค่าแรง -->
+              <div style="margin-bottom: 20px;">
+                <div style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">👥 ค่าแรงรวม</div>
+                <div style="font-size: 24px; font-weight: bold; color: #3498db; margin-bottom: 5px;">${salaryTotal.toLocaleString()} ฿</div>
+                <div style="font-size: 14px; color: #7f8c8d;">${presentList.length} วัน</div>
+                <div style="font-size: 14px; color: #7f8c8d;">${Object.values(employeeData).filter(e => e.salary.days > 0).length} พนักงาน</div>
               </div>
-            </div>
-
-            <!-- Modern Stats Grid -->
-            <div class="modern-stats-grid">
-              <!-- Card 1: ค่าแรง -->
-              <div class="modern-stat-card card-salary">
-                <div class="stat-card-header">
-                  <div class="stat-icon-wrapper stat-icon-salary">
-                    <span class="stat-icon-text">👥</span>
-                  </div>
-                  <div class="stat-trend stat-trend-neutral">
-                    <span class="trend-value">${presentList.length} วัน</span>
-                  </div>
-                </div>
-                <div class="stat-card-body">
-                  <h3 class="stat-label">ค่าแรงรวม</h3>
-                  <div class="stat-value">${salaryTotal.toLocaleString()} <span class="stat-currency">฿</span></div>
-                  <p class="stat-meta">${Object.values(employeeData).filter(e => e.salary.days > 0).length} พนักงาน</p>
-                </div>
+              
+              <!-- ค่าน้ำมัน -->
+              <div style="margin-bottom: 20px;">
+                <div style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">⛽ ค่าน้ำมัน</div>
+                <div style="font-size: 24px; font-weight: bold; color: #f39c12; margin-bottom: 5px;">${fuelOnlyTotal.toLocaleString()} ฿</div>
+                <div style="font-size: 14px; color: #7f8c8d;">${fuelList.length} รายการ</div>
+                <div style="font-size: 14px; color: #7f8c8d;">${Object.values(employeeData).filter(e => e.fuel.count > 0).length} พนักงาน</div>
               </div>
-
-              <!-- Card 2: ค่าน้ำมัน -->
-              <div class="modern-stat-card card-fuel">
-                <div class="stat-card-header">
-                  <div class="stat-icon-wrapper stat-icon-fuel">
-                    <span class="stat-icon-text">⛽</span>
-                  </div>
-                  <div class="stat-trend stat-trend-neutral">
-                    <span class="trend-value">${fuelList.length} รายการ</span>
-                  </div>
-                </div>
-                <div class="stat-card-body">
-                  <h3 class="stat-label">ค่าน้ำมัน</h3>
-                  <div class="stat-value">${fuelOnlyTotal.toLocaleString()} <span class="stat-currency">฿</span></div>
-                  <p class="stat-meta">${Object.values(employeeData).filter(e => e.fuel.count > 0).length} พนักงาน</p>
-                </div>
+              
+              <!-- ค่าซ่อม -->
+              <div style="margin-bottom: 20px;">
+                <div style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">🔧 ค่าซ่อม</div>
+                <div style="font-size: 24px; font-weight: bold; color: #e74c3c; margin-bottom: 5px;">${repairOnlyTotal.toLocaleString()} ฿</div>
+                <div style="font-size: 14px; color: #7f8c8d;">${repairList.length} รายการ</div>
+                <div style="font-size: 14px; color: #7f8c8d;">${Object.values(employeeData).filter(e => e.repair.count > 0).length} พนักงาน</div>
               </div>
-
-              <!-- Card 3: ค่าซ่อม -->
-              <div class="modern-stat-card card-repair">
-                <div class="stat-card-header">
-                  <div class="stat-icon-wrapper stat-icon-repair">
-                    <span class="stat-icon-text">🔧</span>
-                  </div>
-                  <div class="stat-trend stat-trend-neutral">
-                    <span class="trend-value">${repairList.length} รายการ</span>
-                  </div>
-                </div>
-                <div class="stat-card-body">
-                  <h3 class="stat-label">ค่าซ่อม</h3>
-                  <div class="stat-value">${repairOnlyTotal.toLocaleString()} <span class="stat-currency">฿</span></div>
-                  <p class="stat-meta">${Object.values(employeeData).filter(e => e.repair.count > 0).length} พนักงาน</p>
-                </div>
-              </div>
-
-              <!-- Card 4: รวมทั้งหมด -->
-              <div class="modern-stat-card card-total">
-                <div class="stat-card-header">
-                  <div class="stat-icon-wrapper stat-icon-total">
-                    <span class="stat-icon-text">💰</span>
-                  </div>
-                  <div class="stat-trend stat-trend-up">
-                    <span class="trend-value">100%</span>
-                  </div>
-                </div>
-                <div class="stat-card-body">
-                  <h3 class="stat-label">ยอดรวมทั้งหมด</h3>
-                  <div class="stat-value stat-value-large">${grandTotal.toLocaleString()} <span class="stat-currency">฿</span></div>
-                  <p class="stat-meta">${Object.keys(employeeData).length} พนักงานทั้งหมด</p>
-                </div>
+              
+              <div style="border-bottom: 2px solid #e9ecef; margin-bottom: 15px;"></div>
+              
+              <!-- ยอดรวมทั้งหมด -->
+              <div style="margin-bottom: 20px;">
+                <div style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">💰 ยอดรวมทั้งหมด</div>
+                <div style="font-size: 28px; font-weight: bold; color: #27ae60; margin-bottom: 5px;">${grandTotal.toLocaleString()} ฿</div>
+                <div style="font-size: 14px; color: #7f8c8d;">${Object.keys(employeeData).length} พนักงานทั้งหมด</div>
               </div>
             </div>
           `;
