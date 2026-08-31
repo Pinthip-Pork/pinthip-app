@@ -68,14 +68,16 @@
         html += '<div style="color:#888; margin-bottom:15px;">ยังไม่มีการตั้งค่าพิกัดในระบบ</div>';
       } else {
         locList.forEach((loc) => {
+          const safeName = window.PinThipSafe.safeText(loc.name);
+          const safeKey = window.PinThipSafe.safeText(loc.key);
           html += `
             <div class="history-item">
-              <b>📍 ${loc.name}</b><br>
-              ละติจูด: ${loc.lat} | ลองจิจูด: ${loc.lng}<br>
-              📏 รัศมีอนุญาต: <b style="color:#28a745; font-size:15px;">${loc.radius || 100} เมตร</b><br>
+              <b>📍 ${safeName}</b><br>
+              ละติจูด: ${window.PinThipSafe.safeText(loc.lat)} | ลองจิจูด: ${window.PinThipSafe.safeText(loc.lng)}<br>
+              📏 รัศมีอนุญาต: <b style="color:#28a745; font-size:15px;">${window.PinThipSafe.safeText(loc.radius || 100)} เมตร</b><br>
               <div style="margin-top:8px; display:flex; gap:6px;">
-                <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditLocationModal('${loc.key}', '${loc.name}', ${loc.lat}, ${loc.lng}, ${loc.radius || 100})">✏️ แก้ไข</button>
-                <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="deleteLocation('${loc.key}')">🗑️ ลบ</button>
+                <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditLocationModal('${safeKey}', '${safeName}', ${Number(loc.lat) || 0}, ${Number(loc.lng) || 0}, ${Number(loc.radius) || 100})">✏️ แก้ไข</button>
+                <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="deleteLocation('${safeKey}')">🗑️ ลบ</button>
               </div>
             </div>
           `;
@@ -117,22 +119,27 @@
     }, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', 'เพิ่มพิกัดจุดเช็กอินเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showLocationManagement();">ตกลง</button>');
+      } else {
+        console.error('Add location failed:', err);
+        PinThipSafe.modal.error('บันทึกจุดเช็กอินไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
 
   function showEditLocationModal(key, name, lat, lng, radius) {
+    const safeName = window.PinThipSafe.safeText(name);
+    const safeKey = window.PinThipSafe.safeText(key);
     const html = `
-      <div class="user-banner">✏️ แก้ไขจุดเช็กอิน: ${name}</div>
-      <input type="hidden" id="editLocKey" value="${key}">
+      <div class="user-banner">✏️ แก้ไขจุดเช็กอิน: ${safeName}</div>
+      <input type="hidden" id="editLocKey" value="${safeKey}">
       <div style="text-align:left; font-size:13px; color:#555;">ชื่อสถานที่:</div>
-      <input type="text" id="editLocName" value="${name}">
+      <input type="text" id="editLocName" value="${safeName}">
       <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">ละติจูด (Lat):</div>
-      <input type="text" id="editLocLat" value="${lat}">
+      <input type="text" id="editLocLat" value="${window.PinThipSafe.safeText(lat)}">
       <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">ลองจิจูด (Lng):</div>
-      <input type="text" id="editLocLng" value="${lng}">
+      <input type="text" id="editLocLng" value="${window.PinThipSafe.safeText(lng)}">
       <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">รัศมี (เมตร):</div>
-      <input type="number" id="editLocRadius" value="${radius}">
+      <input type="number" id="editLocRadius" value="${window.PinThipSafe.safeText(radius)}">
       <button class="btn-blue" onclick="submitEditLocation()">💾 บันทึกการแก้ไข</button>
       <button class="btn-back" onclick="showLocationManagement()">⬅️ ย้อนกลับ</button>
     `;
@@ -160,6 +167,9 @@
     }, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', 'แก้ไขพิกัดจุดเช็กอินเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showLocationManagement();">ตกลง</button>');
+      } else {
+        console.error('Edit location update failed:', err);
+        PinThipSafe.modal.error('บันทึกข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
@@ -255,6 +265,9 @@
     }, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', 'ส่งคำขอเบิกค่าใช้จ่ายเรียบร้อย (รอแอดมินพิจารณายอดเงิน)', '<button class="btn-ok" onclick="closeModal(); showDashboard();">ตกลง</button>');
+      } else {
+        console.error('Fuel request submit failed:', err);
+        PinThipSafe.modal.error('ส่งคำขอเบิกค่าใช้จ่ายไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
@@ -343,6 +356,9 @@
     }, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', 'บันทึกข้อมูลการอนุมัติและจำนวนเงินเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showAdminFuelRequests();">ตกลง</button>');
+      } else {
+        console.error('Update fuel status failed:', err);
+        PinThipSafe.modal.error('บันทึกข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
@@ -455,6 +471,9 @@
         const input = document.getElementById('newCarPlateInput');
         if (input) input.value = '';
         window.loadCarPlatesManagementList();
+      } else {
+        console.error('Add car plate failed:', err);
+        PinThipSafe.modal.error('เพิ่มทะเบียนรถไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
@@ -463,6 +482,9 @@
     window.db.ref('car_plates/' + key).remove((err) => {
       if (!err) {
         window.loadCarPlatesManagementList();
+      } else {
+        console.error('Delete car plate failed:', err);
+        PinThipSafe.modal.error('ลบทะเบียนรถไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
@@ -669,19 +691,21 @@
       const platesObj = snapshot.val() || {};
       const platesList = Object.keys(platesObj).map((k) => platesObj[k].plate);
 
+      const safeCarPlate = window.PinThipSafe.safeText(carPlate || 'รถส่วนกลาง');
       let optionsHtml = '<option value="">-- เลือกทะเบียนรถ --</option>';
       if (platesList.length === 0) {
-        optionsHtml += `<option value="${carPlate || 'รถส่วนกลาง'}">${carPlate || 'รถส่วนกลาง'}</option>`;
+        optionsHtml += `<option value="${safeCarPlate}">${safeCarPlate}</option>`;
       } else {
         platesList.forEach((p) => {
+          const safePlate = window.PinThipSafe.safeText(p);
           const selected = (p === carPlate) ? 'selected' : '';
-          optionsHtml += `<option value="${p}" ${selected}>${p}</option>`;
+          optionsHtml += `<option value="${safePlate}" ${selected}>${safePlate}</option>`;
         });
       }
 
       const html = `
         <div class="user-banner">✏️ แก้ไขข้อมูลการเบิกจ่าย</div>
-        <input type="hidden" id="editFuelKey" value="${key}">
+        <input type="hidden" id="editFuelKey" value="${window.PinThipSafe.safeText(key)}">
         <div style="text-align:left; font-size:13px; color:#555;">ประเภทการเบิก:</div>
         <select id="editFuelType" style="margin-bottom:8px;">
           <option value="⛽ เบิกค่าน้ำมัน" ${reqType.includes('น้ำมัน') ? 'selected' : ''}>⛽ เบิกค่าน้ำมันรถส่งของ</option>
@@ -692,9 +716,9 @@
           ${optionsHtml}
         </select>
         <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">รายละเอียด / เส้นทาง:</div>
-        <input type="text" id="editFuelRoute" value="${route}">
+        <input type="text" id="editFuelRoute" value="${window.PinThipSafe.safeText(route)}">
         <div style="text-align:left; font-size:13px; color:#555; margin-top:5px;">จำนวนเงินอนุมัติ (บาท):</div>
-        <input type="number" id="editFuelAmount" value="${amount}">
+        <input type="number" id="editFuelAmount" value="${window.PinThipSafe.safeText(amount)}">
         <button class="btn-blue" onclick="submitEditFuel()">💾 บันทึกการแก้ไข</button>
         <button class="btn-back" onclick="showAdminFuelHistory()">⬅️ ย้อนกลับ</button>
       `;
@@ -727,6 +751,9 @@
     }, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showAdminFuelHistory();">ตกลง</button>');
+      } else {
+        console.error('Edit fuel update failed:', err);
+        PinThipSafe.modal.error('บันทึกข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
@@ -990,6 +1017,9 @@
     window.db.ref('leaves/' + key).update({ status: newStatus }, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', 'อัปเดตสถานะใบลาเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); renderLeaveHistoryList();">ตกลง</button>');
+      } else {
+        console.error('Update leave status failed:', err);
+        PinThipSafe.modal.error('บันทึกสถานะใบลาไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
@@ -1332,8 +1362,8 @@
               .payroll-summary-grid {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
-                gap: 15px;
-                margin-bottom: 25px;
+                gap: 10px;
+                margin-bottom: 15px;
               }
               @media (max-width: 768px) {
                 .payroll-summary-grid {
@@ -1349,40 +1379,40 @@
             
             <div class="payroll-summary-grid" id="summary-cards">
               <!-- Card 1: พนักงานทั้งหมด -->
-              <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
-                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">พนักงานที่เลือก</div>
-                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;" id="selected-count">${Object.keys(employeeData).length}</div>
-                <div style="font-size: 13px; color: #7f8c8d;">คน</div>
+              <div style="background: white; padding: 12px; border-radius: 8px; border-left: 3px solid #3498db; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center;">
+                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px;">พนักงานที่เลือก</div>
+                <div style="font-size: 22px; font-weight: bold; color: #2c3e50;" id="selected-count">${Object.keys(employeeData).length}</div>
+                <div style="font-size: 11px; color: #95a5a6;">คน</div>
               </div>
               
               <!-- Card 2: ค่าแรงรวม -->
-              <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f39c12; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
-                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">ค่าแรงรวม</div>
-                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;" id="selected-salary">${salaryTotal.toLocaleString()}</div>
-                <div style="font-size: 13px; color: #7f8c8d;">บาท</div>
+              <div style="background: white; padding: 12px; border-radius: 8px; border-left: 3px solid #f39c12; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center;">
+                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px;">ค่าแรงรวม</div>
+                <div style="font-size: 22px; font-weight: bold; color: #2c3e50;" id="selected-salary">${salaryTotal.toLocaleString()}</div>
+                <div style="font-size: 11px; color: #95a5a6;">บาท</div>
               </div>
               
               <!-- Card 3: ค่าน้ำมัน + ซ่อม -->
-              <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #9b59b6; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
-                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">ค่าน้ำมัน + ซ่อม</div>
-                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;" id="selected-other">${(fuelOnlyTotal + repairOnlyTotal).toLocaleString()}</div>
-                <div style="font-size: 13px; color: #7f8c8d;">บาท</div>
+              <div style="background: white; padding: 12px; border-radius: 8px; border-left: 3px solid #9b59b6; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center;">
+                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px;">ค่าน้ำมัน + ซ่อม</div>
+                <div style="font-size: 22px; font-weight: bold; color: #2c3e50;" id="selected-other">${(fuelOnlyTotal + repairOnlyTotal).toLocaleString()}</div>
+                <div style="font-size: 11px; color: #95a5a6;">บาท</div>
               </div>
               
               <!-- Card 4: รวมทั้งหมด -->
-              <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #e74c3c; box-shadow: 0 2px 4px rgba(0,0,0,0.08); text-align: center;">
-                <div style="font-size: 13px; color: #7f8c8d; margin-bottom: 8px;">รวมทั้งหมด</div>
-                <div style="font-size: 32px; font-weight: bold; color: #2c3e50; margin-bottom: 5px;" id="selected-total">${grandTotal.toLocaleString()}</div>
-                <div style="font-size: 13px; color: #7f8c8d;">เช็ครับ + ไม่ผ่า</div>
+              <div style="background: white; padding: 12px; border-radius: 8px; border-left: 3px solid #e74c3c; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center;">
+                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px;">รวมทั้งหมด</div>
+                <div style="font-size: 22px; font-weight: bold; color: #c0392b;" id="selected-total">${grandTotal.toLocaleString()}</div>
+                <div style="font-size: 11px; color: #95a5a6;">บาท</div>
               </div>
             </div>
             
             <!-- ปุ่มควบคุม -->
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-              <button onclick="selectAllEmployees()" style="flex: 1; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">
+            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+              <button onclick="selectAllEmployees()" style="flex: 1; padding: 7px; background: rgba(39,174,96,0.12); color: #1e8449; border: 1px solid rgba(39,174,96,0.4); border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
                 ✓ เลือกทั้งหมด
               </button>
-              <button onclick="unselectAllEmployees()" style="flex: 1; padding: 10px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">
+              <button onclick="unselectAllEmployees()" style="flex: 1; padding: 7px; background: rgba(231,76,60,0.1); color: #c0392b; border: 1px solid rgba(231,76,60,0.35); border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
                 ✗ ยกเลิกทั้งหมด
               </button>
             </div>
@@ -1394,24 +1424,66 @@
           if (employeeList.length === 0) {
             html += '<div style="text-align:center; color:#888; padding: 40px 20px; background:#f8f9fa; border-radius:10px; margin-top: 20px;">ไม่มีข้อมูลในช่วงเวลานี้</div>';
           } else {
-            html += `<div style="margin-top: 30px; margin-bottom: 15px;"><h3 style="margin: 0; font-size: 16px; color: #2c3e50; font-weight: bold;">👥 รายละเอียดรายบุคคล (${employeeList.length} คน)</h3></div>`;
+            html += `<div style="margin-top: 18px; margin-bottom: 10px;"><h3 style="margin: 0; font-size: 14px; color: #2c3e50; font-weight: 600;">👥 รายละเอียดรายบุคคล (${employeeList.length} คน)</h3></div>`;
             
-            html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;" class="employee-grid-3col">';
+            html += '<div class="employee-grid-3col">';
             
             html += `<style>
               .employee-grid-3col {
                 display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 12px;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 8px;
               }
-              @media (max-width: 1024px) {
-                .employee-grid-3col {
-                  grid-template-columns: repeat(2, 1fr);
-                }
+              .emp-pick-card {
+                padding: 8px 10px;
+                border-radius: 8px;
+                cursor: pointer;
+                text-align: center;
+                border: 1px solid transparent;
+                transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+                user-select: none;
+              }
+              .emp-pick-card.is-selected {
+                background: rgba(39, 174, 96, 0.14);
+                border-color: rgba(39, 174, 96, 0.45);
+                opacity: 1;
+              }
+              .emp-pick-card.is-unselected {
+                background: rgba(149, 165, 166, 0.12);
+                border-color: rgba(149, 165, 166, 0.35);
+                opacity: 0.65;
+              }
+              .emp-pick-card:hover {
+                border-color: rgba(39, 174, 96, 0.75);
+              }
+              .emp-pick-name {
+                font-size: 13px;
+                font-weight: 600;
+                color: #2c3e50;
+                margin-bottom: 2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+              .emp-pick-amount {
+                font-size: 15px;
+                font-weight: 700;
+                color: #1e8449;
+                margin-bottom: 2px;
+              }
+              .emp-pick-card.is-unselected .emp-pick-amount {
+                color: #7f8c8d;
+              }
+              .emp-pick-stats {
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                font-size: 11px;
+                color: #7f8c8d;
               }
               @media (max-width: 640px) {
                 .employee-grid-3col {
-                  grid-template-columns: repeat(1, 1fr);
+                  grid-template-columns: repeat(2, 1fr);
                 }
               }
             </style>`;
@@ -1419,16 +1491,11 @@
             employeeList.forEach((emp) => {
               if (emp.grandTotal <= 0) return;
               html += `
-                <div id="emp-card-${emp.empId}" 
-                     onclick="toggleEmployeeSelection('${emp.empId}')" 
-                     style="background: #27ae60; padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                  <div style="color: white; font-size: 15px; font-weight: bold; margin-bottom: 6px; text-align: center;">
-                    👤 ${window.PinThipSafe.safeText(emp.empName)}
-                  </div>
-                  <div style="color: white; font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 6px;">
-                    ${emp.grandTotal.toLocaleString()} ฿
-                  </div>
-                  <div style="display: flex; justify-content: center; gap: 12px; font-size: 12px; color: rgba(255,255,255,0.95);">
+                <div id="emp-card-${emp.empId}" class="emp-pick-card is-selected"
+                     onclick="toggleEmployeeSelection('${emp.empId}')">
+                  <div class="emp-pick-name">${window.PinThipSafe.safeText(emp.empName)}</div>
+                  <div class="emp-pick-amount">${emp.grandTotal.toLocaleString()} ฿</div>
+                  <div class="emp-pick-stats">
                     <span>📅 ${emp.salary.days}</span>
                     <span>⛽ ${emp.fuel.count}</span>
                     <span>🔧 ${emp.repair.count}</span>
@@ -1441,6 +1508,13 @@
             html += '</div>';
           }
           
+          // ฟังก์ชันช่วยตั้งสถานะ card
+          const applyEmployeeCardState = (card, isSelected) => {
+            if (!card) return;
+            card.classList.toggle('is-selected', isSelected);
+            card.classList.toggle('is-unselected', !isSelected);
+          };
+
           // ฟังก์ชัน toggle selection
           window.toggleEmployeeSelection = function(empId) {
             const card = document.getElementById('emp-card-' + empId);
@@ -1448,17 +1522,7 @@
             
             if (checkbox && card) {
               checkbox.checked = !checkbox.checked;
-              
-              if (checkbox.checked) {
-                // เลือก = สีเขียว
-                card.style.background = '#27ae60';
-                card.style.opacity = '1';
-              } else {
-                // ไม่เลือก = สีเทา
-                card.style.background = '#95a5a6';
-                card.style.opacity = '0.6';
-              }
-              
+              applyEmployeeCardState(card, checkbox.checked);
               window.updatePayrollSummary();
             }
           };
@@ -1498,8 +1562,7 @@
               const card = document.getElementById('emp-card-' + emp.empId);
               if (checkbox && card) {
                 checkbox.checked = true;
-                card.style.background = '#27ae60';
-                card.style.opacity = '1';
+                applyEmployeeCardState(card, true);
               }
             });
             window.updatePayrollSummary();
@@ -1513,8 +1576,7 @@
               const card = document.getElementById('emp-card-' + emp.empId);
               if (checkbox && card) {
                 checkbox.checked = false;
-                card.style.background = '#95a5a6';
-                card.style.opacity = '0.6';
+                applyEmployeeCardState(card, false);
               }
             });
             window.updatePayrollSummary();
@@ -1817,6 +1879,9 @@
     window.db.ref('settings/globalLateTime').set(val, (err) => {
       if (!err) {
         window.showModal('🎉 สำเร็จ', `บันทึกเวลาเข้างานกลาง (${val} น.) เรียบร้อย\nมีผลกับพนักงานทุกคนในระบบ`, '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
+      } else {
+        console.error('Save global late time failed:', err);
+        PinThipSafe.modal.error('บันทึกเวลาเข้างานกลางไม่สำเร็จ กรุณาลองอีกครั้ง');
       }
     });
   }
@@ -1877,6 +1942,9 @@
       }, (err) => {
         if (!err) {
           window.showModal('🎉 สำเร็จ', 'เพิ่มพนักงานเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
+        } else {
+          console.error('Add employee failed:', err);
+          PinThipSafe.modal.error('เพิ่มพนักงานไม่สำเร็จ กรุณาลองอีกครั้ง');
         }
       });
     }, (empErr) => {
@@ -1915,23 +1983,47 @@
     const isDriver = document.getElementById('editEmpDriver')?.checked;
     const canSendFoamLabels = document.getElementById('editEmpFoamLabels')?.checked;
 
-    const updateData = {
-      empId: newId,
-      empName: name,
-      dailyRate: Number(rate),
-      isDriver,
-      canSendFoamLabels
-    };
-
-    // Only update PIN if admin provides a new one — otherwise keep existing
-    if (pin) {
-      updateData.pin = pin;
+    if (!key || !newId || !name || !rate) {
+      PinThipSafe.modal.warning('กรุณากรอกข้อมูลให้ครบถ้วน');
+      return;
     }
 
-    window.db.ref('employees/' + key).update(updateData, (err) => {
-      if (!err) {
-        window.showModal('🎉 สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
+    window.db.ref('employees').once('value', (snapshot) => {
+      const employeesObj = snapshot.val() || {};
+      let isIdDuplicate = false;
+      Object.keys(employeesObj).forEach((k) => {
+        if (k !== key && String(employeesObj[k].empId) === String(newId)) isIdDuplicate = true;
+      });
+
+      if (isIdDuplicate) {
+        PinThipSafe.modal.warning(`⚠️ รหัสพนักงาน "${newId}" นี้มีในระบบแล้ว!`);
+        return;
       }
+
+      const updateData = {
+        empId: newId,
+        empName: name,
+        dailyRate: Number(rate),
+        isDriver,
+        canSendFoamLabels
+      };
+
+      // Only update PIN if admin provides a new one — otherwise keep existing
+      if (pin) {
+        updateData.pin = pin;
+      }
+
+      window.db.ref('employees/' + key).update(updateData, (err) => {
+        if (!err) {
+          window.showModal('🎉 สำเร็จ', 'แก้ไขข้อมูลเรียบร้อย', '<button class="btn-ok" onclick="closeModal(); showEmpManagement();">ตกลง</button>');
+        } else {
+          console.error('Edit employee update failed:', err);
+          PinThipSafe.modal.error('บันทึกข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
+        }
+      });
+    }, (empErr) => {
+      console.error('Edit employee duplicate-check failed:', empErr);
+      PinThipSafe.modal.error('ตรวจสอบรหัสพนักงานไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง');
     });
   }
 

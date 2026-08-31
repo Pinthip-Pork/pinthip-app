@@ -77,7 +77,7 @@
       window.db.ref('settings/globalLateTime').once('value'),
       window.db.ref('employees').once('value'),
       window.PinThipSafe.logsRepo.fetchLogsForRange(window.db, startDate, endDate),
-      window.db.ref('leaveRequests').once('value')
+      window.db.ref('leaves').once('value')
     ]).then(([globalTimeSnap, empSnap, logs, leaveSnap]) => {
       const globalLateTime = globalTimeSnap.val() || '08:30';
       const employees = empSnap.val() || {};
