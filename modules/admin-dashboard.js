@@ -342,8 +342,11 @@
       if (window.PinThipSafe?.ui?.showAsyncError) {
         window.PinThipSafe.ui.showAsyncError('mainContent', {
           message: errorMessage,
-          detail: errorDetail + '\n\n💡 หรือดึงหน้าจอลงเพื่อรีเฟรชข้อมูล',
-          retryFn: showAdminDashboard
+          detail: errorDetail + '\n\n💡 หรือดึงหน้าจอลงเพื่อรีเฟรชข้อมูล\n🔄 หากปุ่มลองใหม่ไม่ทำงาน กรุณากด F5 หรือรีเฟรชหน้าเว็บ',
+          retryFn: function() {
+            // Force full page reload to ensure fresh data
+            window.location.reload();
+          }
         });
       }
       console.error('Admin dashboard load failed:', err, isTimeout ? '(TIMEOUT)' : '');
