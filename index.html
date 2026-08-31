@@ -76,7 +76,7 @@
       <div class="top-controls">
         <div class="top-left-group">
           <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleDrawer(true)" style="display:none;" aria-label="เมนู">☰</button>
-          <div class="admin-topbar-logo" id="adminTopbarLogo">ปิ่นทิพย์ <span>Admin Suite</span></div>
+          <div class="admin-topbar-logo" id="adminTopbarLogo">บริษัท ปิ่นทิพย์ จำกัด</div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -113,28 +113,28 @@
       <span onclick="toggleDrawer(false)" style="cursor:pointer; font-size:22px;">&times;</span>
     </div>
     <div class="drawer-section-label">ภาพรวม</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()">🏠 แดสบอร์ดภาพรวม</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminDashboard()">แดสบอร์ดภาพรวม</div>
 
     <div class="drawer-section-label">รออนุมัติ</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">🌴 อนุมัติคำขอลา <span class="drawer-badge" id="pendingLeavesBadge">0</span></div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">⛽ อนุมัติน้ำมัน/ค่าซ่อม <span class="drawer-badge" id="pendingFuelsBadge">0</span></div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showFoamAdminView()">📦 จัดการป้ายลังโฟม <span class="drawer-badge" id="pendingFoamBadge" style="display:none;">0</span></div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaves()">อนุมัติ ขอลา <span class="drawer-badge" id="pendingLeavesBadge">0</span></div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelRequests()">อนุมัติ น้ำมัน/ค่าซ่อม <span class="drawer-badge" id="pendingFuelsBadge">0</span></div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showFoamAdminView()">จัดการพิมพ์ป้ายลังโฟม <span class="drawer-badge" id="pendingFoamBadge" style="display:none;">0</span></div>
 
     <div class="drawer-section-label">พนักงาน</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showDeviceAccessManagement()">🔐 จัดการอุปกรณ์ทดลอง <span class="drawer-badge" id="pendingDevicesBadge" style="display:none;">0</span></div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">👥 สรุปขาด ลา สาย</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">📜 ประวัติลงเวลา</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showEmpManagement()">⚙️ จัดการพนักงาน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showDeviceAccessManagement()">จัดการอุปกรณ์ทดลอง <span class="drawer-badge" id="pendingDevicesBadge" style="display:none;">0</span></div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminAttendanceSummaryReport()">สรุปขาด ลา สาย</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLogsHistory()">ประวัติลงเวลา</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showEmpManagement()">จัดการพนักงาน</div>
 
     <div class="drawer-section-label">รายงานและตั้งค่า</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaveHistory()">📜 ประวัติการลา</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelHistory()">📜 ประวัติเบิกจ่าย</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showDailyPayroll()">💵 ค่าแรงรายวัน</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showAnalyticsReport()">📈 ค่าใช้จ่ายรายเดือน</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showLocationManagement()">📍 พิกัด GPS</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showHolidayManagement()">🗓️ วันหยุดร้าน</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); showPrintLayoutEditor()">🎨 ปรับแต่ง Layout พิมพ์</div>
-    <div class="drawer-item" onclick="toggleDrawer(false); handleLogout()" style="color:#dc3545; margin-top:auto;">🚪 ออกจากระบบ</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminLeaveHistory()">ประวัติการลา</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAdminFuelHistory()">ประวัติเบิกจ่าย</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showDailyPayroll()">ค่าแรงรายวัน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showAnalyticsReport()">ค่าใช้จ่ายรายเดือน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showLocationManagement()">พิกัด GPS</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showHolidayManagement()">วันหยุดร้าน</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); showPrintLayoutEditor()">ปรับแต่ง Layout พิมพ์</div>
+    <div class="drawer-item" onclick="toggleDrawer(false); handleLogout()" style="color:#dc3545; margin-top:auto;">ออกจากระบบ</div>
   </div>
 
   <!-- Modal -->
