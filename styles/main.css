@@ -1303,9 +1303,6 @@ button.success {
 
 .btn-refresh:hover { background: #f1f5f9; color: #0f172a; }
 
-/* ---- Responsive: Admin on mobile ---- */
-@media (max-width: 600px) {
-
 /* =============================================
    UI/UX Improvements: Loading States & Skeleton
    ============================================= */
@@ -1398,8 +1395,7 @@ button.success {
   input, select, textarea {
     font-size: 16px;
   }
-}
-
+  
   .card.admin-wide .top-bar {
     padding: 12px 16px;
   }
@@ -1578,7 +1574,7 @@ button.success {
   .hc-day-num { font-size: 13px; }
   .hc-day-sub { font-size: 8px; }
   .holiday-calendar-title { min-width: 100%; }
-
+}
 
 /* =============================================
    Modern Payroll Dashboard - Professional Style
@@ -2264,4 +2260,15 @@ button.success {
   }
 }
 
+
+/* =============================================
+   #repResult Container Fix
+   ============================================= */
+#repResult {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  clear: both !important;
+  overflow: visible !important;
 }

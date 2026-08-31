@@ -1353,149 +1353,77 @@
           
           // สร้าง HTML แบบ 4 กล่องเรียงแนวนอน (จะอัปเดตแบบ dynamic)
           let html = `
-            <div style="text-align: center; margin-bottom: 20px;">
-              <h2 style="margin: 0 0 5px 0; font-size: 16px; color: #2c3e50;">สรุปค่าแรง & ค่าใช้จ่ายรายบุคคล</h2>
-              <p style="margin: 0; font-size: 13px; color: #7f8c8d;">${startDate} ถึง ${endDate}</p>
+            <div class="payroll-dashboard-wrapper">
+            <div class="payroll-dash-header">
+              <h2 class="payroll-dash-title">💵 สรุปค่าแรง &amp; ค่าใช้จ่ายรายบุคคล</h2>
+              <p class="payroll-dash-subtitle">${startDate} ถึง ${endDate}</p>
             </div>
             
-            <style>
-              .payroll-summary-grid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 10px;
-                margin-bottom: 15px;
-              }
-              @media (max-width: 768px) {
-                .payroll-summary-grid {
-                  grid-template-columns: repeat(2, 1fr);
-                }
-              }
-              @media (max-width: 480px) {
-                .payroll-summary-grid {
-                  grid-template-columns: repeat(1, 1fr);
-                }
-              }
-            </style>
-            
-            <div class="payroll-summary-grid" id="summary-cards">
-              <!-- Card 1: พนักงานทั้งหมด -->
-              <div style="background: white; padding: 12px; border-radius: 8px; border-left: 3px solid #3498db; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center;">
-                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px;">พนักงานที่เลือก</div>
-                <div style="font-size: 22px; font-weight: bold; color: #2c3e50;" id="selected-count">${Object.keys(employeeData).length}</div>
-                <div style="font-size: 11px; color: #95a5a6;">คน</div>
+            <div class="payroll-stats-grid" id="summary-cards">
+              <div class="payroll-stat-card pcard-emp">
+                <div class="payroll-stat-header">
+                  <div class="payroll-stat-icon">👥</div>
+                  <div class="payroll-stat-label">พนักงานที่เลือก</div>
+                </div>
+                <div class="payroll-stat-value" id="selected-count">${Object.keys(employeeData).length}</div>
+                <div class="payroll-stat-meta">คน</div>
               </div>
-              
-              <!-- Card 2: ค่าแรงรวม -->
-              <div style="background: white; padding: 12px; border-radius: 8px; border-left: 3px solid #f39c12; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center;">
-                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px;">ค่าแรงรวม</div>
-                <div style="font-size: 22px; font-weight: bold; color: #2c3e50;" id="selected-salary">${salaryTotal.toLocaleString()}</div>
-                <div style="font-size: 11px; color: #95a5a6;">บาท</div>
+
+              <div class="payroll-stat-card pcard-salary">
+                <div class="payroll-stat-header">
+                  <div class="payroll-stat-icon">💵</div>
+                  <div class="payroll-stat-label">ค่าแรงรวม</div>
+                </div>
+                <div class="payroll-stat-value"><span id="selected-salary">${salaryTotal.toLocaleString()}</span><span class="currency">บาท</span></div>
+                <div class="payroll-stat-meta">ค่าแรงพนักงาน</div>
               </div>
-              
-              <!-- Card 3: ค่าน้ำมัน + ซ่อม -->
-              <div style="background: white; padding: 12px; border-radius: 8px; border-left: 3px solid #9b59b6; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center;">
-                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px;">ค่าน้ำมัน + ซ่อม</div>
-                <div style="font-size: 22px; font-weight: bold; color: #2c3e50;" id="selected-other">${(fuelOnlyTotal + repairOnlyTotal).toLocaleString()}</div>
-                <div style="font-size: 11px; color: #95a5a6;">บาท</div>
+
+              <div class="payroll-stat-card pcard-other">
+                <div class="payroll-stat-header">
+                  <div class="payroll-stat-icon">⛽</div>
+                  <div class="payroll-stat-label">ค่าน้ำมัน + ซ่อม</div>
+                </div>
+                <div class="payroll-stat-value"><span id="selected-other">${(fuelOnlyTotal + repairOnlyTotal).toLocaleString()}</span><span class="currency">บาท</span></div>
+                <div class="payroll-stat-meta">ค่าใช้จ่ายรถ</div>
               </div>
-              
-              <!-- Card 4: รวมทั้งหมด -->
-              <div style="background: white; padding: 12px; border-radius: 8px; border-left: 3px solid #e74c3c; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center;">
-                <div style="font-size: 11px; color: #7f8c8d; margin-bottom: 4px;">รวมทั้งหมด</div>
-                <div style="font-size: 22px; font-weight: bold; color: #c0392b;" id="selected-total">${grandTotal.toLocaleString()}</div>
-                <div style="font-size: 11px; color: #95a5a6;">บาท</div>
+
+              <div class="payroll-stat-card pcard-total">
+                <div class="payroll-stat-header">
+                  <div class="payroll-stat-icon">💰</div>
+                  <div class="payroll-stat-label">รวมทั้งหมด</div>
+                </div>
+                <div class="payroll-stat-value"><span id="selected-total">${grandTotal.toLocaleString()}</span><span class="currency">บาท</span></div>
+                <div class="payroll-stat-meta">ยอดจ่ายสุทธิ</div>
               </div>
             </div>
-            
-            <!-- ปุ่มควบคุม -->
-            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-              <button onclick="selectAllEmployees()" style="flex: 1; padding: 7px; background: rgba(39,174,96,0.12); color: #1e8449; border: 1px solid rgba(39,174,96,0.4); border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                ✓ เลือกทั้งหมด
-              </button>
-              <button onclick="unselectAllEmployees()" style="flex: 1; padding: 7px; background: rgba(231,76,60,0.1); color: #c0392b; border: 1px solid rgba(231,76,60,0.35); border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                ✗ ยกเลิกทั้งหมด
-              </button>
+
+            <div class="payroll-toolbar">
+              <button type="button" class="payroll-tool-btn payroll-tool-select" onclick="selectAllEmployees()">✓ เลือกทั้งหมด</button>
+              <button type="button" class="payroll-tool-btn payroll-tool-clear" onclick="unselectAllEmployees()">✗ ยกเลิกทั้งหมด</button>
             </div>
           `;
 
-          // แสดงรายละเอียดรายบุคคล (แบบ 3 คอลัมน์ คลิกที่ชื่อ)
+          // แสดงรายละเอียดรายบุคคล (ซ้าย: เลือกพนักงาน / ขวา: กราฟสัดส่วน)
           const employeeList = Object.values(employeeData).sort((a, b) => b.grandTotal - a.grandTotal);
           
           if (employeeList.length === 0) {
-            html += '<div style="text-align:center; color:#888; padding: 40px 20px; background:#f8f9fa; border-radius:10px; margin-top: 20px;">ไม่มีข้อมูลในช่วงเวลานี้</div>';
+            html += '<div class="payroll-empty">ไม่มีข้อมูลในช่วงเวลานี้</div>';
           } else {
-            html += `<div style="margin-top: 18px; margin-bottom: 10px;"><h3 style="margin: 0; font-size: 14px; color: #2c3e50; font-weight: 600;">👥 รายละเอียดรายบุคคล (${employeeList.length} คน)</h3></div>`;
-            
-            html += '<div class="employee-grid-3col">';
-            
-            html += `<style>
-              .employee-grid-3col {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 8px;
-              }
-              .emp-pick-card {
-                padding: 8px 10px;
-                border-radius: 8px;
-                cursor: pointer;
-                text-align: center;
-                border: 1px solid transparent;
-                transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
-                user-select: none;
-              }
-              .emp-pick-card.is-selected {
-                background: rgba(39, 174, 96, 0.14);
-                border-color: rgba(39, 174, 96, 0.45);
-                opacity: 1;
-              }
-              .emp-pick-card.is-unselected {
-                background: rgba(149, 165, 166, 0.12);
-                border-color: rgba(149, 165, 166, 0.35);
-                opacity: 0.65;
-              }
-              .emp-pick-card:hover {
-                border-color: rgba(39, 174, 96, 0.75);
-              }
-              .emp-pick-name {
-                font-size: 13px;
-                font-weight: 600;
-                color: #2c3e50;
-                margin-bottom: 2px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-              }
-              .emp-pick-amount {
-                font-size: 15px;
-                font-weight: 700;
-                color: #1e8449;
-                margin-bottom: 2px;
-              }
-              .emp-pick-card.is-unselected .emp-pick-amount {
-                color: #7f8c8d;
-              }
-              .emp-pick-stats {
-                display: flex;
-                justify-content: center;
-                gap: 8px;
-                font-size: 11px;
-                color: #7f8c8d;
-              }
-              @media (max-width: 640px) {
-                .employee-grid-3col {
-                  grid-template-columns: repeat(2, 1fr);
-                }
-              }
-            </style>`;
-            
+            html += '<div class="payroll-split-row">';
+
+            // คอลัมน์ซ้าย: เลือกพนักงาน
+            html += '<div class="payroll-split-col">';
+            html += `<h3 class="payroll-section-title">👥 รายละเอียดรายบุคคล (${employeeList.length} คน)</h3>`;
+            html += '<div class="payroll-emp-grid">';
+
             employeeList.forEach((emp) => {
               if (emp.grandTotal <= 0) return;
               html += `
-                <div id="emp-card-${emp.empId}" class="emp-pick-card is-selected"
+                <div id="emp-card-${emp.empId}" class="payroll-emp-card is-selected"
                      onclick="toggleEmployeeSelection('${emp.empId}')">
-                  <div class="emp-pick-name">${window.PinThipSafe.safeText(emp.empName)}</div>
-                  <div class="emp-pick-amount">${emp.grandTotal.toLocaleString()} ฿</div>
-                  <div class="emp-pick-stats">
+                  <div class="payroll-emp-name">${window.PinThipSafe.safeText(emp.empName)}</div>
+                  <div class="payroll-emp-amount">${emp.grandTotal.toLocaleString()} ฿</div>
+                  <div class="payroll-emp-stats">
                     <span>📅 ${emp.salary.days}</span>
                     <span>⛽ ${emp.fuel.count}</span>
                     <span>🔧 ${emp.repair.count}</span>
@@ -1504,9 +1432,19 @@
                 </div>
               `;
             });
-            
+
+            html += '</div>';
+            html += '</div>';
+
+            // คอลัมน์ขวา: กราฟสัดส่วนค่าใช้จ่าย (อัปเดตตามคนที่เลือก)
+            html += '<div class="payroll-split-col payroll-split-charts" id="payrollChartsCol">';
+            html += renderPayrollCharts(salaryTotal, fuelOnlyTotal, repairOnlyTotal);
+            html += '</div>';
+
             html += '</div>';
           }
+
+          html += '</div>';
           
           // ฟังก์ชันช่วยตั้งสถานะ card
           const applyEmployeeCardState = (card, isSelected) => {
@@ -1552,6 +1490,12 @@
             document.getElementById('selected-salary').textContent = selectedSalary.toLocaleString();
             document.getElementById('selected-other').textContent = selectedOther.toLocaleString();
             document.getElementById('selected-total').textContent = selectedTotal.toLocaleString();
+
+            // วาดกราฟสัดส่วนใหม่ตามพนักงานที่เลือก
+            const chartsCol = document.getElementById('payrollChartsCol');
+            if (chartsCol) {
+              chartsCol.innerHTML = renderPayrollCharts(selectedSalary, selectedFuel, selectedRepair);
+            }
           };
           
           // ฟังก์ชันเลือกทั้งหมด
@@ -1617,6 +1561,78 @@
       }
     });
   }
+
+  // สร้างกราฟเปรียบเทียบ + กราฟโดนัทสัดส่วนค่าใช้จ่าย (ใช้ร่วมกับหน้าสรุปค่าแรงรายบุคคล)
+  function renderPayrollCharts(salary, fuel, repair) {
+    const safeSalary = Number(salary) || 0;
+    const safeFuel = Number(fuel) || 0;
+    const safeRepair = Number(repair) || 0;
+    const total = safeSalary + safeFuel + safeRepair;
+
+    const pct = (value) => (total > 0 ? (value / total * 100) : 0);
+    const sp = pct(safeSalary);
+    const fp = pct(safeFuel);
+    const rp = pct(safeRepair);
+
+    const fmt = (value) => value.toFixed(1);
+    const salaryDeg = (sp / 100) * 360;
+    const fuelEndDeg = salaryDeg + ((fp / 100) * 360);
+
+    const barItem = (icon, label, amount, percent, startColor, endColor) => `
+      <div class="payroll-bar-item">
+        <div class="payroll-bar-label">
+          <div class="payroll-bar-label-left"><span>${icon}</span><span>${label}</span></div>
+          <div class="payroll-bar-label-right">${amount.toLocaleString()} บาท</div>
+        </div>
+        <div class="payroll-bar-track">
+          <div class="payroll-bar" style="--pbar-width: ${fmt(percent)}%; --pbar-start: ${startColor}; --pbar-end: ${endColor};"></div>
+        </div>
+      </div>
+    `;
+
+    const legendItem = (color, label, amount, percent) => `
+      <div class="payroll-legend-item">
+        <div class="payroll-legend-left">
+          <div class="payroll-legend-color" style="background: ${color};"></div>
+          <div class="payroll-legend-label">${label}</div>
+        </div>
+        <div class="payroll-legend-value">${amount.toLocaleString()}<span class="payroll-legend-percent">(${fmt(percent)}%)</span></div>
+      </div>
+    `;
+
+    const donutClass = total > 0 ? 'payroll-donut-circle' : 'payroll-donut-circle payroll-donut-empty';
+
+    return `
+      <div class="payroll-chart-section">
+        <div class="payroll-chart-title">📊 เปรียบเทียบค่าใช้จ่าย</div>
+        <div class="payroll-bar-list">
+          ${barItem('💵', 'ค่าแรงพนักงาน', safeSalary, sp, '#6366f1', '#8b5cf6')}
+          ${barItem('⛽', 'ค่าน้ำมันรถ', safeFuel, fp, '#f59e0b', '#f97316')}
+          ${barItem('🔧', 'ค่าซ่อมรถ', safeRepair, rp, '#ef4444', '#dc2626')}
+        </div>
+      </div>
+      <div class="payroll-chart-section">
+        <div class="payroll-chart-title">🥧 สัดส่วนค่าใช้จ่าย</div>
+        <div class="payroll-donut-wrapper">
+          <div class="payroll-donut-chart">
+            <div class="${donutClass}" style="--pdonut-salary: #6366f1; --pdonut-fuel: #f59e0b; --pdonut-repair: #ef4444; --pdonut-salary-deg: ${salaryDeg}deg; --pdonut-fuel-end-deg: ${fuelEndDeg}deg;">
+              <div class="payroll-donut-center">
+                <div class="payroll-donut-center-label">รวม</div>
+                <div class="payroll-donut-center-value">${total.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+          <div class="payroll-donut-legend">
+            ${legendItem('#6366f1', 'ค่าแรง', safeSalary, sp)}
+            ${legendItem('#f59e0b', 'ค่าน้ำมัน', safeFuel, fp)}
+            ${legendItem('#ef4444', 'ค่าซ่อม', safeRepair, rp)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+
 
   function exportPayrollExcel() {
     const startDate = document.getElementById('payrollStartDate')?.value;
@@ -1731,16 +1747,7 @@
 
           const repResult = document.getElementById('repResult');
           if (repResult) {
-            repResult.innerHTML = `
-              <div class="history-item">
-                📅 ประจำเดือน: <b>${ym}</b><br><br>
-                💵 ค่าแรงพนักงานรวม: <b style="color:#28a745; font-size:15px;">${totalSalary.toLocaleString()} บาท</b><br>
-                ⛽ ค่าน้ำมันรถรวม (อนุมัติแล้ว): <b style="color:#e67e22; font-size:15px;">${totalFuel.toLocaleString()} บาท</b><br>
-                🔧 ค่าซ่อมรถรวม (อนุมัติแล้ว): <b style="color:#d9534f; font-size:15px;">${totalRepair.toLocaleString()} บาท</b><br>
-                <hr style="border:0; border-top:1px solid #ddd; margin:10px 0;">
-                💰 <b>ค่าใช้จ่ายบริษัทรวมทั้งหมด: <span style="font-size:18px; color:#d9534f;">${(totalSalary + totalFuel + totalRepair).toLocaleString()} บาท</span></b>
-              </div>
-            `;
+            repResult.innerHTML = renderMonthlyDashboard(ym, totalSalary, totalFuel, totalRepair);
           }
         }, (fuelErr) => {
           console.error('Monthly fuel load failed:', fuelErr);
@@ -1755,6 +1762,135 @@
       showMonthlyLoadError('ไม่สามารถโหลดข้อมูลพนักงานสำหรับสรุปรายเดือนได้', empErr);
     });
   }
+
+  // Render Monthly Dashboard with cards and charts
+  function renderMonthlyDashboard(ym, totalSalary, totalFuel, totalRepair) {
+    console.log('🎨 renderMonthlyDashboard called:', { ym, totalSalary, totalFuel, totalRepair });
+    const total = totalSalary + totalFuel + totalRepair;
+    const salaryPercent = total > 0 ? (totalSalary / total * 100).toFixed(1) : 0;
+    const fuelPercent = total > 0 ? (totalFuel / total * 100).toFixed(1) : 0;
+    const repairPercent = total > 0 ? (totalRepair / total * 100).toFixed(1) : 0;
+    const salaryDeg = (parseFloat(salaryPercent) / 100) * 360;
+    const fuelEndDeg = salaryDeg + ((parseFloat(fuelPercent) / 100) * 360);
+    
+    return `
+      <div class="monthly-dashboard-wrapper">
+        <div class="monthly-stats-grid">
+          <div class="monthly-stat-card card-salary">
+            <div class="monthly-stat-header">
+              <div class="monthly-stat-icon">💵</div>
+              <div class="monthly-stat-label">ค่าแรงพนักงาน</div>
+            </div>
+            <div class="monthly-stat-value">${totalSalary.toLocaleString()}<span class="currency">บาท</span></div>
+            <div class="monthly-stat-meta">${salaryPercent}% ของค่าใช้จ่ายรวม</div>
+          </div>
+          <div class="monthly-stat-card card-fuel">
+            <div class="monthly-stat-header">
+              <div class="monthly-stat-icon">⛽</div>
+              <div class="monthly-stat-label">ค่าน้ำมันรถ</div>
+            </div>
+            <div class="monthly-stat-value">${totalFuel.toLocaleString()}<span class="currency">บาท</span></div>
+            <div class="monthly-stat-meta">${fuelPercent}% ของค่าใช้จ่ายรวม</div>
+          </div>
+          <div class="monthly-stat-card card-repair">
+            <div class="monthly-stat-header">
+              <div class="monthly-stat-icon">🔧</div>
+              <div class="monthly-stat-label">ค่าซ่อมรถ</div>
+            </div>
+            <div class="monthly-stat-value">${totalRepair.toLocaleString()}<span class="currency">บาท</span></div>
+            <div class="monthly-stat-meta">${repairPercent}% ของค่าใช้จ่ายรวม</div>
+          </div>
+          <div class="monthly-stat-card card-total">
+            <div class="monthly-stat-header">
+              <div class="monthly-stat-icon">💰</div>
+              <div class="monthly-stat-label">รวมทั้งหมด</div>
+            </div>
+            <div class="monthly-stat-value">${total.toLocaleString()}<span class="currency">บาท</span></div>
+            <div class="monthly-stat-meta">ค่าใช้จ่ายประจำเดือน ${ym}</div>
+          </div>
+        </div>
+        ${renderMonthlyCharts(totalSalary, totalFuel, totalRepair, salaryPercent, fuelPercent, repairPercent, salaryDeg, fuelEndDeg, total)}
+      </div>
+    `;
+  }
+
+  // Render charts section
+  function renderMonthlyCharts(salary, fuel, repair, sp, fp, rp, sd, fed, total) {
+    return `
+      <div class="monthly-charts-row">
+        <div class="monthly-chart-section">
+          <div class="monthly-chart-title">📊 เปรียบเทียบค่าใช้จ่าย</div>
+          <div class="monthly-bar-chart-list">
+            <div class="monthly-bar-item">
+              <div class="monthly-bar-label">
+                <div class="monthly-bar-label-left"><span>💵</span><span>ค่าแรงพนักงาน</span></div>
+                <div class="monthly-bar-label-right">${salary.toLocaleString()} บาท</div>
+              </div>
+              <div class="monthly-bar-track">
+                <div class="monthly-bar" style="--bar-width: ${sp}%; --bar-color-start: #6366f1; --bar-color-end: #8b5cf6;"></div>
+              </div>
+            </div>
+            <div class="monthly-bar-item">
+              <div class="monthly-bar-label">
+                <div class="monthly-bar-label-left"><span>⛽</span><span>ค่าน้ำมันรถ</span></div>
+                <div class="monthly-bar-label-right">${fuel.toLocaleString()} บาท</div>
+              </div>
+              <div class="monthly-bar-track">
+                <div class="monthly-bar" style="--bar-width: ${fp}%; --bar-color-start: #f59e0b; --bar-color-end: #f97316;"></div>
+              </div>
+            </div>
+            <div class="monthly-bar-item">
+              <div class="monthly-bar-label">
+                <div class="monthly-bar-label-left"><span>🔧</span><span>ค่าซ่อมรถ</span></div>
+                <div class="monthly-bar-label-right">${repair.toLocaleString()} บาท</div>
+              </div>
+              <div class="monthly-bar-track">
+                <div class="monthly-bar" style="--bar-width: ${rp}%; --bar-color-start: #ef4444; --bar-color-end: #dc2626;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="monthly-chart-section">
+          <div class="monthly-chart-title">🥧 สัดส่วนค่าใช้จ่าย</div>
+          <div class="monthly-donut-wrapper">
+            <div class="monthly-donut-chart">
+              <div class="monthly-donut-circle" style="--salary-color: #6366f1; --fuel-color: #f59e0b; --repair-color: #ef4444; --salary-deg: ${sd}deg; --fuel-end-deg: ${fed}deg;">
+                <div class="monthly-donut-center">
+                  <div class="monthly-donut-center-label">รวม</div>
+                  <div class="monthly-donut-center-value">${total.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+            <div class="monthly-donut-legend">
+              <div class="monthly-legend-item">
+                <div class="monthly-legend-left">
+                  <div class="monthly-legend-color" style="background: #6366f1;"></div>
+                  <div class="monthly-legend-label">ค่าแรง</div>
+                </div>
+                <div class="monthly-legend-value">${salary.toLocaleString()}<span class="monthly-legend-percent">(${sp}%)</span></div>
+              </div>
+              <div class="monthly-legend-item">
+                <div class="monthly-legend-left">
+                  <div class="monthly-legend-color" style="background: #f59e0b;"></div>
+                  <div class="monthly-legend-label">ค่าน้ำมัน</div>
+                </div>
+                <div class="monthly-legend-value">${fuel.toLocaleString()}<span class="monthly-legend-percent">(${fp}%)</span></div>
+              </div>
+              <div class="monthly-legend-item">
+                <div class="monthly-legend-left">
+                  <div class="monthly-legend-color" style="background: #ef4444;"></div>
+                  <div class="monthly-legend-label">ค่าซ่อม</div>
+                </div>
+                <div class="monthly-legend-value">${repair.toLocaleString()}<span class="monthly-legend-percent">(${rp}%)</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+
 
   function showMonthlyLoadError(message, err) {
     const repResult = document.getElementById('repResult');
