@@ -87,6 +87,21 @@
         }
       }
     },
+    "pork_price_data": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.role === 'admin'",
+      ".indexOn": ["date"],
+      "$entryId": {
+        ".validate": "newData.hasChildren(['date', 'price'])",
+        "date": { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+        "price": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 10000" },
+        "quantity": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "source": { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "addedAt": { ".validate": "newData.isString()" },
+        "addedBy": { ".validate": "newData.isString()" },
+        "$other": { ".validate": false }
+      }
+    },
     "locations": {
       ".read": "auth != null",
       ".write": "auth != null && auth.token.role === 'admin'"

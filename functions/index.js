@@ -10,6 +10,177 @@ const crypto = require('crypto');
 
 initializeApp();
 
+// ===== PORK PRICE SCRAPER =====
+// Cloud Function to bypass CORS restrictions
+// Scrapes pork price data from swinethailand.com
+
+/**
+ * Fetch HTML content from a URL
+ */
+async function fetchHTML(url) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.text();
+  } catch (error) {
+    throw new Error(`Failed to fetch ${url}: ${error.message}`);
+  }
+}
+
+/**
+ * Convert Thai month name to number
+ */
+function thaiMonthToNumber(monthName) {
+  const months = {
+    'มกราคม': 1, 'กุมภาพันธ์': 2, 'มีนาคม': 3, 'เมษายน': 4,
+    'พฤษภาคม': 5, 'มิถุนายน': 6, 'กรกฎาคม': 7, 'สิงหาคม': 8,
+    'กันยายน': 9, 'ตุลาคม': 10, 'พฤศจิกายน': 11, 'ธันวาคม': 12
+  };
+  return months[monthName] || 1;
+}
+
+/**
+ * Convert Thai Buddhist date to ISO date
+ */
+function thaiDateToISO(day, monthName, buddhistYear) {
+  const month = thaiMonthToNumber(monthName);
+  const year = buddhistYear - 543;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/**
+ * Extract price data from HTML
+ */
+function extractPriceData(html, dateInfo) {
+  const data = {
+    date: thaiDateToISO(dateInfo.day, dateInfo.month, dateInfo.year),
+    prices: {},
+    source: 'swinethailand.com'
+  };
+
+  // Extract regional prices: ภาคตะวันตก 74-76
+  const regionPattern = /ภาค(ตะวันตก|ตะวันออก|อีสาน|เหนือ|ใต้)\s+(?:-?\s*)?(\d+(?:\.\d+)?)\s*-?\s*(\d+(?:\.\d+)?)?/gi;
+  let match;
+  
+  while ((match = regionPattern.exec(html)) !== null) {
+    const region = match[1];
+    const price1 = parseFloat(match[2]);
+    const price2 = match[3] ? parseFloat(match[3]) : price1;
+    const avgPrice = (price1 + price2) / 2;
+    
+    if (!data.prices[region] || avgPrice > data.prices[region]) {
+      data.prices[region] = avgPrice;
+    }
+  }
+
+  // Extract piglet price: ลูกสุกรขุนเล็ก 2,000
+  const pigletPattern = /ลูกสุกร(?:ขุน)?(?:เล็ก)?\s+([\d,]+)/i;
+  const pigletMatch = pigletPattern.exec(html);
+  if (pigletMatch) {
+    data.pigletPrice = parseFloat(pigletMatch[1].replace(/,/g, ''));
+  }
+
+  // Calculate national average
+  const priceValues = Object.values(data.prices);
+  if (priceValues.length > 0) {
+    data.nationalAverage = priceValues.reduce((a, b) => a + b, 0) / priceValues.length;
+  }
+
+  return data;
+}
+
+/**
+ * Cloud Function: Scrape pork prices from swinethailand.com
+ * 
+ * Request: { count: 4 }  // number of weeks to scrape
+ * Response: [{ date, nationalAverage, prices, pigletPrice, source }, ...]
+ */
+exports.scrapePorkPrices = onCall({ region: 'asia-southeast1', cors: true }, async (request) => {
+  const count = request.data?.count || 4;
+  
+  if (!Number.isInteger(count) || count < 1 || count > 52) {
+    throw new HttpsError('invalid-argument', 'count must be between 1 and 52');
+  }
+
+  try {
+    // Step 1: Fetch index page to find all price report links
+    const indexUrl = 'https://www.swinethailand.com/16866405/ราคาสุกรขุน-ปี-2561-2569';
+    const indexHtml = await fetchHTML(indexUrl);
+
+    // Step 2: Extract links using regex
+    // Pattern: <a href="/17495564/live-pig-price-28-08-2026">วันพระที่ 28 สิงหาคม 2569</a>
+    const linkPattern = /<a[^>]+href="([^"]+live-pig-price[^"]*)"[^>]*>(?:วันพระที่\s+)?(\d+)\s+(\S+)\s+(\d+)<\/a>/gi;
+    const links = [];
+    let match;
+
+    while ((match = linkPattern.exec(indexHtml)) !== null) {
+      const url = match[1].startsWith('http') 
+        ? match[1] 
+        : `https://www.swinethailand.com${match[1]}`;
+      
+      links.push({
+        url,
+        day: parseInt(match[2], 10),
+        month: match[3],
+        year: parseInt(match[4], 10)
+      });
+    }
+
+    if (links.length === 0) {
+      throw new HttpsError('not-found', 'No price data links found');
+    }
+
+    // Step 3: Sort by date (newest first)
+    links.sort((a, b) => {
+      const dateA = new Date(thaiDateToISO(a.day, a.month, a.year));
+      const dateB = new Date(thaiDateToISO(b.day, b.month, b.year));
+      return dateB - dateA;
+    });
+
+    // Step 4: Scrape the requested number of pages
+    const linksToScrape = links.slice(0, count);
+    const results = [];
+
+    for (const linkInfo of linksToScrape) {
+      try {
+        const html = await fetchHTML(linkInfo.url);
+        const data = extractPriceData(html, linkInfo);
+        results.push(data);
+        
+        // Add delay to be respectful to the server
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.warn(`Failed to scrape ${linkInfo.url}:`, error.message);
+        // Continue with other pages even if one fails
+      }
+    }
+
+    if (results.length === 0) {
+      throw new HttpsError('internal', 'Failed to scrape any price data');
+    }
+
+    return {
+      success: true,
+      count: results.length,
+      data: results
+    };
+
+  } catch (error) {
+    console.error('[scrapePorkPrices] Error:', error);
+    throw new HttpsError('internal', error.message);
+  }
+});
+
 // ===== PIN Hashing =====
 // New format: "scrypt$<salt>$<hash>" — salt is random per user
 // scrypt is a memory-hard KDF (slows brute-force significantly vs SHA-256)
