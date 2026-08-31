@@ -360,8 +360,9 @@ function initApp() {
     window._tokenRefreshInterval = null;
   }
 
-  // Proactive token refresh every 45 minutes to keep Firebase Auth session alive
+  // Proactive token refresh every 30 minutes to keep Firebase Auth session alive
   // (Firebase custom tokens have a 1-hour TTL; refreshing before expiry prevents silent logout)
+  // Reduced from 45 to 30 minutes to provide better margin before token expiry
   window._tokenRefreshInterval = setInterval(function() {
     var cu = firebase.auth().currentUser;
     if (cu) {
@@ -374,7 +375,39 @@ function initApp() {
         console.warn('Proactive token refresh failed:', e);
       });
     }
-  }, 45 * 60 * 1000);
+  }, 30 * 60 * 1000);
+
+  // Visibility change listener: refresh token when user returns to the tab
+  // This handles cases where the browser suspends timers when the tab is inactive
+  var lastVisibilityChange = Date.now();
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      var timeSinceLastChange = Date.now() - lastVisibilityChange;
+      lastVisibilityChange = Date.now();
+      
+      // If the tab was hidden for more than 5 minutes, proactively refresh the token
+      if (timeSinceLastChange > 5 * 60 * 1000) {
+        var cu = firebase.auth().currentUser;
+        if (cu) {
+          console.log('Tab became visible after', Math.round(timeSinceLastChange / 60000), 'minutes — refreshing token...');
+          cu.getIdToken(true).then(function() {
+            if (window.PinThipSafe && window.PinThipSafe.session && window.PinThipSafe.session.refreshSessionExpiry) {
+              window.PinThipSafe.session.refreshSessionExpiry();
+            }
+            console.log('Token refreshed successfully after tab visibility change');
+          }).catch(function(e) {
+            console.warn('Token refresh on visibility change failed:', e);
+            // Try to recover the session
+            recoverFirebaseSession().then(function(recovered) {
+              if (!recovered) {
+                console.warn('Session recovery failed after visibility change');
+              }
+            });
+          });
+        }
+      }
+    }
+  });
 
   firebase.auth().onIdTokenChanged(function(firebaseUser) {
     if (!isInitialAuthState) {
