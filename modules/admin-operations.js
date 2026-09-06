@@ -514,6 +514,9 @@
         const list = Object.keys(fuelObj).map((k) => ({ key: k, ...fuelObj[k] }));
 
         currentFuelFilteredList = list.filter((item) => item.date && item.date >= startDate && item.date <= endDate);
+        
+        // เก็บไว้ใน window เพื่อให้ showCarHistory() เข้าถึงได้
+        window.currentFuelFilteredList = currentFuelFilteredList;
 
         let totalFuelOnly = 0;
         let totalRepairOnly = 0;
@@ -533,14 +536,7 @@
 
         const grandTotalApproved = totalFuelOnly + totalRepairOnly;
 
-        let html = `
-          <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-left: 4px solid #e67e22; color: #333; padding: 12px 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;">
-            <b>📊 สรุปยอดเบิกจ่ายช่วงวันที่ ${startDate} ถึง ${endDate}:</b><br>
-            • ⛽ ค่าน้ำมันรวม: <b style="color: #e67e22;">${totalFuelOnly.toLocaleString()} บาท</b><br>
-            • 🔧 ค่าซ่อมรถรวม: <b style="color: #d9534f;">${totalRepairOnly.toLocaleString()} บาท</b><br>
-            💰 รวมยอดอนุมัติจ่ายทั้งหมด: <b style="color: #2c3e50; font-size: 16px;">${grandTotalApproved.toLocaleString()} บาท</b> (${currentFuelFilteredList.length} รายการ)
-          </div>
-        `;
+        let html = ``;
 
         if (currentFuelFilteredList.length === 0) {
           html += '<div style="color:#888; margin:20px 0;">ไม่มีรายการเบิกจ่ายในช่วงเวลาดังกล่าว</div>';
@@ -548,6 +544,8 @@
           currentFuelFilteredList.slice().reverse().forEach((item) => {
             const statusBadge = String(item.status || '').includes('อนุมัติแล้ว') ? '🟢 อนุมัติแล้ว' : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รออนุมัติ');
             const isApproved = String(item.status || '').includes('อนุมัติแล้ว');
+            const isPending = String(item.status || '').includes('รออนุมัติ');
+            const isRejected = String(item.status || '').includes('ไม่อนุมัติ');
             const isPaid = item.paid === true;
             const paidBadge = isApproved
               ? (isPaid ? '<span style=\"color:#2e7d32; font-weight:bold;\">💰 ได้รับเงินแล้ว</span>' + (item.paidDate ? ' (' + window.PinThipSafe.safeText(item.paidDate) + ')' : '') : '<span style=\"color:#e67e22; font-weight:bold;\">❓ ยังไม่ได้รับเงิน</span>')
@@ -565,6 +563,16 @@
                 <b>👤 ${safeEmpName} (${safeEmpId})</b> [<span style="color:${typeColor}; font-weight:bold;">${badgeType}</span>] | สถานะ: <b>${statusBadge}</b>${isApproved ? ' | ' + paidBadge : ''}<br>
                 ${plateText}📍 รายละเอียด: ${safeRoute} | 💵 ยอด: <b style="color:${typeColor}; font-size:15px;">${Number(item.amount || 0).toLocaleString()} บาท</b><br>
                 📅 วันที่: ${window.PinThipSafe.safeText(item.date)}<br>
+                ${isPending ? `
+                <div style="margin-top:8px; padding:10px; background:#fff8e1; border-left:4px solid #ff9800; border-radius:6px;">
+                  <div style="font-size:12px; font-weight:bold; color:#e65100; margin-bottom:6px;">💵 กำหนดจำนวนเงินอนุมัติ:</div>
+                  <input type="number" id="quickFuelAmount_${window.PinThipSafe.safeText(item.key)}" value="${item.amount || ''}" placeholder="ระบุยอดเงิน" style="width:100%; margin-bottom:6px; padding:8px; font-size:13px;">
+                  <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button style="flex:1; min-width:120px; margin:0; padding:8px 12px; font-size:12px; background:#28a745; color:white; border:none; border-radius:6px; font-weight:600;" onclick="quickApproveFuel('${window.PinThipSafe.safeText(item.key)}', true)">✅ อนุมัติ</button>
+                    <button style="flex:1; min-width:120px; margin:0; padding:8px 12px; font-size:12px; background:#dc3545; color:white; border:none; border-radius:6px; font-weight:600;" onclick="quickApproveFuel('${window.PinThipSafe.safeText(item.key)}', false)">❌ ไม่อนุมัติ</button>
+                  </div>
+                </div>
+                ` : ''}
                 <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
                   <button class="btn-blue" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="showEditFuelModal('${window.PinThipSafe.safeText(item.key)}', '${safeCarPlate}', '${safeRoute}', ${item.amount || 0}, '${badgeType}')">✏️ แก้ไขข้อมูล</button>
                   <button class="btn-danger" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="confirmDeleteFuel('${window.PinThipSafe.safeText(item.key)}', '${safeEmpName}')">🗑️ ลบ</button>
@@ -607,6 +615,9 @@
     if (!chartContainer) return;
 
     const carData = {};
+    const carDates = {}; // เก็บวันที่เบิกแต่ละคัน
+    let totalFuelOverall = 0;
+    let totalRepairOverall = 0;
     let maxAmount = 1;
 
     currentFuelFilteredList.forEach((item) => {
@@ -616,11 +627,17 @@
       if (statusStr.includes('อนุมัติแล้ว')) {
         const amt = Number(item.amount || 0);
         if (!carData[plate]) carData[plate] = { fuel: 0, repair: 0 };
+        if (!carDates[plate]) carDates[plate] = [];
+
+        // เก็บวันที่เบิก
+        if (item.date) carDates[plate].push(item.date);
 
         if (reqType.includes('ซ่อม')) {
           carData[plate].repair += amt;
+          totalRepairOverall += amt;
         } else {
           carData[plate].fuel += amt;
+          totalFuelOverall += amt;
         }
 
         const totalForPlate = carData[plate].fuel + carData[plate].repair;
@@ -634,28 +651,435 @@
       return;
     }
 
-    let chartHtml = '';
+    // สร้าง HTML โดยไม่มีกราฟโดนัท/แท่ง (ลบออก เหลือแค่ปุ่ม filter และตาราง)
+    let chartHtml = '<div class="payroll-dashboard-wrapper" style="margin-bottom: 20px;">';
+    
+    // ปุ่มเลือกทะเบียนรถ (toolbar)
+    chartHtml += '<div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">';
+    chartHtml += '<button class="payroll-tool-btn" id="car-filter-all" onclick="filterCarExpense(\'all\')" style="background: #10b981; color: white; border-color: #10b981;">✓ ทุกคัน</button>';
     plates.forEach((plate) => {
+      const safePlate = window.PinThipSafe.safeText(plate);
+      chartHtml += `<button class="payroll-tool-btn car-filter-btn" data-plate="${safePlate}" onclick="filterCarExpense('${safePlate}')">${safePlate}</button>`;
+    });
+    chartHtml += '</div>';
+    chartHtml += '</div>';
+
+    // ตามด้วยส่วน breakdown ตามทะเบียนรถ (Table with Sparkline)
+    chartHtml += '<div style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #dee2e6;">';
+    chartHtml += '<div style="font-size: 13px; font-weight: bold; color: #6c757d; margin-bottom: 12px;">🚗 รายละเอียดแยกตามทะเบียนรถ (เรียงตามยอดมาก → น้อย)</div>';
+    chartHtml += '<div id="carBreakdownList">';
+    
+    // เรียงลำดับตามยอดรวม มาก → น้อย
+    const sortedPlates = plates.sort((a, b) => {
+      const totalA = carData[a].fuel + carData[a].repair;
+      const totalB = carData[b].fuel + carData[b].repair;
+      return totalB - totalA;
+    });
+    
+    // หายอดสูงสุดเพื่อคำนวณ sparkline
+    const maxTotal = sortedPlates.length > 0 
+      ? (carData[sortedPlates[0]].fuel + carData[sortedPlates[0]].repair)
+      : 1;
+    
+    // ฟังก์ชันนับจำนวนครั้งที่เบิก
+    function getRequestCount(dates) {
+      return dates ? dates.length : 0;
+    }
+    
+    // สร้างตาราง
+    chartHtml += `
+      <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <thead>
+          <tr style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-bottom: 2px solid #dee2e6;">
+            <th style="padding: 12px; text-align: left; font-size: 13px; color: #495057; font-weight: 700;">อันดับ</th>
+            <th style="padding: 12px; text-align: left; font-size: 13px; color: #495057; font-weight: 700;">ทะเบียน</th>
+            <th style="padding: 12px; text-align: right; font-size: 13px; color: #495057; font-weight: 700;">ค่าน้ำมัน</th>
+            <th style="padding: 12px; text-align: right; font-size: 13px; color: #495057; font-weight: 700;">ค่าซ่อม</th>
+            <th style="padding: 12px; text-align: right; font-size: 13px; color: #495057; font-weight: 700;">รวม</th>
+            <th style="padding: 12px; text-align: center; font-size: 13px; color: #495057; font-weight: 700;">จำนวนครั้ง</th>
+            <th style="padding: 12px; text-align: left; font-size: 13px; color: #495057; font-weight: 700; min-width: 150px;">กราฟเปรียบเทียบ</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    sortedPlates.forEach((plate, index) => {
       const safePlate = window.PinThipSafe.safeText(plate);
       const fAmt = carData[plate].fuel;
       const rAmt = carData[plate].repair;
       const total = fAmt + rAmt;
-
+      const percentage = maxTotal > 0 ? Math.round((total / maxTotal) * 100) : 0;
+      
+      // นับจำนวนครั้งที่เบิก
+      const requestCount = getRequestCount(carDates[plate]);
+      const countText = requestCount > 0 
+        ? `<span style="color: #10b981; font-weight: 700; font-size: 14px;">${requestCount}</span> <span style="color: #6c757d; font-size: 12px;">ครั้ง</span>`
+        : `<span style="color: #adb5bd; font-size: 12px;">0</span>`;
+      
+      // เหรียญอันดับ
+      let rankBadge = '';
+      if (index === 0) rankBadge = '🥇';
+      else if (index === 1) rankBadge = '🥈';
+      else if (index === 2) rankBadge = '🥉';
+      else rankBadge = `<span style="color: #adb5bd; font-weight: 600;">${index + 1}</span>`;
+      
+      // สี row สลับ
+      const bgColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+      
       chartHtml += `
-        <div style="margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; color: #495057;">
-            <span>🚗 <b>${safePlate}</b> (⛽ ค่าน้ำมัน: <b style="color:#e67e22;">${fAmt.toLocaleString()} ฿</b> | 🔧 ค่าซ่อม: <b style="color:#d9534f;">${rAmt.toLocaleString()} ฿</b>)</span>
-            <span style="font-weight: bold; color: #2c3e50;">รวม ${total.toLocaleString()} บาท</span>
+        <tr class="car-breakdown-item" data-plate="${safePlate}" 
+            style="background: ${bgColor}; border-bottom: 1px solid #e9ecef; cursor: pointer; transition: all 0.2s ease;"
+            onmouseover="this.style.background='#e7f3ff'" 
+            onmouseout="this.style.background='${bgColor}'"
+            onclick="filterCarExpense('${safePlate}', false)">
+          <td style="padding: 12px; text-align: center; font-size: 18px;">${rankBadge}</td>
+          <td style="padding: 12px; font-weight: 700; color: #2c3e50; font-size: 14px;">🚗 ${safePlate}</td>
+          <td style="padding: 12px; text-align: right; color: #e67e22; font-weight: 600; font-size: 14px;">${fAmt.toLocaleString()} ฿</td>
+          <td style="padding: 12px; text-align: right; color: #d9534f; font-weight: 600; font-size: 14px;">${rAmt.toLocaleString()} ฿</td>
+          <td style="padding: 12px; text-align: right; color: #2c3e50; font-weight: 700; font-size: 15px;">${total.toLocaleString()} ฿</td>
+          <td style="padding: 12px; text-align: center;">${countText}</td>
+          <td style="padding: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="flex: 1; background: #e9ecef; border-radius: 4px; height: 20px; overflow: hidden; position: relative;">
+                <div style="background: linear-gradient(90deg, #10b981, #059669); height: 100%; width: ${percentage}%; border-radius: 4px; transition: width 0.3s ease;"></div>
+              </div>
+              <span style="font-size: 12px; color: #6c757d; font-weight: 600; min-width: 38px; text-align: right;">${percentage}%</span>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    chartHtml += `
+        </tbody>
+      </table>
+    `;
+
+    chartHtml += '</div>';
+    chartHtml += '</div>';
+    
+    // เพิ่มสรุปยอดรวมด้านล่างตาราง - แบบการ์ด 3 คอลัมน์
+    const totalAll = totalFuelOverall + totalRepairOverall;
+    const fuelPercent = totalAll > 0 ? ((totalFuelOverall / totalAll) * 100).toFixed(1) : '0.0';
+    const repairPercent = totalAll > 0 ? ((totalRepairOverall / totalAll) * 100).toFixed(1) : '0.0';
+    
+    chartHtml += `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 20px;">
+        
+        <!-- การ์ดค่าน้ำมัน -->
+        <div data-summary-card="fuel" style="background: linear-gradient(135deg, #fff5e6, #ffffff); border: 1px solid #ffe4cc; border-left: 4px solid #e67e22; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+          <div style="font-size: 28px; margin-bottom: 4px;">⛽</div>
+          <div style="font-size: 12px; color: #888; margin-bottom: 6px;">ค่าน้ำมันรถ</div>
+          <div data-amount style="font-size: 20px; font-weight: 700; color: #e67e22; margin-bottom: 4px;">${totalFuelOverall.toLocaleString()}<span style="font-size: 14px; font-weight: 400;">บาท</span></div>
+          <div data-percent style="font-size: 11px; color: #999;">${fuelPercent}% ของค่าใช้จ่ายรวม</div>
+        </div>
+        
+        <!-- การ์ดค่าซ่อม -->
+        <div data-summary-card="repair" style="background: linear-gradient(135deg, #ffe6e6, #ffffff); border: 1px solid #ffcccc; border-left: 4px solid #d9534f; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+          <div style="font-size: 28px; margin-bottom: 4px;">🔧</div>
+          <div style="font-size: 12px; color: #888; margin-bottom: 6px;">ค่าซ่อมรถ</div>
+          <div data-amount style="font-size: 20px; font-weight: 700; color: #d9534f; margin-bottom: 4px;">${totalRepairOverall.toLocaleString()}<span style="font-size: 14px; font-weight: 400;">บาท</span></div>
+          <div data-percent style="font-size: 11px; color: #999;">${repairPercent}% ของค่าใช้จ่ายรวม</div>
+        </div>
+        
+        <!-- การ์ดรวมทั้งหมด -->
+        <div data-summary-card="total" style="background: linear-gradient(135deg, #e6f7ff, #ffffff); border: 1px solid #b3e0ff; border-left: 4px solid #0dcaf0; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+          <div style="font-size: 28px; margin-bottom: 4px;">💰</div>
+          <div style="font-size: 12px; color: #888; margin-bottom: 6px;">รวมทั้งหมด</div>
+          <div data-amount style="font-size: 20px; font-weight: 700; color: #2c3e50; margin-bottom: 4px;">${totalAll.toLocaleString()}<span style="font-size: 14px; font-weight: 400;">บาท</span></div>
+          <div data-percent style="font-size: 11px; color: #999;">${sortedPlates.length} คัน</div>
+        </div>
+        
+      </div>
+    `;
+    
+    chartContainer.innerHTML = chartHtml;
+    
+    // เก็บข้อมูลไว้ใช้กับ filter
+    window.currentCarData = carData;
+  }
+
+  function filterCarExpense(plate, fromButton = true) {
+    if (!window.currentCarData) return;
+    
+    const carData = window.currentCarData;
+    const breakdownItems = document.querySelectorAll('.car-breakdown-item');
+    const allBtn = document.getElementById('car-filter-all');
+    const filterBtns = document.querySelectorAll('.car-filter-btn');
+
+    // อัปเดตสถานะปุ่ม
+    if (plate === 'all') {
+      if (allBtn) {
+        allBtn.style.background = '#10b981';
+        allBtn.style.color = 'white';
+        allBtn.style.borderColor = '#10b981';
+      }
+      filterBtns.forEach((btn) => {
+        btn.style.background = '#ffffff';
+        btn.style.color = '#475569';
+        btn.style.borderColor = '#e2e8f0';
+      });
+      
+      // แสดงทุกคัน
+      breakdownItems.forEach((item) => {
+        item.style.display = '';
+        item.style.opacity = '1';
+      });
+      
+      // ซ่อน modal ถ้ามี
+      const modal = document.getElementById('carHistoryModal');
+      if (modal) modal.style.display = 'none';
+      
+      // อัปเดตการ์ดกลับเป็นรวมทั้งหมด
+      updateSummaryCards('all');
+    } else {
+      // เลือกคันใดคันหนึ่ง
+      if (allBtn) {
+        allBtn.style.background = '#ffffff';
+        allBtn.style.color = '#475569';
+        allBtn.style.borderColor = '#e2e8f0';
+      }
+      
+      filterBtns.forEach((btn) => {
+        const btnPlate = btn.getAttribute('data-plate');
+        if (btnPlate === plate) {
+          btn.style.background = '#10b981';
+          btn.style.color = 'white';
+          btn.style.borderColor = '#10b981';
+        } else {
+          btn.style.background = '#ffffff';
+          btn.style.color = '#475569';
+          btn.style.borderColor = '#e2e8f0';
+        }
+      });
+      
+      // แสดงเฉพาะคันที่เลือก highlight ส่วนอื่นเป็นเทา
+      breakdownItems.forEach((item) => {
+        const itemPlate = item.getAttribute('data-plate');
+        if (itemPlate === plate) {
+          item.style.opacity = '1';
+          item.style.display = '';
+        } else {
+          item.style.opacity = '0.3';
+          item.style.display = '';
+        }
+      });
+      
+      // ถ้าคลิกจากปุ่มด้านบน → อัปเดตการ์ดอย่างเดียว
+      // ถ้าคลิกจากตาราง → เด้ง modal
+      if (fromButton) {
+        // คลิกจากปุ่ม → อัปเดตการ์ดสรุป
+        updateSummaryCards(plate);
+      } else {
+        // คลิกจากตาราง → แสดง modal ประวัติ
+        updateSummaryCards(plate);
+        showCarHistory(plate);
+      }
+    }
+  }
+
+  function updateSummaryCards(plate) {
+    if (!window.currentCarData) return;
+    
+    const carData = window.currentCarData;
+    let totalFuel = 0;
+    let totalRepair = 0;
+    let carCount = 0;
+    
+    if (plate === 'all') {
+      // แสดงทุกคัน
+      Object.keys(carData).forEach((p) => {
+        totalFuel += carData[p].fuel;
+        totalRepair += carData[p].repair;
+      });
+      carCount = Object.keys(carData).length;
+    } else {
+      // แสดงเฉพาะคันที่เลือก
+      if (carData[plate]) {
+        totalFuel = carData[plate].fuel;
+        totalRepair = carData[plate].repair;
+        carCount = 1;
+      }
+    }
+    
+    const totalAll = totalFuel + totalRepair;
+    const fuelPercent = totalAll > 0 ? ((totalFuel / totalAll) * 100).toFixed(1) : '0.0';
+    const repairPercent = totalAll > 0 ? ((totalRepair / totalAll) * 100).toFixed(1) : '0.0';
+    
+    // อัปเดต DOM
+    const fuelCard = document.querySelector('[data-summary-card="fuel"]');
+    const repairCard = document.querySelector('[data-summary-card="repair"]');
+    const totalCard = document.querySelector('[data-summary-card="total"]');
+    
+    if (fuelCard) {
+      fuelCard.querySelector('[data-amount]').innerHTML = `${totalFuel.toLocaleString()}<span style="font-size: 14px; font-weight: 400;">บาท</span>`;
+      fuelCard.querySelector('[data-percent]').textContent = `${fuelPercent}% ของค่าใช้จ่ายรวม`;
+    }
+    
+    if (repairCard) {
+      repairCard.querySelector('[data-amount]').innerHTML = `${totalRepair.toLocaleString()}<span style="font-size: 14px; font-weight: 400;">บาท</span>`;
+      repairCard.querySelector('[data-percent]').textContent = `${repairPercent}% ของค่าใช้จ่ายรวม`;
+    }
+    
+    if (totalCard) {
+      totalCard.querySelector('[data-amount]').innerHTML = `${totalAll.toLocaleString()}<span style="font-size: 14px; font-weight: 400;">บาท</span>`;
+      totalCard.querySelector('[data-percent]').textContent = `${carCount} คัน`;
+    }
+  }
+
+  function showCarHistory(plate) {
+    if (!window.currentFuelFilteredList || !plate) return;
+    
+    // กรองรายการของรถคันนี้ในช่วงวันที่ที่เลือก
+    const carItems = window.currentFuelFilteredList.filter((item) => {
+      return (item.carPlate || 'ไม่ระบุทะเบียน') === plate;
+    });
+    
+    if (carItems.length === 0) return;
+    
+    // เรียงตามวันที่ล่าสุดก่อน
+    carItems.sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      return dateB.localeCompare(dateA);
+    });
+    
+    // สร้าง modal header
+    let modalHtml = `
+      <div id="carHistoryModal" style="
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        background: rgba(0,0,0,0.5); 
+        z-index: 10000; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        padding: 20px;
+      ">
+        <div style="
+          background: white; 
+          border-radius: 12px; 
+          max-width: 700px; 
+          width: 100%; 
+          max-height: 80vh; 
+          overflow-y: auto;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        ">
+          <div style="
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px 24px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1;
+          ">
+            <div>
+              <div style="font-size: 18px; font-weight: bold;">🚗 ประวัติเบิกจ่าย: ${window.PinThipSafe.safeText(plate)}</div>
+              <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">พบ ${carItems.length} รายการ</div>
+            </div>
+            <button onclick="document.getElementById('carHistoryModal').style.display='none'" style="
+              background: rgba(255,255,255,0.2);
+              border: none;
+              color: white;
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+              cursor: pointer;
+              font-size: 20px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: background 0.2s;
+            " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">×</button>
           </div>
-          <div style="background: #e9ecef; border-radius: 6px; height: 10px; width: 100%; overflow: hidden; display: flex;">
-            <div style="background: #e67e22; width: ${Math.round((fAmt / total) * 100 || 0)}%; height: 100%;" title="ค่าน้ำมัน"></div>
-            <div style="background: #d9534f; width: ${Math.round((rAmt / total) * 100 || 0)}%; height: 100%;" title="ค่าซ่อม"></div>
+          <div style="padding: 20px 24px;">
+    `;
+
+    
+    let totalFuel = 0;
+    let totalRepair = 0;
+    
+    carItems.forEach((item, index) => {
+      const statusBadge = String(item.status || '').includes('อนุมัติแล้ว') 
+        ? '🟢 อนุมัติแล้ว' 
+        : (String(item.status || '').includes('ไม่อนุมัติ') ? '🔴 ไม่อนุมัติ' : '⏳ รอการอนุมัติ');
+      const reqType = item.requestType || 'เบิกค่าน้ำมัน';
+      const isRepair = reqType.includes('ซ่อม');
+      const icon = isRepair ? '🔧' : '⛽';
+      const typeColor = isRepair ? '#d9534f' : '#e67e22';
+      const amt = Number(item.amount || 0);
+      
+      if (String(item.status || '').includes('อนุมัติแล้ว')) {
+        if (isRepair) {
+          totalRepair += amt;
+        } else {
+          totalFuel += amt;
+        }
+      }
+      
+      const safeEmpName = window.PinThipSafe.safeText(item.empName || '-');
+      const safeRoute = window.PinThipSafe.safeText(item.route || '-');
+      const safeDate = window.PinThipSafe.safeText(item.date || '-');
+      const safeRemark = window.PinThipSafe.safeText(item.remark || '');
+      
+      modalHtml += `
+        <div style="
+          background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};
+          border: 1px solid #e9ecef;
+          border-left: 3px solid ${typeColor};
+          border-radius: 6px;
+          padding: 10px 12px;
+          margin-bottom: 8px;
+        ">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 12px; color: #6c757d;">${statusBadge}</div>
+            <div style="font-size: 14px; font-weight: bold; color: ${typeColor};">${amt.toLocaleString()} ฿</div>
+          </div>
+          <div style="font-size: 13px; font-weight: 600; color: #2c3e50; margin-bottom: 4px;">
+            ${icon} ${window.PinThipSafe.safeText(reqType)}
+          </div>
+          <div style="font-size: 12px; color: #495057; line-height: 1.5;">
+            📅 ${safeDate} | 👤 ${safeEmpName} | 📍 ${safeRoute}${safeRemark ? ` | 📝 ${safeRemark}` : ''}
           </div>
         </div>
       `;
     });
-
-    chartContainer.innerHTML = chartHtml;
+    
+    // สรุปยอดรวมของรถคันนี้
+    modalHtml += `
+      <div style="
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px solid #10b981;
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-top: 16px;
+      ">
+        <div style="font-size: 13px; font-weight: bold; color: #2c3e50; margin-bottom: 8px;">📊 สรุปยอดรวม</div>
+        <div style="font-size: 12px; color: #495057; line-height: 1.6;">
+          ⛽ ค่าน้ำมัน: <b style="color: #e67e22;">${totalFuel.toLocaleString()} ฿</b> | 🔧 ค่าซ่อม: <b style="color: #d9534f;">${totalRepair.toLocaleString()} ฿</b> | 💰 รวม: <b style="color: #2c3e50; font-size: 13px;">${(totalFuel + totalRepair).toLocaleString()} ฿</b>
+        </div>
+      </div>
+    `;
+    
+    modalHtml += `
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // ลบ modal เก่าถ้ามี
+    const oldModal = document.getElementById('carHistoryModal');
+    if (oldModal) oldModal.remove();
+    
+    // แทรก modal ใหม่
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
   }
 
   function exportFuelHistoryExcel() {
@@ -1578,6 +2002,14 @@
     const salaryDeg = (sp / 100) * 360;
     const fuelEndDeg = salaryDeg + ((fp / 100) * 360);
 
+    // เลือกสีและ label ตามประเภทค่าใช้จ่าย (ถ้า salary=0 แสดงว่าเป็นหน้าเบิกจ่าย ใช้สีแยก)
+    const isFuelRepairOnly = (safeSalary === 0);
+    const salaryColor = isFuelRepairOnly ? '#6c757d' : '#6366f1';
+    const fuelColorStart = isFuelRepairOnly ? '#e67e22' : '#f59e0b';
+    const fuelColorEnd = isFuelRepairOnly ? '#d68722' : '#f97316';
+    const repairColorStart = isFuelRepairOnly ? '#d9534f' : '#ef4444';
+    const repairColorEnd = isFuelRepairOnly ? '#c9443f' : '#dc2626';
+
     const barItem = (icon, label, amount, percent, startColor, endColor) => `
       <div class="payroll-bar-item">
         <div class="payroll-bar-label">
@@ -1602,34 +2034,43 @@
 
     const donutClass = total > 0 ? 'payroll-donut-circle' : 'payroll-donut-circle payroll-donut-empty';
 
-    return `
-      <div class="payroll-chart-section">
-        <div class="payroll-chart-title">📊 เปรียบเทียบค่าใช้จ่าย</div>
-        <div class="payroll-bar-list">
-          ${barItem('💵', 'ค่าแรงพนักงาน', safeSalary, sp, '#6366f1', '#8b5cf6')}
-          ${barItem('⛽', 'ค่าน้ำมันรถ', safeFuel, fp, '#f59e0b', '#f97316')}
-          ${barItem('🔧', 'ค่าซ่อมรถ', safeRepair, rp, '#ef4444', '#dc2626')}
-        </div>
-      </div>
-      <div class="payroll-chart-section">
-        <div class="payroll-chart-title">🥧 สัดส่วนค่าใช้จ่าย</div>
-        <div class="payroll-donut-wrapper">
-          <div class="payroll-donut-chart">
-            <div class="${donutClass}" style="--pdonut-salary: #6366f1; --pdonut-fuel: #f59e0b; --pdonut-repair: #ef4444; --pdonut-salary-deg: ${salaryDeg}deg; --pdonut-fuel-end-deg: ${fuelEndDeg}deg;">
-              <div class="payroll-donut-center">
-                <div class="payroll-donut-center-label">รวม</div>
-                <div class="payroll-donut-center-value">${total.toLocaleString()}</div>
-              </div>
-            </div>
-          </div>
-          <div class="payroll-donut-legend">
-            ${legendItem('#6366f1', 'ค่าแรง', safeSalary, sp)}
-            ${legendItem('#f59e0b', 'ค่าน้ำมัน', safeFuel, fp)}
-            ${legendItem('#ef4444', 'ค่าซ่อม', safeRepair, rp)}
-          </div>
-        </div>
-      </div>
-    `;
+    let html = '<div class="payroll-chart-section">';
+    html += '<div class="payroll-chart-title">📊 เปรียบเทียบค่าใช้จ่าย</div>';
+    html += '<div class="payroll-bar-list">';
+    
+    if (!isFuelRepairOnly) {
+      html += barItem('💵', 'ค่าแรงพนักงาน', safeSalary, sp, salaryColor, '#8b5cf6');
+    }
+    html += barItem('⛽', 'ค่าน้ำมันรถ', safeFuel, fp, fuelColorStart, fuelColorEnd);
+    html += barItem('🔧', 'ค่าซ่อมรถ', safeRepair, rp, repairColorStart, repairColorEnd);
+    
+    html += '</div>';
+    html += '</div>';
+    
+    html += '<div class="payroll-chart-section">';
+    html += '<div class="payroll-chart-title">🥧 สัดส่วนค่าใช้จ่าย</div>';
+    html += '<div class="payroll-donut-wrapper">';
+    html += '<div class="payroll-donut-chart">';
+    html += `<div class="${donutClass}" style="--pdonut-salary: ${salaryColor}; --pdonut-fuel: ${fuelColorStart}; --pdonut-repair: ${repairColorStart}; --pdonut-salary-deg: ${salaryDeg}deg; --pdonut-fuel-end-deg: ${fuelEndDeg}deg;">`;
+    html += '<div class="payroll-donut-center">';
+    html += '<div class="payroll-donut-center-label">รวม</div>';
+    html += `<div class="payroll-donut-center-value">${total.toLocaleString()}</div>`;
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="payroll-donut-legend">';
+    
+    if (!isFuelRepairOnly) {
+      html += legendItem(salaryColor, 'ค่าแรง', safeSalary, sp);
+    }
+    html += legendItem(fuelColorStart, 'ค่าน้ำมัน', safeFuel, fp);
+    html += legendItem(repairColorStart, 'ค่าซ่อม', safeRepair, rp);
+    
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    return html;
   }
 
 
@@ -2251,7 +2692,44 @@
   window.showAdminFuelRequests = showAdminFuelRequests;
   window.updateFuelStatusWithAmount = updateFuelStatusWithAmount;
   window.showAdminFuelHistory = showAdminFuelHistory;
+
+  // ฟังก์ชันอนุมัติ/ไม่อนุมัติแบบเร็วในหน้าประวัติ
+  function quickApproveFuel(key, approve) {
+    const amountInput = document.getElementById(`quickFuelAmount_${key}`);
+    const amountVal = amountInput?.value.trim() || '';
+
+    if (approve && (!amountVal || Number(amountVal) <= 0)) {
+      PinThipSafe.modal.warning('กรุณากรอกจำนวนเงินอนุมัติให้ถูกต้อง');
+      return;
+    }
+
+    const newStatus = approve ? 'อนุมัติแล้ว 🟢' : 'ไม่อนุมัติ 🔴';
+    const confirmMsg = approve 
+      ? `ยืนยันการอนุมัติเบิกจ่ายจำนวน ${Number(amountVal).toLocaleString()} บาท?`
+      : 'ยืนยันไม่อนุมัติรายการนี้?';
+
+    if (!confirm(confirmMsg)) return;
+
+    window.db.ref('fuel_requests/' + key).update({
+      status: newStatus,
+      amount: Number(amountVal || 0)
+    }, (err) => {
+      if (!err) {
+        PinThipSafe.modal.success(approve ? '✅ อนุมัติเรียบร้อย' : '❌ บันทึกการไม่อนุมัติเรียบร้อย');
+        // Reload หน้าประวัติ
+        setTimeout(() => {
+          renderFuelHistoryList();
+        }, 800);
+      } else {
+        console.error('Quick approve/reject failed:', err);
+        PinThipSafe.modal.error('บันทึกข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง');
+      }
+    });
+  }
+
+  window.quickApproveFuel = quickApproveFuel;
   window.loadCarPlatesManagementList = loadCarPlatesManagementList;
+  window.filterCarExpense = filterCarExpense;
   window.addCarPlate = addCarPlate;
   window.deleteCarPlate = deleteCarPlate;
   window.setFuelDateToday = setFuelDateToday;
