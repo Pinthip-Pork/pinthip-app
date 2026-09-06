@@ -2,39 +2,85 @@
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onValueWritten } = require('firebase-functions/v2/database');
-const { initializeApp } = require('firebase-admin/app');
+const admin = require('firebase-admin');
 const { getAuth } = require('firebase-admin/auth');
 const { getDatabase } = require('firebase-admin/database');
 const { getMessaging } = require('firebase-admin/messaging');
 const crypto = require('crypto');
 
-initializeApp();
+admin.initializeApp();
 
 // ===== PORK PRICE SCRAPER =====
 // Cloud Function to bypass CORS restrictions
 // Scrapes pork price data from swinethailand.com
 
 /**
- * Fetch HTML content from a URL
+ * Fetch HTML content from a URL using https module
  */
 async function fetchHTML(url) {
-  try {
-    const response = await fetch(url, {
+  // Use dynamic import for node-fetch (ESM module)
+  // Node.js 22 has native fetch, but let's use https for better compatibility
+  return new Promise((resolve, reject) => {
+    const https = require('https');
+    const urlLib = require('url');
+    
+    const parsedUrl = urlLib.parse(url);
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || 443,
+      path: parsedUrl.path,
+      method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7'
+        'Accept-Language': 'th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br'
       }
+    };
+    
+    const req = https.request(options, (res) => {
+      let data = '';
+      
+      // Handle gzip/deflate encoding
+      let stream = res;
+      if (res.headers['content-encoding'] === 'gzip') {
+        const zlib = require('zlib');
+        stream = res.pipe(zlib.createGunzip());
+      } else if (res.headers['content-encoding'] === 'deflate') {
+        const zlib = require('zlib');
+        stream = res.pipe(zlib.createInflate());
+      }
+      
+      stream.setEncoding('utf8');
+      
+      stream.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      stream.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(data);
+        } else {
+          reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+        }
+      });
+      
+      stream.on('error', (err) => {
+        reject(new Error(`Stream error: ${err.message}`));
+      });
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+    req.on('error', (err) => {
+      reject(new Error(`Failed to fetch ${url}: ${err.message}`));
+    });
     
-    return await response.text();
-  } catch (error) {
-    throw new Error(`Failed to fetch ${url}: ${error.message}`);
-  }
+    req.setTimeout(15000, () => {
+      req.destroy();
+      reject(new Error(`Request timeout for ${url}`));
+    });
+    
+    req.end();
+  });
 }
 
 /**
@@ -106,15 +152,39 @@ function extractPriceData(html, dateInfo) {
  * Response: [{ date, nationalAverage, prices, pigletPrice, source }, ...]
  */
 exports.scrapePorkPrices = onCall({ region: 'asia-southeast1', cors: true }, async (request) => {
+  // Without this guard the function is an open scraping proxy: anyone holding
+  // the public web API key could burn the project's quota. Match the write rule
+  // on /pork_price_data, which is admin-only.
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'ต้องเข้าสู่ระบบก่อน');
+  }
+  if (request.auth.token?.role !== 'admin') {
+    throw new HttpsError('permission-denied', 'ต้องเป็นผู้ดูแลระบบ (admin)');
+  }
+
   const count = request.data?.count || 4;
-  
+
   if (!Number.isInteger(count) || count < 1 || count > 52) {
-    throw new HttpsError('invalid-argument', 'count must be between 1 and 52');
+    throw new HttpsError('invalid-argument', 'count must be between 1 and 52 (1 year max)');
   }
 
   try {
+    // Step 0: Get existing dates from database to avoid duplicates
+    const db = admin.database();
+    const existingSnapshot = await db.ref('pork_price_data').orderByChild('date').once('value');
+    const existingData = existingSnapshot.val() || {};
+    const existingDates = new Set();
+    
+    Object.values(existingData).forEach(entry => {
+      if (entry && entry.date) {
+        existingDates.add(entry.date);
+      }
+    });
+    
+    console.log(`[scrapePorkPrices] Found ${existingDates.size} existing dates in database`);
+
     // Step 1: Fetch index page to find all price report links
-    const indexUrl = 'https://www.swinethailand.com/16866405/ราคาสุกรขุน-ปี-2561-2569';
+    const indexUrl = 'https://www.swinethailand.com/16866405/%E0%B8%A3%E0%B8%B2%E0%B8%84%E0%B8%B2%E0%B8%AA%E0%B8%B8%E0%B8%81%E0%B8%A3%E0%B8%82%E0%B8%B8%E0%B8%99-%E0%B8%9B%E0%B8%B5-2561-2569';
     const indexHtml = await fetchHTML(indexUrl);
 
     // Step 2: Extract links using regex
@@ -137,6 +207,34 @@ exports.scrapePorkPrices = onCall({ region: 'asia-southeast1', cors: true }, asy
     }
 
     if (links.length === 0) {
+      // Fallback: Try extracting from URL pattern
+      console.log('[scrapePorkPrices] Pattern 1 failed, trying URL-based extraction...');
+      const urlPattern = /href="([^"]*live-pig-price-(\d+)-(\d+)-(\d+)[^"]*)"/gi;
+      let fallbackMatch;
+      while ((fallbackMatch = urlPattern.exec(indexHtml)) !== null) {
+        const url = fallbackMatch[1].startsWith('http')
+          ? fallbackMatch[1]
+          : `https://www.swinethailand.com${fallbackMatch[1]}`;
+        const day = parseInt(fallbackMatch[2], 10);
+        const month = parseInt(fallbackMatch[3], 10);
+        const year = parseInt(fallbackMatch[4], 10);
+        
+        const thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                           'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+        const buddhist = year > 2500 ? year : year + 543;
+        
+        if (!links.some(l => l.url === url)) {
+          links.push({
+            url,
+            day,
+            month: thaiMonths[month] || 'มกราคม',
+            year: buddhist
+          });
+        }
+      }
+    }
+
+    if (links.length === 0) {
       throw new HttpsError('not-found', 'No price data links found');
     }
 
@@ -147,8 +245,27 @@ exports.scrapePorkPrices = onCall({ region: 'asia-southeast1', cors: true }, asy
       return dateB - dateA;
     });
 
-    // Step 4: Scrape the requested number of pages
-    const linksToScrape = links.slice(0, count);
+    // Step 4: Filter out dates that already exist in database
+    const linksToScrape = links
+      .slice(0, count * 2) // Get more than needed in case many are duplicates
+      .filter(link => {
+        const isoDate = thaiDateToISO(link.day, link.month, link.year);
+        return !existingDates.has(isoDate);
+      })
+      .slice(0, count); // Take only the requested count after filtering
+
+    console.log(`[scrapePorkPrices] Found ${links.length} total links, ${linksToScrape.length} new dates to scrape`);
+
+    if (linksToScrape.length === 0) {
+      return {
+        success: true,
+        count: 0,
+        data: [],
+        message: 'ไม่มีข้อมูลใหม่ - มีข้อมูลทั้งหมดอยู่แล้ว'
+      };
+    }
+
+    // Step 5: Scrape the new pages only
     const results = [];
 
     for (const linkInfo of linksToScrape) {
@@ -177,6 +294,10 @@ exports.scrapePorkPrices = onCall({ region: 'asia-southeast1', cors: true }, asy
 
   } catch (error) {
     console.error('[scrapePorkPrices] Error:', error);
+    // Preserve the original code: the client maps 'not-found' /
+    // 'invalid-argument' to specific Thai messages, and rewrapping everything
+    // as 'internal' would collapse them into a generic failure.
+    if (error instanceof HttpsError) throw error;
     throw new HttpsError('internal', error.message);
   }
 });

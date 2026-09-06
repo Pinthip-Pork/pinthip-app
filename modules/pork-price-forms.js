@@ -12,6 +12,19 @@
       : String(v == null ? '' : v);
   }
 
+  // Records who entered a row so entries can be traced later. The rules allow
+  // an optional string 'addedBy'; fall back to 'unknown' rather than omitting it.
+  function currentUid() {
+    try {
+      const user = window.firebase && window.firebase.auth
+        ? window.firebase.auth().currentUser
+        : null;
+      return (user && user.uid) || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
   function showAddPriceForm() {
     document.getElementById('mainContent').innerHTML = `
       <div class="admin-content">
@@ -70,7 +83,8 @@
         price: price,
         quantity: quantity,
         source: source,
-        addedAt: new Date().toISOString()
+        addedAt: new Date().toISOString(),
+        addedBy: currentUid()
       })
         .then(function () {
           alert('บันทึกสำเร็จ');

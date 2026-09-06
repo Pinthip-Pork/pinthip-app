@@ -32,20 +32,32 @@
 
   function normalizeRows(snapshotValue) {
     const obj = snapshotValue || {};
-    return Object.keys(obj).map(function (key) {
+    const rows = Object.keys(obj).map(function (key) {
       const row = obj[key] || {};
       return {
         id: key,
         date: String(row.date || ''),
         price: Number(row.price || 0),
         quantity: Number(row.quantity || 0),
-        source: row.source || '-'
+        source: row.source || '-',
+        addedAt: String(row.addedAt || '')
       };
     }).filter(function (row) {
       return row.date && isFinite(row.price) && row.price > 0;
     }).sort(function (a, b) {
       return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0);
     });
+
+    // Collapse duplicate dates: re-importing the same range pushes new keys
+    // rather than overwriting, and two rows on one day skew both the average
+    // and the regression. Keep the most recently added row for each date.
+    const byDate = Object.create(null);
+    rows.forEach(function (row) {
+      const kept = byDate[row.date];
+      if (!kept || row.addedAt >= kept.addedAt) byDate[row.date] = row;
+    });
+
+    return rows.filter(function (row) { return byDate[row.date] === row; });
   }
 
   function showPorkPriceAnalytics() {
@@ -140,7 +152,7 @@
           <div id="porkChartWrap"><canvas id="porkChart" style="max-height: 400px;"></canvas></div>
         </div>
         <div style="background: #fff; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-          <h3>คาดการณ์ 7 วัน</h3>
+          <h3>${esc(predictionHeading(data))}</h3>
           ${renderTable(p7)}
         </div>
         ${renderActions()}
@@ -149,6 +161,16 @@
     `;
 
     initChart(data, p7);
+  }
+
+  // Predictions are spaced like the history, so the heading must not hardcode
+  // "7 วัน": weekly scraped data yields 7 weekly points, not 7 daily ones.
+  function predictionHeading(data) {
+    const c = core();
+    const step = (c && c.medianStepDays) ? c.medianStepDays(data) : 1;
+    if (step === 1) return 'คาดการณ์ 7 วันข้างหน้า';
+    if (step === 7) return 'คาดการณ์ 7 สัปดาห์ข้างหน้า';
+    return 'คาดการณ์ 7 ช่วงข้างหน้า (ทุก ' + step + ' วัน)';
   }
 
   function renderActions() {

@@ -63,11 +63,12 @@
   <script src="./modules/foam-admin-ui.js?v=opt-realtime-20260819"></script>
 
   <!-- Pork Price Analytics modules -->
-  <script src="./modules/pork-price-scraper.js?v=20260831-cors"></script>
-  <script src="./modules/pork-price-core.js?v=20260831-2"></script>
-  <script src="./modules/pork-price-analytics.js?v=20260831-2"></script>
-  <script src="./modules/pork-price-forms.js?v=20260831-2"></script>
-  <script src="./modules/pork-price-bulk.js?v=20260831-cloudfunction"></script>
+  <!-- pork-price-scraper.js is intentionally not loaded: all scraping happens
+       server-side in the scrapePorkPrices Cloud Function (CORS + duplicate regex). -->
+  <script src="./modules/pork-price-core.js?v=20260901-dayaxis"></script>
+  <script src="./modules/pork-price-analytics.js?v=20260901-dayaxis"></script>
+  <script src="./modules/pork-price-forms.js?v=20260901-dayaxis"></script>
+  <script src="./modules/pork-price-bulk.js?v=20260901-dayaxis"></script>
 
   <!-- Chart.js for graphs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

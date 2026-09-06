@@ -52,6 +52,50 @@ test('predictFuturePrices needs at least two points', async () => {
   assert.equal(core.predictFuturePrices([], 7).length, 0);
 });
 
+// Weekly rows (the shape the scraper produces): the fit is per-day, so
+// predictions must be spaced a week apart too, not one day apart.
+const weeklyRows = (...prices) =>
+  prices.map((price, index) => {
+    const day = 1 + index * 7;
+    return { date: `2024-01-${String(day).padStart(2, '0')}`, price };
+  });
+
+test('predictFuturePrices spaces weekly history a week apart', async () => {
+  const core = await loadPorkCore();
+  // 2024-01-01, -08, -15, -22 at +2 baht per week => +2 per predicted point.
+  const predictions = core.predictFuturePrices(weeklyRows(80, 82, 84, 86), 3);
+
+  assert.deepEqual(host(predictions.map((p) => p.date)), ['2024-01-29', '2024-02-05', '2024-02-12']);
+  assert.deepEqual(host(predictions.map((p) => Math.round(p.price))), [88, 90, 92]);
+});
+
+test('linearRegression slope is per day, not per row', async () => {
+  const core = await loadPorkCore();
+  // +2 baht every 7 days => 2/7 per day.
+  const { slope } = core.linearRegression(weeklyRows(80, 82, 84, 86));
+
+  assert.equal(Math.round(slope * 10000) / 10000, Math.round((2 / 7) * 10000) / 10000);
+});
+
+test('medianStepDays detects daily and weekly cadence', async () => {
+  const core = await loadPorkCore();
+
+  assert.equal(core.medianStepDays(rows(80, 82, 84)), 1);
+  assert.equal(core.medianStepDays(weeklyRows(80, 82, 84)), 7);
+});
+
+test('linearRegression stays finite when every row shares one date', async () => {
+  const core = await loadPorkCore();
+  const sameDay = [
+    { date: '2024-01-01', price: 80 },
+    { date: '2024-01-01', price: 90 }
+  ];
+  const { slope, intercept } = core.linearRegression(sameDay);
+
+  assert.equal(slope, 0);
+  assert.equal(intercept, 85);
+});
+
 test('predictFuturePrices never projects a negative price', async () => {
   const core = await loadPorkCore();
   // A steep downward trend would cross zero if left unclamped.

@@ -9,6 +9,11 @@ firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 var db = firebase.database();
 window.db = db;
 
+// Callables deployed with an explicit region must be called through a client
+// bound to that same region; firebase.functions() defaults to us-central1 and
+// would 404. Auth callables (loginWithPin/adminLogin/...) stay on the default.
+window.firebaseFunctions = firebase.app().functions('asia-southeast1');
+
 // ===== Global State =====
 var currentLang = 'TH';
 var currentUser = null;

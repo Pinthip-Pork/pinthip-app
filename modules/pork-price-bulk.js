@@ -18,6 +18,8 @@
               <option value="4">4 สัปดาห์</option>
               <option value="8" selected>8 สัปดาห์</option>
               <option value="12">12 สัปดาห์</option>
+              <option value="26">26 สัปดาห์ (6 เดือน)</option>
+              <option value="52">52 สัปดาห์ (1 ปี)</option>
             </select>
             <button onclick="startAutoScrape()" id="scrapeBtn"
               style="padding:8px 24px; background:#0ea5e9; color:white; border:none; border-radius:4px; cursor:pointer;">
@@ -46,13 +48,28 @@
             <button onclick="processBulk()" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 4px; cursor: pointer;">นำเข้า</button>
           </div>
           <div id="preview" style="display: none; margin-top: 12px;"></div>
-          <div id="status" style="margin-top: 12px;"></div>
+          <!-- Not "status": index.html already owns a #status element, and
+               getElementById would return that one instead of this. -->
+          <div id="bulkStatus" style="margin-top: 12px;"></div>
         </div>
         <button class="btn-back" onclick="showPorkPriceAnalytics()">⬅️ กลับ</button>
       </div>
     `;
   }
 
+
+  // Records who imported a row so entries can be traced later. The rules allow
+  // an optional string 'addedBy'; fall back to 'unknown' rather than omitting it.
+  function currentUid() {
+    try {
+      const user = window.firebase && window.firebase.auth
+        ? window.firebase.auth().currentUser
+        : null;
+      return (user && user.uid) || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
 
   function parseDate(s) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
@@ -103,17 +120,20 @@
 
   function processBulk() {
     if (!window._bulk || !window._bulk.length) { alert('กรุณาคลิก "ตัวอย่าง" ก่อน'); return; }
-    const st = document.getElementById('status');
+    const st = document.getElementById('bulkStatus');
+    if (!st) return;
     const count = window._bulk.length;
     st.innerHTML = '<div style="color: #0ea5e9; padding: 12px;">⏳ กำลังนำเข้า ' + count + ' รายการ...</div>';
 
+    const addedBy = currentUid();
     Promise.all(window._bulk.map(function (d) {
       return window.db.ref('pork_price_data').push({
         date: d.date,
         price: d.price,
         quantity: d.quantity,
         source: d.source,
-        addedAt: new Date().toISOString()
+        addedAt: new Date().toISOString(),
+        addedBy: addedBy
       });
     }))
       .then(function () {
@@ -153,13 +173,15 @@
       progressBar.style.width = '10%';
       progressBar.style.background = '#0ea5e9';
       
-      // Call Firebase Cloud Function instead of direct scraping
+      // Call Firebase Cloud Function instead of direct scraping.
+      // Use the region-bound client: scrapePorkPrices is deployed to
+      // asia-southeast1, so firebase.functions() (us-central1) would 404.
       const functions = window.firebaseFunctions;
       if (!functions) {
         throw new Error('Firebase Functions not initialized');
       }
-      
-      const scrapePorkPrices = window.firebase.functions().httpsCallable('scrapePorkPrices');
+
+      const scrapePorkPrices = functions.httpsCallable('scrapePorkPrices');
       
       statusDiv.textContent = 'กำลังดึงข้อมูล ' + count + ' สัปดาห์...';
       progressBar.style.width = '30%';
@@ -173,6 +195,14 @@
       const priceData = result.data.data;
       
       if (!priceData || priceData.length === 0) {
+        // Check if message indicates all data already exists
+        if (result.data.message && result.data.message.includes('ไม่มีข้อมูลใหม่')) {
+          statusDiv.textContent = '✅ ' + result.data.message;
+          statusDiv.style.color = '#16a34a';
+          progressBar.style.width = '100%';
+          progressBar.style.background = '#16a34a';
+          return;
+        }
         throw new Error('ไม่พบข้อมูลราคา');
       }
       
@@ -207,6 +237,14 @@
         errorMsg = 'จำนวนสัปดาห์ไม่ถูกต้อง';
       } else if (errorMsg.includes('Functions not initialized')) {
         errorMsg = 'ยังไม่ได้เชื่อมต่อ Firebase - กรุณารอสักครู่แล้วลองใหม่';
+      }
+
+      // The callable now rejects non-admins; report that instead of a raw code.
+      const code = String((error && error.code) || '');
+      if (code.indexOf('permission-denied') !== -1) {
+        errorMsg = 'ต้องเป็นผู้ดูแลระบบ (admin) จึงจะดึงข้อมูลได้';
+      } else if (code.indexOf('unauthenticated') !== -1) {
+        errorMsg = 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่';
       }
       
       statusDiv.textContent = '❌ เกิดข้อผิดพลาด: ' + errorMsg;
