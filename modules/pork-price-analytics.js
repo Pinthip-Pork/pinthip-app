@@ -109,6 +109,12 @@
     const c = core();
     const st = c.calculateStatistics(data);
     const p7 = c.predictFuturePrices(data, 7);
+    
+    // Get next week prediction only
+    const nextWeek = p7.length > 0 ? p7[0] : null;
+    
+    // Calculate probability of price movement
+    const probability = calculatePriceProbability(data, nextWeek);
 
     // Empty state: with zero rows an admin previously saw "0.00" cards and a blank
     // canvas, with no hint about what to do next.
@@ -151,10 +157,7 @@
           <h3>กราฟราคา</h3>
           <div id="porkChartWrap"><canvas id="porkChart" style="max-height: 400px;"></canvas></div>
         </div>
-        <div style="background: #fff; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-          <h3>${esc(predictionHeading(data))}</h3>
-          ${renderTable(p7)}
-        </div>
+        ${renderPredictionCard(data, nextWeek, probability)}
         ${renderActions()}
         <button class="btn-back" onclick="showAdminDashboard()" style="margin-top:15px;">⬅️ กลับหน้าแดชบอร์ด</button>
       </div>
@@ -168,9 +171,179 @@
   function predictionHeading(data) {
     const c = core();
     const step = (c && c.medianStepDays) ? c.medianStepDays(data) : 1;
-    if (step === 1) return 'คาดการณ์ 7 วันข้างหน้า';
-    if (step === 7) return 'คาดการณ์ 7 สัปดาห์ข้างหน้า';
-    return 'คาดการณ์ 7 ช่วงข้างหน้า (ทุก ' + step + ' วัน)';
+    if (step === 1) return 'คาดการณ์สัปดาห์หน้า';
+    if (step === 7) return 'คาดการณ์สัปดาห์หน้า';
+    return 'คาดการณ์ช่วงถัดไป (ทุก ' + step + ' วัน)';
+  }
+
+  // Calculate probability of price movement based on historical data
+  function calculatePriceProbability(data, nextWeek) {
+    if (!data || data.length < 2 || !nextWeek) {
+      return { up: 33.33, down: 33.33, flat: 33.34 };
+    }
+
+    // Analyze recent trends (last 10 data points or all if less)
+    const recentCount = Math.min(10, data.length - 1);
+    const recentData = data.slice(-recentCount - 1);
+    
+    let upCount = 0;
+    let downCount = 0;
+    let flatCount = 0;
+    
+    for (let i = 1; i < recentData.length; i++) {
+      const prev = recentData[i - 1].price;
+      const curr = recentData[i].price;
+      const diff = curr - prev;
+      
+      if (Math.abs(diff) < 0.5) {
+        flatCount++;
+      } else if (diff > 0) {
+        upCount++;
+      } else {
+        downCount++;
+      }
+    }
+    
+    const total = upCount + downCount + flatCount;
+    
+    // Calculate base probability from historical patterns
+    let upProb = (upCount / total) * 100;
+    let downProb = (downCount / total) * 100;
+    let flatProb = (flatCount / total) * 100;
+    
+    // Adjust based on prediction vs current price
+    const lastPrice = data[data.length - 1].price;
+    const predictedPrice = nextWeek.price;
+    const priceDiff = predictedPrice - lastPrice;
+    
+    // Add weight to prediction direction
+    if (priceDiff > 0.5) {
+      upProb = Math.min(upProb + 15, 85);
+      downProb = Math.max(downProb - 10, 5);
+      flatProb = 100 - upProb - downProb;
+    } else if (priceDiff < -0.5) {
+      downProb = Math.min(downProb + 15, 85);
+      upProb = Math.max(upProb - 10, 5);
+      flatProb = 100 - upProb - downProb;
+    } else {
+      flatProb = Math.min(flatProb + 20, 70);
+      const remaining = 100 - flatProb;
+      upProb = remaining / 2;
+      downProb = remaining / 2;
+    }
+    
+    // Ensure total is 100%
+    const sum = upProb + downProb + flatProb;
+    upProb = (upProb / sum) * 100;
+    downProb = (downProb / sum) * 100;
+    flatProb = (flatProb / sum) * 100;
+    
+    return {
+      up: Math.round(upProb * 10) / 10,
+      down: Math.round(downProb * 10) / 10,
+      flat: Math.round(flatProb * 10) / 10
+    };
+  }
+
+  // Render prediction card with probability
+  function renderPredictionCard(data, nextWeek, probability) {
+    if (!nextWeek) {
+      return `<div style="background: #fff; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+        <h3>🔮 คาดการณ์สัปดาห์หน้า</h3>
+        <div style="padding: 20px; text-align: center; color: #64748b;">ต้องมีข้อมูลอย่างน้อย 2 วัน จึงจะคาดการณ์ได้</div>
+      </div>`;
+    }
+
+    const c = core();
+    const lastPrice = data[data.length - 1].price;
+    const predictedPrice = nextWeek.price;
+    const diff = predictedPrice - lastPrice;
+    const diffPercent = ((diff / lastPrice) * 100).toFixed(2);
+    
+    let trendIcon = '';
+    let trendText = '';
+    let trendColor = '';
+    let bgColor = '';
+    
+    if (diff > 0.5) {
+      trendIcon = '📈';
+      trendText = 'ขึ้น';
+      trendColor = '#dc2626';
+      bgColor = '#fee2e2';
+    } else if (diff < -0.5) {
+      trendIcon = '📉';
+      trendText = 'ลง';
+      trendColor = '#16a34a';
+      bgColor = '#dcfce7';
+    } else {
+      trendIcon = '➡️';
+      trendText = 'ยืน';
+      trendColor = '#64748b';
+      bgColor = '#f1f5f9';
+    }
+
+    return `
+      <div style="background: ${bgColor}; padding: 20px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid ${trendColor};">
+        <h3 style="margin-top: 0; color: ${trendColor};">🔮 คาดการณ์สัปดาห์หน้า</h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+          <div style="background: white; padding: 16px; border-radius: 8px;">
+            <div style="font-size: 14px; color: #64748b; margin-bottom: 4px;">วันที่คาดการณ์</div>
+            <div style="font-size: 20px; font-weight: bold; color: #1f2937;">${esc(c.formatThaiDate(nextWeek.date))}</div>
+          </div>
+          
+          <div style="background: white; padding: 16px; border-radius: 8px;">
+            <div style="font-size: 14px; color: #64748b; margin-bottom: 4px;">ราคาคาดการณ์</div>
+            <div style="font-size: 20px; font-weight: bold; color: ${trendColor};">${predictedPrice.toFixed(2)} บาท/กก.</div>
+          </div>
+        </div>
+
+        <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+          <div style="font-size: 14px; color: #64748b; margin-bottom: 8px;">การเปลี่ยนแปลงจากราคาปัจจุบัน</div>
+          <div style="font-size: 28px; font-weight: bold; color: ${trendColor};">
+            ${trendIcon} ${trendText} ${diff > 0 ? '+' : ''}${diff.toFixed(2)} บาท (${diff > 0 ? '+' : ''}${diffPercent}%)
+          </div>
+        </div>
+
+        <div style="background: white; padding: 16px; border-radius: 8px;">
+          <div style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">📊 โอกาสที่จะเกิดขึ้น</div>
+          
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: #64748b;">📈 โอกาสที่ราคาจะขึ้น</span>
+              <span style="font-weight: bold; color: #dc2626;">${probability.up}%</span>
+            </div>
+            <div style="background: #f1f5f9; height: 24px; border-radius: 12px; overflow: hidden;">
+              <div style="background: linear-gradient(90deg, #dc2626, #ef4444); height: 100%; width: ${probability.up}%; transition: width 0.3s;"></div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: #64748b;">📉 โอกาสที่ราคาจะลง</span>
+              <span style="font-weight: bold; color: #16a34a;">${probability.down}%</span>
+            </div>
+            <div style="background: #f1f5f9; height: 24px; border-radius: 12px; overflow: hidden;">
+              <div style="background: linear-gradient(90deg, #16a34a, #22c55e); height: 100%; width: ${probability.down}%; transition: width 0.3s;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: #64748b;">➡️ โอกาสที่ราคาจะยืน</span>
+              <span style="font-weight: bold; color: #64748b;">${probability.flat}%</span>
+            </div>
+            <div style="background: #f1f5f9; height: 24px; border-radius: 12px; overflow: hidden;">
+              <div style="background: linear-gradient(90deg, #64748b, #94a3b8); height: 100%; width: ${probability.flat}%; transition: width 0.3s;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.5); border-radius: 6px; font-size: 13px; color: #64748b;">
+          💡 การคาดการณ์นี้คำนวณจาก Linear Regression และวิเคราะห์แนวโน้มย้อนหลัง 10 ช่วงเวลา
+        </div>
+      </div>
+    `;
   }
 
   function renderActions() {
