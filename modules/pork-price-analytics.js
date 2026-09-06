@@ -187,10 +187,46 @@
       return '<div style="padding: 20px; text-align: center; color: #64748b;">ต้องมีข้อมูลอย่างน้อย 2 วัน จึงจะคาดการณ์ได้</div>';
     }
     const c = core();
-    let h = '<table style="width: 100%; border-collapse: collapse;"><tr style="background: #f1f5f9;"><th style="padding: 12px; text-align:left;">วันที่</th><th style="padding: 12px; text-align:left;">ราคา</th></tr>';
-    pred.forEach(function (p) {
-      h += `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 12px;">${esc(c.formatThaiDate(p.date))}</td><td style="padding: 12px; font-weight: bold; color: #0ea5e9;">${p.price.toFixed(2)} บาท/กก.</td></tr>`;
+    let h = '<table style="width: 100%; border-collapse: collapse;"><tr style="background: #f1f5f9;"><th style="padding: 12px; text-align:left;">วันที่</th><th style="padding: 12px; text-align:left;">ราคาคาดการณ์</th><th style="padding: 12px; text-align:left;">แนวโน้ม</th></tr>';
+    
+    // Calculate trend for each prediction
+    pred.forEach(function (p, index) {
+      let trendIcon = '';
+      let trendText = '';
+      let trendColor = '#64748b';
+      
+      if (index > 0) {
+        const prevPrice = pred[index - 1].price;
+        const currentPrice = p.price;
+        const diff = currentPrice - prevPrice;
+        const diffPercent = ((diff / prevPrice) * 100).toFixed(2);
+        
+        if (diff > 0) {
+          trendIcon = '📈';
+          trendText = `+${diff.toFixed(2)} บาท (+${diffPercent}%)`;
+          trendColor = '#dc2626';
+        } else if (diff < 0) {
+          trendIcon = '📉';
+          trendText = `${diff.toFixed(2)} บาท (${diffPercent}%)`;
+          trendColor = '#16a34a';
+        } else {
+          trendIcon = '➡️';
+          trendText = 'ยืน (0%)';
+          trendColor = '#64748b';
+        }
+      } else {
+        trendIcon = '🔮';
+        trendText = 'จุดเริ่มต้น';
+        trendColor = '#0ea5e9';
+      }
+      
+      h += `<tr style="border-bottom: 1px solid #e2e8f0;">
+        <td style="padding: 12px;">${esc(c.formatThaiDate(p.date))}</td>
+        <td style="padding: 12px; font-weight: bold; color: #0ea5e9;">${p.price.toFixed(2)} บาท/กก.</td>
+        <td style="padding: 12px; color: ${trendColor}; font-weight: 600;">${trendIcon} ${trendText}</td>
+      </tr>`;
     });
+    
     return h + '</table>';
   }
 
