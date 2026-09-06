@@ -6,6 +6,31 @@
       <div class="admin-content">
         <h2>📦 นำเข้าข้อมูลจำนวนมาก</h2>
 
+        <!-- CSV File Upload Section -->
+        <div style="background:#f0fdf4; border-left:4px solid #16a34a; padding:16px; border-radius:4px; margin:16px 0;">
+          <h3 style="margin-top:0;">📂 อัปโหลดไฟล์ CSV</h3>
+          <p style="color:#475569;">นำเข้าข้อมูลราคาหมูจากไฟล์ CSV ที่ดาวน์โหลดจาก swinethailand.com</p>
+          <p style="color:#16a34a; font-size:13px; margin:8px 0;">✅ รองรับไฟล์ที่มีหลายภาคในคอลัมน์แยก พร้อมคำนวณค่าเฉลี่ยอัตโนมัติ</p>
+          
+          <div style="margin-top:12px;">
+            <input type="file" id="csvFileInput" accept=".csv" 
+              style="padding:8px; border:1px solid #cbd5e1; border-radius:4px; margin-bottom:8px;">
+            <button onclick="uploadCSVFile()" id="uploadBtn"
+              style="padding:8px 24px; background:#16a34a; color:white; border:none; border-radius:4px; cursor:pointer; margin-left:8px;">
+              📤 อัปโหลดและประมวลผล
+            </button>
+          </div>
+          
+          <div id="csvProgress" style="display:none; margin-top:12px;">
+            <div style="background:#f8fafc; padding:12px; border-radius:4px;">
+              <div id="csvStatus" style="color:#64748b; margin-bottom:8px;"></div>
+              <div style="background:#e2e8f0; height:8px; border-radius:4px; overflow:hidden;">
+                <div id="csvProgressBar" style="background:#16a34a; height:100%; width:0%; transition:width 0.3s;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Auto Scrape Section -->
         <div style="background:#eff6ff; border-left:4px solid #0ea5e9; padding:16px; border-radius:4px; margin:16px 0;">
           <h3 style="margin-top:0;">🤖 ดึงข้อมูลอัตโนมัติ</h3>
@@ -256,8 +281,198 @@
     }
   }
 
+  // CSV File Upload Handler
+  async function uploadCSVFile() {
+    const fileInput = document.getElementById('csvFileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const progressDiv = document.getElementById('csvProgress');
+    const statusDiv = document.getElementById('csvStatus');
+    const progressBar = document.getElementById('csvProgressBar');
+    
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+      alert('กรุณาเลือกไฟล์ CSV ก่อน');
+      return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    if (!file.name.endsWith('.csv')) {
+      alert('กรุณาเลือกไฟล์ CSV เท่านั้น');
+      return;
+    }
+    
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = '⏳ กำลังประมวลผล...';
+    progressDiv.style.display = 'block';
+    
+    try {
+      statusDiv.textContent = 'กำลังอ่านไฟล์...';
+      statusDiv.style.color = '#64748b';
+      progressBar.style.width = '10%';
+      progressBar.style.background = '#16a34a';
+      
+      const text = await file.text();
+      const lines = text.split('\n');
+      
+      statusDiv.textContent = 'กำลังแปลงข้อมูล...';
+      progressBar.style.width = '30%';
+      
+      const data = parseCSVData(lines);
+      
+      if (!data || data.length === 0) {
+        throw new Error('ไม่พบข้อมูลในไฟล์ CSV');
+      }
+      
+      statusDiv.textContent = `พบข้อมูล ${data.length} รายการ - กำลังนำเข้า...`;
+      progressBar.style.width = '50%';
+      
+      // Import to Firebase
+      const addedBy = currentUid();
+      let imported = 0;
+      
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        await window.db.ref('pork_price_data').push({
+          date: item.date,
+          price: item.price,
+          quantity: item.quantity || 0,
+          source: item.source || 'CSV Import',
+          addedAt: new Date().toISOString(),
+          addedBy: addedBy
+        });
+        
+        imported++;
+        const percent = 50 + Math.floor((imported / data.length) * 50);
+        progressBar.style.width = percent + '%';
+        statusDiv.textContent = `กำลังนำเข้า... ${imported}/${data.length}`;
+        
+        // Add small delay to avoid overwhelming Firebase
+        if (i % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      progressBar.style.width = '100%';
+      statusDiv.textContent = `✅ นำเข้าสำเร็จ ${imported} รายการ`;
+      statusDiv.style.color = '#16a34a';
+      
+      setTimeout(() => {
+        showPorkPriceAnalytics();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('[CSV Upload] Failed:', error);
+      statusDiv.textContent = '❌ เกิดข้อผิดพลาด: ' + error.message;
+      statusDiv.style.color = '#dc2626';
+      progressBar.style.background = '#dc2626';
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = '📤 อัปโหลดและประมวลผล';
+    }
+  }
+
   // Remove old scrapeLatestFromWeb function - no longer needed
+  // Parse CSV data with multi-region support
+  function parseCSVData(lines) {
+    const results = [];
+    let headers = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Parse CSV line (handle quoted values)
+      const values = parseCSVLine(line);
+      
+      if (i === 0) {
+        headers = values.map(v => v.toLowerCase());
+        continue;
+      }
+      
+      // Find column indices
+      const yearIdx = headers.indexOf('yearbe');
+      const monthIdx = headers.indexOf('month');
+      const dayIdx = headers.indexOf('day');
+      
+      if (yearIdx === -1 || monthIdx === -1 || dayIdx === -1) continue;
+      
+      const yearBE = parseInt(values[yearIdx]);
+      const month = parseInt(values[monthIdx]);
+      const day = parseInt(values[dayIdx]);
+      
+      if (!yearBE || !month || !day) continue;
+      
+      // Convert Buddhist year to Christian year
+      const year = yearBE - 543;
+      const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      
+      // Calculate average price from regions
+      const regions = ['ภาคตะวันตก', 'ภาคตะวันออก', 'ภาคอีสาน', 'ภาคเหนือ', 'ภาคใต้', 'ภาคกลาง'];
+      const prices = [];
+      
+      regions.forEach(region => {
+        const idx = headers.indexOf(region);
+        if (idx !== -1 && values[idx]) {
+          const priceStr = values[idx].trim();
+          if (priceStr && priceStr !== '' && !priceStr.includes('ราคายืน') && !priceStr.includes('รอยืนยัน')) {
+            // Handle range like "76-78" or single value
+            const rangeParts = priceStr.split('-');
+            if (rangeParts.length === 2) {
+              const p1 = parseFloat(rangeParts[0]);
+              const p2 = parseFloat(rangeParts[1]);
+              if (isFinite(p1) && isFinite(p2)) {
+                prices.push((p1 + p2) / 2);
+              }
+            } else {
+              const p = parseFloat(priceStr);
+              if (isFinite(p) && p > 0) {
+                prices.push(p);
+              }
+            }
+          }
+        }
+      });
+      
+      if (prices.length > 0) {
+        const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+        results.push({
+          date: date,
+          price: Math.round(avgPrice * 100) / 100,
+          quantity: 0,
+          source: 'swinethailand.com (CSV)'
+        });
+      }
+    }
+    
+    return results;
+  }
+  
+  // Parse a single CSV line (handles quoted values)
+  function parseCSVLine(line) {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    values.push(current.trim());
+    return values;
+  }
+
   // All scraping is now done server-side via Cloud Function
+
+  window.uploadCSVFile = uploadCSVFile;
 
   window.startAutoScrape = startAutoScrape;
   window.showBulkImportForm = showBulkImportForm;
