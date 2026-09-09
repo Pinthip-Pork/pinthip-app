@@ -60,7 +60,10 @@
       ".write": "auth != null",
       "$deviceId": {
         ".read": "auth != null && (auth.token.role === 'admin' || data.child('empId').val() === auth.token.empId || data.child('uid').val() === auth.uid)",
-        ".write": "auth != null && (auth.token.role === 'admin' || !data.exists() || data.child('empId').val() === auth.token.empId)"
+        ".write": "auth != null && (auth.token.role === 'admin' || !data.exists() || data.child('empId').val() === auth.token.empId)",
+        "status": {
+          ".read": true
+        }
       }
     },
     "customers": {

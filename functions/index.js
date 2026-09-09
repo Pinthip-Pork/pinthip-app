@@ -356,10 +356,10 @@ function isPlainPin(value) {
 
 // ===== Rate Limiting =====
 const RATE_LIMIT = {
-  maxAttempts: 5,
-  lockMs: 5 * 60 * 1000,        // 5 minutes
-  maxAttemptsHard: 10,
-  lockMsHard: 30 * 60 * 1000,   // 30 minutes
+  maxAttempts: 8,
+  lockMs: 2 * 60 * 1000,         // 2 minutes
+  maxAttemptsHard: 15,
+  lockMsHard: 15 * 60 * 1000,    // 15 minutes
   cleanupAfterMs: 60 * 60 * 1000 // clean old entries after 1 hour
 };
 

@@ -24,6 +24,7 @@ async function handleLogin() {
     return;
   }
 
+  if (typeof stopWaitingForDeviceApproval === 'function') stopWaitingForDeviceApproval();
   setStatusText('status', t.checking);
 
   // Admin login attempt via Cloud Function + Firebase Auth
@@ -193,8 +194,45 @@ async function handleCustomAuthLogin(inputId, inputPin) {
   } catch (error) {
     console.warn('Custom auth login failed:', error);
     var message = error?.details || error?.message || '';
-    setStatusText('status', message.indexOf('waiting for admin') !== -1
-      ? '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E2D Admin \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34'
-      : (message.indexOf('blocked') !== -1 ? '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E16\u0E39\u0E01\u0E23\u0E30\u0E07\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19' : '\u0E23\u0E2B\u0E31\u0E2A\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2B\u0E23\u0E37\u0E2D PIN \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07'));
+    if (message.indexOf('waiting for admin') !== -1) {
+      setStatusText('status', '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E01\u0E33\u0E25\u0E31\u0E07\u0E23\u0E2D Admin \u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34 (\u0E08\u0E30\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E39\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E43\u0E2B\u0E49\u0E2D\u0E31\u0E15\u0E42\u0E19\u0E21\u0E31\u0E15\u0E34\u0E40\u0E21\u0E37\u0E48\u0E2D\u0E2D\u0E19\u0E38\u0E21\u0E31\u0E15\u0E34\u0E41\u0E25\u0E49\u0E27)');
+      waitForDeviceApprovalThenLogin(inputId, inputPin);
+    } else {
+      setStatusText('status', message.indexOf('blocked') !== -1 ? '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E16\u0E39\u0E01\u0E23\u0E30\u0E07\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19' : '\u0E23\u0E2B\u0E31\u0E2A\u0E1E\u0E19\u0E31\u0E01\u0E07\u0E32\u0E19\u0E2B\u0E23\u0E37\u0E2D PIN \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07');
+    }
   }
+}
+
+// ===== Auto-login once a pending device gets approved by an admin =====
+// Avoids the user being stuck on "waiting for admin approval" forever —
+// listens for device_access/{deviceId}/status to flip to 'active' and
+// automatically retries the login instead of requiring a manual re-click.
+var pendingApprovalListenerRef = null;
+
+function stopWaitingForDeviceApproval() {
+  if (pendingApprovalListenerRef) {
+    pendingApprovalListenerRef.off('value');
+    pendingApprovalListenerRef = null;
+  }
+}
+
+function waitForDeviceApprovalThenLogin(inputId, inputPin) {
+  stopWaitingForDeviceApproval();
+  var deviceId = window.PinThipSafe.utils.getDeviceId();
+  pendingApprovalListenerRef = db.ref('device_access/' + deviceId + '/status');
+  pendingApprovalListenerRef.on('value', function (snapshot) {
+    var status = snapshot.val();
+    if (status === 'active' || status === 'approved') {
+      stopWaitingForDeviceApproval();
+      setStatusText('status', t_currentLangSafe().checking || '\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E39\u0E48\u0E23\u0E30\u0E1A\u0E1A...');
+      handleCustomAuthLogin(inputId, inputPin);
+    } else if (status === 'blocked') {
+      stopWaitingForDeviceApproval();
+      setStatusText('status', '\u0E2D\u0E38\u0E1B\u0E01\u0E23\u0E13\u0E4C\u0E19\u0E35\u0E49\u0E16\u0E39\u0E01\u0E23\u0E30\u0E07\u0E31\u0E1A\u0E01\u0E32\u0E23\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19');
+    }
+  });
+}
+
+function t_currentLangSafe() {
+  return (typeof i18n !== 'undefined' && i18n[currentLang]) ? i18n[currentLang] : {};
 }
