@@ -469,7 +469,7 @@ function getAdminUid(username) {
 }
 
 // ===== Login With PIN (Employee) =====
-exports.loginWithPin = onCall(async (request) => {
+exports.loginWithPin = onCall({ cors: true }, async (request) => {
   const empId = requireText(request.data?.empId, 'empId');
   const pin = requireText(request.data?.pin, 'pin');
   const deviceId = requireText(request.data?.deviceId, 'deviceId');
@@ -591,7 +591,7 @@ exports.loginWithPin = onCall(async (request) => {
 });
 
 // ===== Admin Login =====
-exports.adminLogin = onCall(async (request) => {
+exports.adminLogin = onCall({ cors: true }, async (request) => {
   const auth = getAuth();
   const database = getDatabase();
 
