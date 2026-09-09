@@ -587,7 +587,7 @@ exports.loginWithPin = onCall({ cors: true }, async (request) => {
     deviceId
   });
 
-  return { token, uid, empId, status, sessionToken };
+  return { token, uid, empId, deviceId, status, sessionToken };
 });
 
 // ===== Admin Login =====
