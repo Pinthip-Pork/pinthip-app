@@ -30,12 +30,12 @@
   }
 
   function statusBadgeClass(status) {
-    if (status === 'pending_review' || status === 'pending_duplicate_approval') return '#e67e22';
-    if (status === 'approved') return '#0d6efd';
-    if (status === 'printed') return '#28a745';
-    if (status === 'completed') return '#198754';
-    if (status === 'cancelled') return '#dc3545';
-    return '#6c757d';
+    if (status === 'pending_review' || status === 'pending_duplicate_approval') return '#f59e0b';
+    if (status === 'approved') return '#3b82f6';
+    if (status === 'printed') return '#10b981';
+    if (status === 'completed') return '#10b981';
+    if (status === 'cancelled') return '#ef4444';
+    return '#6b7280';
   }
 
   function statusLabel(status) {
@@ -81,15 +81,38 @@
 
     var html = '' +
       '<div class="user-banner">📦 แอดมินตรวจสอบข้อมูลป้ายลังโฟม</div>' +
-      '<button class="btn-blue" onclick="showFoamCustomerManager()" style="width:100%; margin:0 0 16px; padding:13px 16px; font-size:17px;">👥 จัดการลูกค้าลังโฟม</button>' +
+      
+      // Toolbar
+      '<div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">' +
+        '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; flex:1;">' +
+          '<label style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:600; color:#495057;">📅 <input type="date" id="foamDatePicker" style="padding:8px 10px; border:1px solid #ced4da; border-radius:6px; font-size:14px;"></label>' +
+          '<input type="text" id="foamSearchBox" placeholder="🔍 ค้นหาชื่อ/พนักงาน/ขนส่ง..." style="flex:1; min-width:200px; padding:8px 12px; border:1px solid #ced4da; border-radius:6px; font-size:14px;">' +
+        '</div>' +
+        '<button class="btn-blue" onclick="showFoamCustomerManager()" style="margin:0; padding:8px 14px; font-size:13px; white-space:nowrap;">👥 ลูกค้า</button>' +
+      '</div>' +
+      
+      // Summary Cards
+      '<div id="foamSummaryCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:16px;"></div>' +
+      
+      // Filter Tabs
+      '<div id="foamFilterTabs" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; padding-bottom:8px;"></div>' +
+      
+      // Bulk Actions Bar - Sticky Header Style
+      '<div id="foamBulkActions" style="display:none; background:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:12px 16px; margin-bottom:12px; align-items:center; gap:12px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
+        '<input type="checkbox" id="foamSelectAllCheckbox" onclick="foamBulkSelectAll()" style="width:20px; height:20px; cursor:pointer; accent-color:#10b981;">' +
+        '<span id="foamBulkCount" style="font-size:14px; font-weight:600; color:#1f2937; flex:1;">เลือก 0 รายการ</span>' +
+        '<button onclick="foamBulkPrint()" style="padding:8px 16px; background:#10b981; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background=\'#059669\'" onmouseout="this.style.background=\'#10b981\'">🖨️ พิมพ์</button>' +
+        '<button onclick="foamBulkClearSelection()" style="padding:8px 16px; background:#6b7280; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background=\'#4b5563\'" onmouseout="this.style.background=\'#6b7280\'">✖️ ยกเลิก</button>' +
+      '</div>' +
+      
+      // Main Layout
       '<div id="foamAdminLayout" style="display:grid; grid-template-columns: 1.1fr 1fr; gap:16px; align-items:start;">' +
         '<div style="min-width:0;">' +
-          '<b style="display:block; font-size:17px; margin-bottom:8px;">📋 รายการส่งลังโฟม</b>' +
           '<div id="foamAdminQueue" style="min-width:0;">' +
             '<div style="color:#666; text-align:center; padding:18px;">กำลังโหลดรายการแจ้งเตือน...</div>' +
           '</div>' +
         '</div>' +
-        '<div id="foamAdminDetail" style="min-width:0;">' +
+        '<div id="foamAdminDetail" style="min-width:0; position:sticky; top:20px; max-height:calc(100vh - 40px); overflow-y:auto;">' +
           '<div style="color:#666; text-align:center; padding:18px;">เลือกรายการจากซ้ายเพื่อดูรายละเอียด</div>' +
         '</div>' +
       '</div>' +
@@ -97,6 +120,33 @@
 
     var mainContent = document.getElementById('mainContent');
     if (mainContent) mainContent.innerHTML = html;
+
+    // Initialize state
+    window.__FOAM_FILTER_STATUS__ = 'all';
+    window.__FOAM_SEARCH_TERM__ = '';
+    window.__FOAM_SELECTED_DATE__ = getTodayStr();
+    window.__FOAM_BULK_SELECTED__ = [];
+
+    // Set up event listeners
+    var datePicker = document.getElementById('foamDatePicker');
+    if (datePicker) {
+      datePicker.value = getTodayStr();
+      datePicker.addEventListener('change', function() {
+        window.__FOAM_SELECTED_DATE__ = this.value || getTodayStr();
+        loadFoamAdminQueue();
+      });
+    }
+
+    var searchBox = document.getElementById('foamSearchBox');
+    if (searchBox) {
+      searchBox.addEventListener('input', function() {
+        clearTimeout(window.__FOAM_SEARCH_TIMER__);
+        window.__FOAM_SEARCH_TIMER__ = setTimeout(function() {
+          window.__FOAM_SEARCH_TERM__ = searchBox.value.toLowerCase().trim();
+          renderFoamFilteredQueue();
+        }, 300);
+      });
+    }
 
     loadFoamAdminQueue();
   }
@@ -109,58 +159,346 @@
       return;
     }
 
-    repo.fetchRequestsByDate(getTodayStr()).then(function (requests) {
-      var queue = document.getElementById('foamAdminQueue');
-      if (!queue) return;
+    var selectedDate = window.__FOAM_SELECTED_DATE__ || getTodayStr();
 
-      requests.sort(function (a, b) {
-        return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
-      });
-
-      if (!requests.length) {
-        queue.innerHTML = '<div style="color:#888; text-align:center; padding:18px;">ยังไม่มีรายการส่งลังโฟมวันนี้</div>';
-        return;
-      }
-
-      var html = '';
-      requests.forEach(function (request) {
-        var snapshot = request.customerSnapshot || {};
-        var name = snapshot.name || 'ลูกค้าใหม่';
-        var status = statusLabel(request.status);
-        var badgeColor = statusBadgeClass(request.status);
-        var isSelected = request.key === (window.__FOAM_SELECTED_KEY__ || '');
-
-        html += '<div class="history-item" style="cursor:pointer; border-left:4px solid ' + badgeColor + '; ' + (isSelected ? 'background:#eef7ff;' : '') + '" data-request-key="' + escape(request.key || '') + '" data-date="' + escape(getTodayStr()) + '" onclick="foamAdminSelectRequest(this.dataset.requestKey, this.dataset.date)">';
-        html += '<div style="display:flex; justify-content:space-between; gap:8px; align-items:center; margin-bottom:6px;">';
-        html += '<b>' + escape(name) + '</b>';
-        html += '<span style="font-size:11px; color:' + badgeColor + '; font-weight:bold;">' + escape(status) + '</span>';
-        html += '</div>';
-        html += '📦 ' + (request.boxCount || 1) + ' ลัง';
-        if (snapshot.shipping) html += ' | 🚚 ' + escape(snapshot.shipping);
-        if (request.isDuplicate) html += ' | <span style="color:#e67e22; font-weight:bold;">ซ้ำ</span>';
-        html += '<br><span style="font-size:12px; color:#666;">👤 ' + escape(request.employeeName || '-') + '</span>';
-        html += '</div>';
-      });
-
-      queue.innerHTML = html;
-
-      if (!window.__FOAM_SELECTED_KEY__) {
-        var firstRequest = requests[0];
-        if (firstRequest) {
-          window.__FOAM_SELECTED_KEY__ = firstRequest.key;
-          foamAdminSelectRequest(firstRequest.key, getTodayStr());
-        }
-      } else {
-        var selectedExists = requests.some(function (item) { return item.key === window.__FOAM_SELECTED_KEY__; });
-        if (!selectedExists) {
-          window.__FOAM_SELECTED_KEY__ = requests[0].key;
-        }
-        foamAdminSelectRequest(window.__FOAM_SELECTED_KEY__, getTodayStr());
-      }
+    repo.fetchRequestsByDate(selectedDate).then(function (requests) {
+      window.__FOAM_ALL_REQUESTS__ = requests || [];
+      renderFoamSummaryCards();
+      renderFoamFilterTabs();
+      renderFoamFilteredQueue();
     }).catch(function (err) {
       console.warn('loadFoamAdminQueue failed:', err);
       var queue = document.getElementById('foamAdminQueue');
       if (queue) queue.innerHTML = '<div style="color:#d9534f; padding:18px;">โหลดรายการไม่สำเร็จ กรุณารีเฟรช</div>';
+    });
+  }
+
+  function renderFoamSummaryCards() {
+    var container = document.getElementById('foamSummaryCards');
+    if (!container) return;
+
+    var requests = window.__FOAM_ALL_REQUESTS__ || [];
+    
+    var totalCount = requests.length;
+    var totalBoxes = requests.reduce(function(sum, r) { return sum + (Number(r.boxCount) || 1); }, 0);
+    var pendingCount = requests.filter(function(r) { 
+      return r.status === 'pending_review' || r.status === 'pending_duplicate_approval'; 
+    }).length;
+    var printedCount = requests.filter(function(r) { return r.status === 'printed'; }).length;
+    var duplicateCount = requests.filter(function(r) { return r.isDuplicate; }).length;
+
+    var cards = [
+      { icon: '📋', label: 'ทั้งหมด', value: totalCount + ' รายการ', color: '#6c757d' },
+      { icon: '📦', label: 'ลังทั้งหมด', value: totalBoxes + ' ลัง', color: '#0d6efd' },
+      { icon: '⏳', label: 'รอตรวจสอบ', value: pendingCount, color: '#e67e22' },
+      { icon: '✅', label: 'พิมพ์แล้ว', value: printedCount, color: '#28a745' },
+      { icon: '⚠️', label: 'ซ้ำ', value: duplicateCount, color: '#dc3545' }
+    ];
+
+    var html = '';
+    cards.forEach(function(card) {
+      html += '<div style="background:linear-gradient(135deg, ' + card.color + '15, #ffffff); border:1px solid ' + card.color + '40; border-left:4px solid ' + card.color + '; border-radius:8px; padding:10px 12px; text-align:center;">';
+      html += '<div style="font-size:20px; margin-bottom:2px;">' + card.icon + '</div>';
+      html += '<div style="font-size:11px; color:#6c757d; margin-bottom:4px;">' + card.label + '</div>';
+      html += '<div style="font-size:18px; font-weight:700; color:' + card.color + ';">' + card.value + '</div>';
+      html += '</div>';
+    });
+
+    container.innerHTML = html;
+  }
+
+  function renderFoamFilterTabs() {
+    var container = document.getElementById('foamFilterTabs');
+    if (!container) return;
+
+    var requests = window.__FOAM_ALL_REQUESTS__ || [];
+    
+    var counts = {
+      all: requests.length,
+      pending_review: requests.filter(function(r) { return r.status === 'pending_review' || r.status === 'pending_duplicate_approval'; }).length,
+      approved: requests.filter(function(r) { return r.status === 'approved'; }).length,
+      printed: requests.filter(function(r) { return r.status === 'printed'; }).length,
+      completed: requests.filter(function(r) { return r.status === 'completed'; }).length,
+      cancelled: requests.filter(function(r) { return r.status === 'cancelled'; }).length
+    };
+
+    var tabs = [
+      { key: 'all', label: 'ทั้งหมด', icon: '📋', color: '#6b7280' },
+      { key: 'pending_review', label: 'รอพิมพ์', icon: '⏳', color: '#f59e0b' },
+      { key: 'printed', label: 'พิมพ์แล้ว', icon: '🖨️', color: '#10b981' },
+      { key: 'cancelled', label: 'ยกเลิก', icon: '❌', color: '#ef4444' }
+    ];
+
+    var currentFilter = window.__FOAM_FILTER_STATUS__ || 'all';
+    var html = '';
+    
+    tabs.forEach(function(tab) {
+      var isActive = currentFilter === tab.key;
+      var count = counts[tab.key] || 0;
+      
+      html += '<button onclick="foamSetFilterStatus(\'' + tab.key + '\')" style="';
+      html += 'padding:10px 16px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; ';
+      html += 'width:auto; ';
+      html += 'background:' + (isActive ? tab.color : '#f9fafb') + '; ';
+      html += 'color:' + (isActive ? 'white' : '#6b7280') + '; ';
+      html += 'box-shadow:' + (isActive ? '0 2px 6px rgba(0,0,0,0.15)' : '0 1px 2px rgba(0,0,0,0.05)') + '; ';
+      html += 'white-space:nowrap;';
+      html += '"';
+      if (!isActive) {
+        html += ' onmouseover="this.style.background=\'#f3f4f6\'" onmouseout="this.style.background=\'#f9fafb\'"';
+      }
+      html += '>' + tab.icon + ' ' + tab.label;
+      if (count > 0) html += ' <span style="background:' + (isActive ? 'rgba(255,255,255,0.25)' : '#e5e7eb') + '; padding:2px 8px; border-radius:999px; font-size:12px; margin-left:6px;">' + count + '</span>';
+      html += '</button>';
+    });
+
+    container.innerHTML = html;
+  }
+
+  function foamSetFilterStatus(status) {
+    window.__FOAM_FILTER_STATUS__ = status;
+    renderFoamFilterTabs();
+    renderFoamFilteredQueue();
+  }
+
+  function renderFoamFilteredQueue() {
+    var queue = document.getElementById('foamAdminQueue');
+    if (!queue) return;
+
+    var requests = window.__FOAM_ALL_REQUESTS__ || [];
+    var filterStatus = window.__FOAM_FILTER_STATUS__ || 'all';
+    var searchTerm = window.__FOAM_SEARCH_TERM__ || '';
+
+    // Filter by status
+    var filtered = requests;
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(function(r) {
+        if (filterStatus === 'pending_review') {
+          return r.status === 'pending_review' || r.status === 'pending_duplicate_approval';
+        }
+        return r.status === filterStatus;
+      });
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(function(r) {
+        var snapshot = r.customerSnapshot || {};
+        var name = (snapshot.name || '').toLowerCase();
+        var shipping = (snapshot.shipping || '').toLowerCase();
+        var empName = (r.employeeName || '').toLowerCase();
+        return name.indexOf(searchTerm) >= 0 || shipping.indexOf(searchTerm) >= 0 || empName.indexOf(searchTerm) >= 0;
+      });
+    }
+
+    // Sort by createdAt desc
+    filtered.sort(function (a, b) {
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+
+    if (!filtered.length) {
+      queue.innerHTML = '<div style="color:#888; text-align:center; padding:18px;">ไม่พบรายการที่ตรงกับเงื่อนไข</div>';
+      return;
+    }
+
+    var html = '';
+    filtered.forEach(function (request) {
+      var snapshot = request.customerSnapshot || {};
+      var name = snapshot.name || 'ลูกค้าใหม่';
+      var status = statusLabel(request.status);
+      var badgeColor = statusBadgeClass(request.status);
+      var isSelected = request.key === (window.__FOAM_SELECTED_KEY__ || '');
+      var isBulkSelected = (window.__FOAM_BULK_SELECTED__ || []).indexOf(request.key) >= 0;
+
+      // Calculate time
+      var timeStr = '';
+      if (request.createdAt) {
+        var date = new Date(request.createdAt);
+        timeStr = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+      }
+
+      // Check duplicate frequency
+      var duplicateNote = '';
+      if (request.isDuplicate && request.duplicateCount > 1) {
+        duplicateNote = ' (ส่งครั้งที่ ' + request.duplicateCount + ' ในสัปดาห์นี้)';
+      }
+
+      html += '<div class="foam-card" style="position:relative; cursor:pointer; border:2px solid ' + (isSelected ? '#10b981' : '#e5e7eb') + '; padding:20px; background:' + (isSelected ? '#f0fdf4' : 'white') + '; border-radius:12px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); transition:all 0.2s;" data-request-key="' + escape(request.key || '') + '" data-date="' + escape(window.__FOAM_SELECTED_DATE__ || getTodayStr()) + '" onclick="foamAdminSelectRequest(this.dataset.requestKey, this.dataset.date)" onmouseover="if(!' + isSelected + ') this.style.boxShadow=\'0 4px 12px rgba(0,0,0,0.1)\'" onmouseout="if(!' + isSelected + ') this.style.boxShadow=\'0 1px 3px rgba(0,0,0,0.06)\'">';
+      
+      // Checkbox (top-left absolute)
+      html += '<input type="checkbox" ' + (isBulkSelected ? 'checked' : '') + ' onclick="event.stopPropagation(); foamToggleBulkSelect(\'' + escape(request.key || '') + '\')" style="position:absolute; top:20px; left:20px; width:22px; height:22px; cursor:pointer; accent-color:#10b981;">';
+      
+      // Main content with left padding for checkbox
+      html += '<div style="padding-left:36px;">';
+      
+      // Top row: name, time, status badge
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">';
+      html += '<h3 style="font-size:18px; font-weight:700; color:#111827; margin:0;">' + escape(name) + '</h3>';
+      html += '<div style="display:flex; align-items:center; gap:10px;">';
+      html += '<span style="font-size:13px; color:#6b7280; font-weight:500;">' + timeStr + '</span>';
+      html += '<span style="font-size:13px; color:white; font-weight:600; background:' + badgeColor + '; padding:6px 12px; border-radius:999px; white-space:nowrap;">' + escape(status) + '</span>';
+      html += '</div>';
+      html += '</div>';
+      
+      // Middle row: box count, shipping, duplicate warning
+      html += '<div style="display:flex; align-items:center; gap:18px; font-size:14px; color:#4b5563; margin-bottom:10px; flex-wrap:wrap;">';
+      html += '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:18px;">📦</span><span style="font-weight:600; color:#1f2937;">' + (request.boxCount || 1) + ' ลัง</span></div>';
+      if (snapshot.shipping) {
+        html += '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:18px;">🚚</span><span style="color:#6b7280;">' + escape(snapshot.shipping) + '</span></div>';
+      }
+      if (request.isDuplicate) {
+        html += '<div style="display:flex; align-items:center; gap:8px; color:#dc2626; font-weight:600; background:#fef2f2; padding:4px 10px; border-radius:6px;"><span style="font-size:16px;">⚠️</span><span>ซ้ำ' + duplicateNote + '</span></div>';
+      }
+      html += '</div>';
+      
+      // Bottom row: employee name
+      html += '<div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#9ca3af;">';
+      html += '<span style="font-size:16px;">👤</span><span>' + escape(request.employeeName || '-') + '</span>';
+      html += '</div>';
+      
+      html += '</div>'; // end padding-left wrapper
+      html += '</div>'; // end foam-card
+    });
+
+    queue.innerHTML = html;
+
+    // Auto-select first if none selected
+    if (!window.__FOAM_SELECTED_KEY__ && filtered.length > 0) {
+      window.__FOAM_SELECTED_KEY__ = filtered[0].key;
+      foamAdminSelectRequest(filtered[0].key, window.__FOAM_SELECTED_DATE__ || getTodayStr());
+    }
+  }
+
+  function foamToggleBulkSelect(requestKey) {
+    window.__FOAM_BULK_SELECTED__ = window.__FOAM_BULK_SELECTED__ || [];
+    var idx = window.__FOAM_BULK_SELECTED__.indexOf(requestKey);
+    
+    if (idx >= 0) {
+      window.__FOAM_BULK_SELECTED__.splice(idx, 1);
+    } else {
+      window.__FOAM_BULK_SELECTED__.push(requestKey);
+    }
+
+    // Update bulk action bar
+    var bulkBar = document.getElementById('foamBulkActions');
+    var bulkCount = document.getElementById('foamBulkCount');
+    
+    if (window.__FOAM_BULK_SELECTED__.length > 0) {
+      if (bulkBar) bulkBar.style.display = 'flex';
+      if (bulkCount) bulkCount.innerText = 'เลือก ' + window.__FOAM_BULK_SELECTED__.length + ' รายการ';
+    } else {
+      if (bulkBar) bulkBar.style.display = 'none';
+    }
+  }
+
+  function foamBulkClearSelection() {
+    window.__FOAM_BULK_SELECTED__ = [];
+    var bulkBar = document.getElementById('foamBulkActions');
+    if (bulkBar) bulkBar.style.display = 'none';
+    renderFoamFilteredQueue();
+  }
+
+  function foamBulkSelectAll() {
+    var currentFilter = window.__FOAM_FILTER_STATUS__ || 'all';
+    var allRequests = window.__FOAM_ALL_REQUESTS__ || [];
+    
+    // Check if all are currently selected
+    var filteredRequests = allRequests.filter(function(req) {
+      if (currentFilter === 'all') return true;
+      if (currentFilter === 'pending_review') {
+        return req.status === 'pending_review' || req.status === 'pending_duplicate_approval';
+      }
+      return req.status === currentFilter;
+    });
+    
+    var allSelected = filteredRequests.length > 0 && filteredRequests.every(function(req) {
+      return (window.__FOAM_BULK_SELECTED__ || []).indexOf(req.key) >= 0;
+    });
+    
+    if (allSelected) {
+      // Deselect all
+      window.__FOAM_BULK_SELECTED__ = [];
+    } else {
+      // Select all filtered requests
+      window.__FOAM_BULK_SELECTED__ = filteredRequests.map(function(req) { return req.key; });
+    }
+    
+    // Update checkbox state
+    var selectAllCheckbox = document.getElementById('foamSelectAllCheckbox');
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = !allSelected;
+    }
+    
+    // Update bulk action bar
+    var bulkBar = document.getElementById('foamBulkActions');
+    var bulkCount = document.getElementById('foamBulkCount');
+    
+    if (window.__FOAM_BULK_SELECTED__.length > 0) {
+      if (bulkBar) bulkBar.style.display = 'flex';
+      if (bulkCount) bulkCount.innerText = 'เลือก ' + window.__FOAM_BULK_SELECTED__.length + ' รายการ';
+    } else {
+      if (bulkBar) bulkBar.style.display = 'none';
+    }
+    
+    // Re-render to update checkboxes
+    renderFoamFilteredQueue();
+  }
+
+  function foamBulkPrint() {
+    var selected = window.__FOAM_BULK_SELECTED__ || [];
+    if (selected.length === 0) return;
+
+    if (!confirm('ต้องการพิมพ์ ' + selected.length + ' รายการใช่หรือไม่?')) return;
+
+    var db = window.db;
+    if (!db) return;
+
+    var selectedDate = window.__FOAM_SELECTED_DATE__ || getTodayStr();
+    var printApi = getPrintApi();
+    if (!printApi) {
+      PinThipSafe.modal.warning('ระบบพิมพ์ป้ายยังไม่พร้อมใช้งาน');
+      return;
+    }
+
+    var promises = selected.map(function(key) {
+      return db.ref('foam_delivery_requests/' + selectedDate + '/' + key).once('value');
+    });
+
+    Promise.all(promises).then(function(snapshots) {
+      snapshots.forEach(function(snapshot) {
+        var request = snapshot.val();
+        if (!request) return;
+
+        var data = request.customerSnapshot || {};
+        printApi.printMultipleLabels({
+          name: data.name || '',
+          phone: data.phone || '',
+          address: data.address || '',
+          subdistrict: data.subdistrict || '',
+          district: data.district || '',
+          province: data.province || '',
+          postalCode: data.postalCode || '',
+          shipping: data.shipping || request.shipping || ''
+        }, Number(request.boxCount || 1));
+      });
+
+      var repo = getDeliveryRepo();
+      if (repo) {
+        var updatePromises = selected.map(function(key) {
+          return repo.updateStatus(selectedDate, key, 'printed', 'admin');
+        });
+
+        Promise.all(updatePromises).then(function() {
+          PinThipSafe.modal.success('พิมพ์ ' + selected.length + ' รายการเรียบร้อย');
+          foamBulkClearSelection();
+          loadFoamAdminQueue();
+        }).catch(function() {
+          loadFoamAdminQueue();
+        });
+      }
+    }).catch(function(err) {
+      console.warn('Bulk print failed:', err);
+      PinThipSafe.modal.error('พิมพ์ไม่สำเร็จ');
     });
   }
 
@@ -849,4 +1187,9 @@
   window.foamAdminRejectSelected = foamAdminRejectSelected;
   window.foamAdminDeleteSelected = foamAdminDeleteSelected;
   window.foamAdminPrintSelected = foamAdminPrintSelected;
+  window.foamSetFilterStatus = foamSetFilterStatus;
+  window.foamToggleBulkSelect = foamToggleBulkSelect;
+  window.foamBulkClearSelection = foamBulkClearSelection;
+  window.foamBulkApprove = foamBulkApprove;
+  window.foamBulkPrint = foamBulkPrint;
 })();
