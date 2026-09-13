@@ -99,10 +99,10 @@
       
       // Bulk Actions Bar - Sticky Header Style
       '<div id="foamBulkActions" style="display:none; background:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:12px 16px; margin-bottom:12px; align-items:center; gap:12px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
-        '<input type="checkbox" id="foamSelectAllCheckbox" onclick="foamBulkSelectAll()" style="width:20px; height:20px; cursor:pointer; accent-color:#10b981;">' +
+        '<input type="checkbox" id="foamSelectAllCheckbox" style="width:20px; height:20px; cursor:pointer; accent-color:#10b981;">' +
         '<span id="foamBulkCount" style="font-size:14px; font-weight:600; color:#1f2937; flex:1;">เลือก 0 รายการ</span>' +
-        '<button onclick="foamBulkPrint()" style="padding:8px 16px; background:#10b981; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background=\'#059669\'" onmouseout="this.style.background=\'#10b981\'">🖨️ พิมพ์</button>' +
-        '<button onclick="foamBulkClearSelection()" style="padding:8px 16px; background:#6b7280; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background=\'#4b5563\'" onmouseout="this.style.background=\'#6b7280\'">✖️ ยกเลิก</button>' +
+        '<button id="foamBulkPrintBtn" style="padding:8px 16px; background:#10b981; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background=\'#059669\'" onmouseout="this.style.background=\'#10b981\'">🖨️ พิมพ์</button>' +
+        '<button id="foamBulkClearBtn" style="padding:8px 16px; background:#6b7280; color:white; border:none; border-radius:6px; font-size:14px; cursor:pointer; font-weight:600; transition:all 0.2s;" onmouseover="this.style.background=\'#4b5563\'" onmouseout="this.style.background=\'#6b7280\'">✖️ ยกเลิก</button>' +
       '</div>' +
       
       // Main Layout
@@ -146,6 +146,22 @@
           renderFoamFilteredQueue();
         }, 300);
       });
+    }
+
+    // Bind bulk action buttons
+    var selectAllCheckbox = document.getElementById('foamSelectAllCheckbox');
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('click', foamBulkSelectAll);
+    }
+    
+    var printBtn = document.getElementById('foamBulkPrintBtn');
+    if (printBtn) {
+      printBtn.addEventListener('click', foamBulkPrint);
+    }
+    
+    var clearBtn = document.getElementById('foamBulkClearBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', foamBulkClearSelection);
     }
 
     loadFoamAdminQueue();
@@ -1190,6 +1206,6 @@
   window.foamSetFilterStatus = foamSetFilterStatus;
   window.foamToggleBulkSelect = foamToggleBulkSelect;
   window.foamBulkClearSelection = foamBulkClearSelection;
-  window.foamBulkApprove = foamBulkApprove;
+  window.foamBulkSelectAll = foamBulkSelectAll;
   window.foamBulkPrint = foamBulkPrint;
 })();
